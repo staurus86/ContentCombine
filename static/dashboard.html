@@ -1081,6 +1081,7 @@ input:focus, textarea:focus, select:focus { outline:none; border-color:#1da1f2; 
 
   <!-- TRENDS (storylines) -->
   <div class="panel active" id="panel-storylines">
+    <div id="kpi-strip" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px"></div>
     <div id="topic-cloud" style="margin-bottom:14px"></div>
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
       <h2>&#128293; Тренды <span id="sl-days-label" style="font-size:0.65em;color:#8899a6;font-weight:normal">кросс-источниковые сюжеты за 3 дня</span></h2>
@@ -5986,6 +5987,7 @@ async function loadStorylines() {
     if (labelEl) labelEl.textContent = 'кластеры похожих новостей за ' + days + ' дн.';
     const data = await api('/api/storylines?days=' + days);
     const stories = data.storylines || [];
+    renderKpi(stories.length);
     if (countEl) countEl.textContent = stories.length + ' сюжетов из ' + (data.total_news||0) + ' новостей';
     if (!stories.length) {
       el.innerHTML = '<div style="color:#8899a6;padding:20px">Нет кластеров (менее 2 похожих новостей за ' + days + ' дн.)</div>';
@@ -6010,6 +6012,8 @@ async function loadStorylines() {
         ? '<div class="storyline-tags"><span class="stl-label">\uD83D\uDD25 Триггеры:</span>' +
           s.top_triggers.map(t => '<span class="stl-tag trigger">' + esc(t) + '</span>').join('') + '</div>'
         : '';
+      const ids = (s.members||[]).map(m=>m.id).join(',');
+      const topId = (s.members[0]||{}).id || '';
       return '<div class="storyline-card">' +
         '<div class="storyline-header">' +
           '<div><span class="storyline-phase ' + phaseClass + '">' + phaseLabel + '</span> ' +
@@ -6021,6 +6025,10 @@ async function loadStorylines() {
           '</div>' +
         '</div>' +
         '<div style="font-size:0.8em;color:#8899a6;margin-bottom:6px">Источники: ' + s.sources.join(', ') + '</div>' +
+        '<div style="margin-bottom:8px;display:flex;gap:6px">' +
+          '<button class="btn btn-sm btn-secondary" onclick="slPin(\'' + ids + '\')" title="Сохранить весь сюжет в Кейсы" style="padding:2px 8px">&#128204; В кейсы</button>' +
+          '<button class="btn btn-sm btn-secondary" onclick="openTgModal(\'' + topId + '\')" title="Топ-новость сюжета в Telegram" style="padding:2px 8px">&#128228; В Telegram</button>' +
+        '</div>' +
         gamesHtml + triggersHtml +
         '<div class="storyline-members">' + membersHtml + '</div>' +
       '</div>';
@@ -6028,6 +6036,32 @@ async function loadStorylines() {
   } catch(e) {
     el.innerHTML = '<div style="color:#e0245e;padding:20px">Ошибка: ' + (e.message||e) + '</div>';
   }
+}
+
+async function renderKpi(storyCount) {
+  const el = document.getElementById('kpi-strip');
+  if (!el) return;
+  let k = {};
+  try { k = await api('/api/kpi'); } catch(e) {}
+  const card = (v, l, c) =>
+    '<div style="background:#192734;border:1px solid #22303c;border-radius:10px;padding:12px 14px">' +
+      '<div style="font-size:1.6em;font-weight:700;color:' + c + '">' + (v==null?'—':v) + '</div>' +
+      '<div style="font-size:0.78em;color:#8899a6">' + l + '</div>' +
+    '</div>';
+  el.innerHTML =
+    card(k.fresh_24h, 'Новых за 24ч', '#1da1f2') +
+    card(storyCount, 'Сюжетов', '#e0245e') +
+    card(k.cases, 'В кейсах', '#f5d650') +
+    card(k.active_sources, 'Источников активно', '#17bf63');
+}
+
+async function slPin(idsCsv) {
+  const ids = (idsCsv || '').split(',').filter(Boolean);
+  if (!ids.length) return;
+  try {
+    await api('/api/news/case', {news_ids: ids, on: true});
+    toast('В кейсы: ' + ids.length);
+  } catch(e) { toast('Ошибка: ' + (e.message||e), true); }
 }
 
 // ═══════════════════════════════════════════
@@ -6177,11 +6211,11 @@ function applyFeatureFlags() {
   const funnelEl = document.getElementById('analytics-funnel');
   if (funnelEl) funnelEl.style.display = ffEnabled('analytics_funnel_v1') ? '' : 'none';
 
-  // Storylines tab
+  // Storylines tab («Тренды») — главная, видна ВСЕГДА (не зависит от feature-флага)
   const slTab = document.getElementById('tab-storylines');
-  if (slTab) slTab.style.display = ffEnabled('storyline_mode_v1') ? '' : 'none';
+  if (slTab) slTab.style.display = '';
   const slPanel = document.getElementById('panel-storylines');
-  if (slPanel) slPanel.style.display = ffEnabled('storyline_mode_v1') ? '' : 'none';
+  // panel visibility управляется переключением вкладок; флаг не используем
 
   // Health plus button
   const hpBtn = document.getElementById('btn-health-plus');

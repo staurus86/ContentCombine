@@ -194,6 +194,7 @@ class AdminHandler(BaseHTTPRequestHandler):
             "/api/storylines/settings": lambda: self._json(self._get_storylines_settings()),
             "/api/storylines/history": lambda: self._json(self._get_storylines_history()),
             "/api/topic_cloud": lambda: self._json(self._get_topic_cloud()),
+            "/api/kpi": lambda: self._json(self._get_kpi()),
         }
 
         # CMS-ready XLSX export of articles
@@ -1589,6 +1590,10 @@ async function login() {
         qs = parse_qs(urlparse(self.path).query)
         hours = int(qs.get("hours", ["48"])[0])
         return topic_cloud(hours=hours)
+
+    def _get_kpi(self):
+        from api.dashboard import kpi
+        return kpi()
 
     def _get_source_health_plus(self):
         from api.dashboard import get_source_health_plus

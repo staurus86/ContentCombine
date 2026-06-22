@@ -59,6 +59,29 @@ def topic_cloud(hours: int = 48, top_n: int = 20):
         cur.close()
 
 
+def kpi(hours: int = 24):
+    """Лёгкие KPI для шапки: новых за N ч, в кейсах, активных источников за N ч.
+    «Сюжетов» считается на клиенте из загруженных storylines (clustering дорогой)."""
+    conn = get_connection()
+    cur = conn.cursor()
+    _ph = "%s" if _is_postgres() else "?"
+    cutoff = (dt_mod.now(timezone.utc) - timedelta(hours=hours)).isoformat()
+    out = {"fresh_24h": 0, "cases": 0, "active_sources": 0}
+    try:
+        cur.execute(f"SELECT COUNT(*) FROM news WHERE COALESCE(is_deleted,0)=0 AND parsed_at > {_ph}", (cutoff,))
+        out["fresh_24h"] = cur.fetchone()[0]
+        cur.execute("SELECT COUNT(*) FROM news WHERE is_case=1")
+        out["cases"] = cur.fetchone()[0]
+        cur.execute(f"SELECT COUNT(DISTINCT source) FROM news WHERE COALESCE(is_deleted,0)=0 AND parsed_at > {_ph}", (cutoff,))
+        out["active_sources"] = cur.fetchone()[0]
+        return out
+    except Exception as e:
+        logger.error("kpi error: %s", e)
+        return out
+    finally:
+        cur.close()
+
+
 def get_ops_dashboard():
     """Operational dashboard: action items, counts, health summary."""
     conn = get_connection()
