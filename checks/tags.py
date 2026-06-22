@@ -1,77 +1,134 @@
 """Автоматические теги по таксономии."""
 
+# SEO/search-marketing taxonomy (multilingual RU+EN + universal tokens).
+# Keywords lowercase, substring match; phrases/>=4 chars to avoid noise.
 TAXONOMY = {
+    "algo_update": {
+        "label": "Алгоритм/Апдейт",
+        "keywords": [
+            "core update", "broad core", "spam update", "helpful content",
+            "algorithm update", "algo update", "google update", "rolling out",
+            "rollout", "unconfirmed update",
+            "апдейт", "обновление алгоритма", "базовый апдейт", "выкатили апдейт",
+            "прокатился апдейт", "переранжирование", "тайфун", "оригами", "вега",
+            "минусинск", "баден-баден",
+        ],
+    },
+    "penalty": {
+        "label": "Фильтр/Санкции",
+        "keywords": [
+            "manual action", "penalty", "deindexed", "deindexing", "demotion",
+            "spam policy", "scaled content abuse", "site reputation abuse",
+            "parasite seo", "cloaking", "unnatural links",
+            "фильтр", "под фильтр", "санкции", "пессимизация", "выпал из индекса",
+            "исключён из поиска", "забанили", "накрутка пф", "аффилиат", "деиндексация",
+        ],
+    },
+    "ai_search": {
+        "label": "AI-поиск/GEO",
+        "keywords": [
+            "ai overviews", "ai mode", "generative search", "answer engine",
+            "chatgpt", "perplexity", "gemini", "copilot", "ai citation",
+            "ai crawler", "gptbot", "llms.txt", "generative engine optimization",
+            "zero-click",
+            "нейроответы", "нейросет", "ии-поиск", "поиск с алисой", "yandexgpt",
+            "генеративный поиск", "цитирование в ии", "geo", "aeo",
+        ],
+    },
+    "technical": {
+        "label": "Технический SEO",
+        "keywords": [
+            "core web vitals", "robots.txt", "structured data", "schema markup",
+            "rich results", "indexing", "crawl budget", "noindex", "canonical",
+            "javascript seo", "rendering", "page experience", "googlebot", "sitemap",
+            "индексация", "переобход", "краулинг", "микроразметка", "редирект",
+            "скорость загрузки", "дубли страниц",
+        ],
+    },
+    "content": {
+        "label": "Контент/E-E-A-T",
+        "keywords": [
+            "e-e-a-t", "helpful content", "ai content", "ai-generated content",
+            "thin content", "content pruning", "topical authority", "quality content",
+            "контент", "экспертность", "ai-тексты", "сгенерированный контент",
+            "некачественный контент", "полезный контент",
+        ],
+    },
+    "links": {
+        "label": "Ссылки",
+        "keywords": [
+            "backlink", "link building", "link spam", "toxic links", "disavow",
+            "anchor text", "guest post",
+            "обратные ссылки", "ссылочн", "покупные ссылки", "линкбилдинг",
+            "анкор", "токсичные ссылки", "крауд-ссылки", "обесценивание ссылок",
+        ],
+    },
+    "local": {
+        "label": "Локальный SEO",
+        "keywords": [
+            "local seo", "google business profile", "google maps",
+            "local pack", "nap consistency", "citations",
+            "локальное seo", "яндекс бизнес", "яндекс справочник", "2гис",
+            "карты", "геозависим", "локальная выдача",
+        ],
+    },
+    "analytics": {
+        "label": "Аналитика/Данные",
+        "keywords": [
+            "search console", "google search console", "analytics 4", "ga4",
+            "looker studio", "impressions", "click-through rate", "ctr",
+            "share of voice", "tracking",
+            "вебмастер", "метрика", "вордстат", "обновление икс", "отчёт", "аналитика",
+        ],
+    },
+    "tool": {
+        "label": "Инструменты",
+        "keywords": [
+            "ahrefs", "semrush", "screaming frog", "sistrix", "serpstat",
+            "surfer", "new feature", "launches", "integration", "new tool",
+            "обновил инструмент", "новый инструмент", "новая функция", "интеграция",
+        ],
+    },
     "industry": {
-        "label": "Industry",
+        "label": "Индустрия",
         "keywords": [
-            "увольнения", "сокращения", "layoff", "layoffs", "купила", "acquisition",
-            "merger", "слияние", "сделка", "deal", "revenue", "выручка", "финансы",
-            "studio closed", "закрыли студию", "IPO", "инвестиции", "investment",
-            "partnership", "партнёрство",
+            "acquisition", "merger", "antitrust", "monopoly", "doj", "lawsuit",
+            "funding", "investment", "ipo", "layoffs", "partnership", "revenue",
+            "поглощение", "слияние", "антимонопол", "иск", "инвестиции", "сделка",
+            "партнёрство", "выручка", "увольнения",
         ],
     },
-    "release": {
-        "label": "Release",
+    "research": {
+        "label": "Исследование/Кейс",
         "keywords": [
-            "релиз", "release", "вышла", "launched", "выходит", "дата выхода",
-            "release date", "coming out", "launch day", "day one", "gold",
-            "ушла на золото", "gone gold", "available now",
+            "study", "research", "case study", "survey", "benchmark", "data shows",
+            "experiment", "analysis of", "report finds", "we analyzed",
+            "исследование", "кейс", "опрос", "эксперимент", "по данным", "анализ",
         ],
     },
-    "update": {
-        "label": "Update/Patch",
+    "ranking": {
+        "label": "Позиции/Трафик",
         "keywords": [
-            "патч", "patch", "обновление", "update", "hotfix", "хотфикс",
-            "dlc", "дополнение", "expansion", "season pass", "сезонный пропуск",
-            "patch notes", "changelog",
+            "traffic drop", "traffic loss", "lost rankings", "ranking drop",
+            "visibility drop", "recovery", "serp", "volatility", "ranking surge",
+            "обвал трафика", "падение позиций", "просадка", "потеря трафика",
+            "вылет из топа", "восстановление трафика", "штормит выдача",
         ],
     },
-    "esports": {
-        "label": "Esports",
+    "ads_ppc": {
+        "label": "Реклама/PPC",
         "keywords": [
-            "турнир", "tournament", "чемпионат", "championship", "киберспорт",
-            "esports", "esport", "команда", "team", "матч", "match",
-            "лига", "league", "призовой", "prize pool", "mvp",
+            "google ads", "performance max", "pmax", "microsoft ads", "bing ads",
+            "ppc", "paid search", "cpc", "roas", "ad campaign",
+            "яндекс директ", "контекстная реклама", "рся", "ставки", "кампани",
         ],
     },
-    "hardware": {
-        "label": "Hardware",
+    "event": {
+        "label": "События/Конференции",
         "keywords": [
-            "консоль", "console", "видеокарта", "gpu", "процессор", "cpu",
-            "ps5", "ps6", "xbox", "switch", "steam deck", "геймпад",
-            "controller", "vr", "headset", "периферия",
-        ],
-    },
-    "controversy": {
-        "label": "Controversy",
-        "keywords": [
-            "скандал", "controversy", "иск", "lawsuit", "бойкот", "boycott",
-            "критика", "backlash", "обвинения", "allegations", "ban",
-            "заблокировали", "цензура", "censorship",
-        ],
-    },
-    "rumor": {
-        "label": "Rumor/Leak",
-        "keywords": [
-            "слух", "rumor", "rumour", "утечка", "leak", "leaked",
-            "инсайдер", "insider", "по слухам", "allegedly", "datamine",
-            "datamined", "предположительно",
-        ],
-    },
-    "review": {
-        "label": "Review",
-        "keywords": [
-            "обзор", "review", "рецензия", "оценка", "metacritic",
-            "score", "rating", "отзывы", "reviews", "критики",
-            "opencritic", "impressions", "превью", "preview",
-        ],
-    },
-    "announcement": {
-        "label": "Announcement",
-        "keywords": [
-            "анонс", "announce", "announced", "revealed", "тизер", "teaser",
-            "трейлер", "trailer", "показали", "reveal", "first look",
-            "world premiere",
+            "brightonseo", "google i/o", "search central live", "webinar",
+            "conference", "keynote", "announced at", "live blog",
+            "конференция", "вебинар", "митап", "выступил на", "доклад",
         ],
     },
 }
