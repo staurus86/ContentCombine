@@ -301,6 +301,7 @@ input:focus, textarea:focus, select:focus { outline:none; border-color:#1da1f2; 
 .storyline-member:last-child { border-bottom:none; }
 .storyline-member .sm-source { color:#8899a6; min-width:80px; font-size:0.8em; }
 .storyline-member .sm-score { color:#1da1f2; font-weight:600; min-width:35px; text-align:right; }
+.storyline-member .sm-title-link:hover { color:#1da1f2 !important; text-decoration:underline; }
 .storyline-stats { display:flex; gap:12px; font-size:0.82em; color:#8899a6; }
 .storyline-tags { display:flex; flex-wrap:wrap; gap:6px; align-items:center; margin-bottom:8px; }
 .stl-label { font-size:0.8em; color:#8899a6; margin-right:2px; }
@@ -5996,14 +5997,18 @@ async function loadStorylines() {
     el.innerHTML = stories.map(s => {
       const phaseClass = s.phase;
       const phaseLabel = s.phase === 'trending' ? 'Тренд' : s.phase === 'developing' ? 'Развивается' : 'Новый';
-      const membersHtml = s.members.map(m =>
-        '<div class="storyline-member">' +
+      const membersHtml = s.members.map(m => {
+        const u = m.url ? esc(m.url) : '';
+        const titleEl = u
+          ? '<a href="' + u + '" target="_blank" rel="noopener" class="sm-title-link" style="flex:1;color:#e1e8ed;text-decoration:none">' + esc(m.title) + '</a>'
+          : '<span style="flex:1">' + esc(m.title) + '</span>';
+        return '<div class="storyline-member">' +
           '<span class="sm-source">' + esc(m.source) + '</span>' +
-          '<span style="flex:1">' + esc(m.title) + '</span>' +
+          titleEl +
           '<span class="sm-score">' + (m.total_score||0) + '</span>' +
           '<span style="color:#8899a6;font-size:0.75em">' + fmtDate(m.published_at) + '</span>' +
-        '</div>'
-      ).join('');
+        '</div>';
+      }).join('');
       const gamesHtml = (s.top_games||[]).length
         ? '<div class="storyline-tags"><span class="stl-label">Сущности:</span>' +
           s.top_games.map(g => '<span class="stl-tag game">' + esc(g) + '</span>').join('') + '</div>'
