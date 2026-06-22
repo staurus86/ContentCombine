@@ -718,6 +718,8 @@ def _clean_element(el) -> str:
     for tag in clone.find_all(_JUNK_TAGS):
         tag.decompose()
     for div in clone.find_all(["div", "section"]):
+        if getattr(div, "attrs", None) is None:  # уже decompose()-нут как потомок
+            continue
         cls = div.get("class", [])
         if cls and any(kw in " ".join(cls).lower() for kw in _JUNK_CLASS_KW):
             div.decompose()
