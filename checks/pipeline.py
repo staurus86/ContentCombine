@@ -201,6 +201,7 @@ def run_review_pipeline(news_list: list[dict], update_status: bool = True) -> di
 
     # Save check results in DB (always) + update statuses (optional)
     AUTO_REJECT_SCORE = 15
+    text_by_id = {n.get("id"): ((n.get("title") or "") + " " + (n.get("plain_text") or n.get("description") or "")) for n in news_list}
     for r in results:
         if update_status:
             if r.get("is_duplicate"):
@@ -231,6 +232,17 @@ def run_review_pipeline(news_list: list[dict], update_status: bool = True) -> di
             )
         except Exception as e:
             logger.warning("Failed to save check results for %s: %s", r["id"], e)
+        # Локальные TF-IDF биграммы для аналитики «Топ ключевые слова» (LLM не нужен).
+        # Заодно проставляет processed_at — без него аналитика за 7д отсекала всё.
+        try:
+            from nlp.tfidf import extract_keywords
+            from storage.database import save_analysis
+            _txt = text_by_id.get(r["id"], "")
+            if _txt and len(_txt) > 50:
+                _kw = extract_keywords(_txt)
+                save_analysis(r["id"], bigrams=_kw.get("bigrams", []), trigrams=_kw.get("trigrams", []))
+        except Exception as e:
+            logger.debug("Bigram extract skipped for %s: %s", r["id"], e)
 
     return {"results": results, "groups": groups}
 
