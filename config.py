@@ -85,6 +85,9 @@ TELEGRAM_MESSAGES_BATCH_SIZE = _int_env("TELEGRAM_MESSAGES_BATCH_SIZE", 20)
 # System health
 WATCHDOG_STALE_TIMEOUT = _int_env("WATCHDOG_STALE_TIMEOUT", 300)
 SOURCE_FAILURE_THRESHOLD = _int_env("SOURCE_FAILURE_THRESHOLD", 5)
+# Источник считается "мёртвым" по времени молчания, а не по "0 за 24ч":
+# редко публикующие официальные источники не должны висеть как dead.
+SOURCE_DEAD_DAYS = _int_env("SOURCE_DEAD_DAYS", 14)
 SOURCE_PROBE_COOLDOWN = _int_env("SOURCE_PROBE_COOLDOWN", 600)
 ZOMBIE_THREADS_CRITICAL = _int_env("ZOMBIE_THREADS_CRITICAL", 5)
 
@@ -132,7 +135,6 @@ SOURCES = [
     {"name": "Anthropic News", "type": "homepage", "url": "https://www.anthropic.com/news", "interval": 120},
     {"name": "AWS Machine Learning Blog", "type": "rss", "url": "https://aws.amazon.com/blogs/machine-learning/feed/", "interval": 30},
     {"name": "Cohere Blog", "type": "homepage", "url": "https://cohere.com/blog", "interval": 60},
-    {"name": "Databricks Blog", "type": "rss", "url": "https://www.databricks.com/feed", "interval": 60},
     {"name": "DeepMind on blog.google", "type": "rss", "url": "https://blog.google/technology/google-deepmind/rss/", "interval": 60},
     {"name": "Google AI Blog (legacy)", "type": "rss", "url": "http://feeds.feedburner.com/blogspot/gJZg", "interval": 60},
     {"name": "Google AI blog.google", "type": "rss", "url": "https://blog.google/technology/ai/rss/", "interval": 30},
@@ -189,7 +191,6 @@ SOURCES = [
     {"name": "Google Search Status", "type": "rss", "url": "https://status.search.google.com/en/feed.atom", "interval": 30},
     {"name": "Kagi Blog", "type": "rss", "url": "https://blog.kagi.com/rss.xml", "interval": 120},
     {"name": "Mojeek Blog", "type": "rss", "url": "https://blog.mojeek.com/feed.xml", "interval": 120},
-    {"name": "Seznam Blog", "type": "rss", "url": "https://blog.seznam.cz/feed/", "interval": 120},
     {"name": "The Keyword (Google)", "type": "rss", "url": "https://blog.google/rss/", "interval": 30},
     {"name": "Yandex Company RU", "type": "rss", "url": "https://yandex.ru/blog/company/rss", "interval": 60},
     {"name": "Yandex Webmaster RU", "type": "rss", "url": "https://webmaster.yandex.ru/blog/rss/", "interval": 60},
@@ -198,16 +199,12 @@ SOURCES = [
     {"name": "BS:crystalcarter", "type": "bluesky", "handle": "crystalontheweb.bsky.social", "interval": 60},
     {"name": "BS:cyrusshepard", "type": "bluesky", "handle": "zyppy.com", "interval": 60},
     {"name": "BS:dannysullivan", "type": "bluesky", "handle": "dannysullivan.bsky.social", "interval": 60},
-    {"name": "BS:drpete", "type": "bluesky", "handle": "dr-pete.bsky.social", "interval": 60},
     {"name": "BS:garyillyes", "type": "bluesky", "handle": "methode.bsky.social", "interval": 60},
     {"name": "BS:gfiorelli", "type": "bluesky", "handle": "gfiorelli1.bsky.social", "interval": 60},
     {"name": "BS:glenngabe", "type": "bluesky", "handle": "glenngabe.bsky.social", "interval": 60},
-    {"name": "BS:jamieindigo", "type": "bluesky", "handle": "not-a-robot.com", "interval": 60},
-    {"name": "BS:johnmu", "type": "bluesky", "handle": "johnmu.com", "interval": 60},
     {"name": "BS:jonoalderson", "type": "bluesky", "handle": "jono.id", "interval": 60},
     {"name": "BS:joost", "type": "bluesky", "handle": "joost.blog", "interval": 60},
     {"name": "BS:kevinindig", "type": "bluesky", "handle": "kevin-indig.bsky.social", "interval": 60},
-    {"name": "BS:lidiainfante", "type": "bluesky", "handle": "lidia-infante.com", "interval": 60},
     {"name": "BS:lilyray", "type": "bluesky", "handle": "lilyray.nyc", "interval": 60},
     {"name": "BS:mariehaynes", "type": "bluesky", "handle": "mariehaynes.bsky.social", "interval": 60},
     {"name": "BS:mordy", "type": "bluesky", "handle": "mordyoberstein.bsky.social", "interval": 60},
@@ -220,7 +217,6 @@ SOURCES = [
     {"name": "BS:suganthan", "type": "bluesky", "handle": "suganthan.com", "interval": 60},
     {"name": "BS:tomcapper", "type": "bluesky", "handle": "tcapper.co.uk", "interval": 60},
     {"name": "BS:tomcritchlow", "type": "bluesky", "handle": "tomcritchlow.com", "interval": 60},
-    {"name": "BS:wilreynolds", "type": "bluesky", "handle": "wilreynolds.bsky.social", "interval": 60},
     {"name": "BS:womenintechseo", "type": "bluesky", "handle": "womenintechseo.bsky.social", "interval": 60},
     {"name": "Ahrefs Blog", "type": "rss", "url": "https://ahrefs.com/blog/feed/", "interval": 60},
     {"name": "Backlinko", "type": "rss", "url": "https://backlinko.com/feed", "interval": 120},
@@ -282,7 +278,6 @@ SOURCES = [
     {"name": "RU: SEOnews", "type": "rss", "url": "https://www.seonews.ru/rss/all/", "interval": 30},
     {"name": "RU: Sosnovskij.ru", "type": "rss", "url": "https://sosnovskij.ru/feed/", "interval": 120},
     {"name": "RU: Texterra Блог", "type": "rss", "url": "https://texterra.ru/blog/rss/", "interval": 60},
-    {"name": "RU: vc.ru", "type": "rss", "url": "https://vc.ru/rss", "interval": 30},
     {"name": "RU: Серч (searchengines.guru)", "type": "rss", "url": "https://searchengines.guru/ru/news/rss", "interval": 30},
     {"name": "RU: Шакин (Михаил Шакин)", "type": "rss", "url": "https://shakin.ru/feed", "interval": 120},
     {"name": "Aleyda Substack", "type": "rss", "url": "https://aleyda.substack.com/feed", "interval": 60},
@@ -358,7 +353,29 @@ SOURCES = [
     {"name": "Sitechecker Blog", "type": "homepage", "url": "https://sitechecker.pro/blog/", "rss_url": "https://sitechecker.pro/feed/", "interval": 90},
     {"name": "SpyFu Blog", "type": "rss", "url": "https://www.spyfu.com/blog/feed/", "interval": 90},
     {"name": "Surfer SEO Blog", "type": "rss", "url": "https://surferseo.com/blog/rss.xml", "interval": 90},
-    {"name": "Wincher Blog", "type": "homepage", "url": "https://www.wincher.com/blog", "interval": 90}
+    {"name": "Wincher Blog", "type": "homepage", "url": "https://www.wincher.com/blog", "interval": 90},
+    # --- Добор 2026-06-23: GEO/AEO, AI-поиск, agentic, AI-видимость бренда (проверены парсером) ---
+    {"name": "The Decoder", "type": "rss", "url": "https://the-decoder.com/feed/", "interval": 60},
+    {"name": "Press Gazette", "type": "rss", "url": "https://pressgazette.co.uk/feed/", "interval": 60},
+    {"name": "TechCrunch AI", "type": "rss", "url": "https://techcrunch.com/category/artificial-intelligence/feed/", "interval": 60},
+    {"name": "VentureBeat AI", "type": "rss", "url": "https://venturebeat.com/category/ai/feed/", "interval": 60},
+    {"name": "Simon Willison", "type": "rss", "url": "https://simonwillison.net/atom/everything/", "interval": 60},
+    {"name": "MIT Technology Review AI", "type": "rss", "url": "https://www.technologyreview.com/topic/artificial-intelligence/feed/", "interval": 90},
+    {"name": "Sterling Sky", "type": "rss", "url": "https://www.sterlingsky.ca/feed/", "interval": 120},
+    {"name": "Lily Ray Substack", "type": "rss", "url": "https://lilyraynyc.substack.com/feed", "interval": 120},
+    {"name": "Addy Osmani", "type": "rss", "url": "https://addyosmani.com/rss.xml", "interval": 120},
+    {"name": "WordLift Blog", "type": "rss", "url": "https://wordlift.io/blog/en/feed/", "interval": 90},
+    {"name": "Writesonic GEO", "type": "rss", "url": "https://writesonic.com/blog/rss.xml", "interval": 90},
+    {"name": "semai.ai", "type": "rss", "url": "https://semai.ai/blogs/feed/", "interval": 60},
+    {"name": "GenRank", "type": "rss", "url": "https://genrank.io/rss", "interval": 120},
+    {"name": "Suganthan Mohanadasan", "type": "homepage", "url": "https://suganthan.com/blog", "interval": 120},
+    {"name": "No Hacks", "type": "homepage", "url": "https://nohacks.co/", "interval": 120},
+    {"name": "ZipTie", "type": "homepage", "url": "https://ziptie.dev/blog/", "interval": 120},
+    {"name": "Superlines", "type": "homepage", "url": "https://www.superlines.io/articles/", "interval": 120},
+    {"name": "Brandlight", "type": "homepage", "url": "https://www.brandlight.ai/blog/", "interval": 120},
+    {"name": "Trakkr", "type": "homepage", "url": "https://trakkr.ai/", "interval": 120},
+    {"name": "BrightEdge", "type": "homepage", "url": "https://www.brightedge.com/blog", "interval": 120},
+    {"name": "Bluefish AI", "type": "homepage", "url": "https://www.bluefishai.com/", "interval": 120}
 ]
 
 

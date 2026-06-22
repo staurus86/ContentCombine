@@ -14,19 +14,23 @@ def get_sources_health() -> list[dict]:
     conn = get_connection()
     cur = conn.cursor()
 
-    cutoff_24h = (datetime.now(timezone.utc) - timedelta(hours=24)).isoformat()
-    cutoff_3h = (datetime.now(timezone.utc) - timedelta(hours=3)).isoformat()
+    now = datetime.now(timezone.utc)
+    cutoff_24h = (now - timedelta(hours=24)).isoformat()
+    cutoff_3h = (now - timedelta(hours=3)).isoformat()
+    cutoff_dead = (now - timedelta(days=config.SOURCE_DEAD_DAYS)).isoformat()
 
     ph = "%s" if _is_postgres() else "?"
 
     try:
-        # Количество новостей за 24ч по источникам
+        # last_parsed — абсолютная дата последней публикации (по всей истории),
+        # count_24h — активность за сутки. "Мёртвость" определяем по времени
+        # молчания (cutoff_dead), а не по нулю за 24ч: редкие официальные
+        # источники публикуют раз в неделю и не должны висеть как dead.
         cur.execute(f"""
             SELECT source,
-                   COUNT(*) as count_24h,
+                   SUM(CASE WHEN parsed_at > {ph} THEN 1 ELSE 0 END) as count_24h,
                    MAX(parsed_at) as last_parsed
             FROM news
-            WHERE parsed_at > {ph}
             GROUP BY source
             ORDER BY count_24h DESC
         """, (cutoff_24h,))
@@ -54,23 +58,22 @@ def get_sources_health() -> list[dict]:
         row = db_sources.get(name)
         if row:
             last_parsed = row["last_parsed"] or ""
-            count = row["count_24h"]
+            count = row["count_24h"] or 0
         else:
             last_parsed = ""
             count = 0
 
-        # Determine health status
-        if count == 0:
-            status = "dead"
+        # Determine health status (мёртвость — по времени молчания, не по 0 за 24ч)
+        if not last_parsed:
+            status = "dead"          # никогда ничего не публиковал
+        elif last_parsed <= cutoff_dead:
+            status = "dead"          # молчит дольше порога SOURCE_DEAD_DAYS
         elif last_parsed > cutoff_3h:
-            if count >= 10:
-                status = "healthy"
-            else:
-                status = "low"
+            status = "healthy" if count >= 10 else "low"
         elif last_parsed > cutoff_24h:
             status = "warning"
         else:
-            status = "down"
+            status = "down"          # жив, но публикует редко (1д…порог) — не dead
 
         # Calculate minutes since last parse
         minutes_ago = -1
