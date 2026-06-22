@@ -4,6 +4,9 @@
 **Статус:** утверждён к планированию
 **Проект:** ContentCombine (`C:\Opencode-test\ContentCombine`)
 **UI-стандарт:** визуальный слой реализуется по скиллу **global-design** (по требованию пользователя).
+**Constraint поставки:** всё (Ф0–Ф4) выкатывается **ОДНИМ коммитом = один редеплой Railway** —
+чтобы не гонять сборки. Реализуем и тестируем локально/на проде через `DATABASE_PUBLIC_URL`,
+коммитим и пушим один раз.
 
 ## Цель / воркфлоу
 Пользователь ведёт Telegram-канал по SEO+AI. Нужен пайплайн для скоростного поиска
@@ -31,6 +34,29 @@
   ☰ Sheets, 📊 XLSX.
 
 ## Компоненты
+
+### Ф0 — Ребрендинг IgroNews → ContentCombine + иконка
+Переименовать во всех user-visible местах:
+- `static/dashboard.html`: `<title>` (стр. 6), `<h1>` логотип (362), favicon (7).
+- `web.py`: `<title>` логина (600), `<h2>` (622), имена выгрузок `igronews_*` → `contentcombine_*` (1334, 1353).
+- `main.py`: лог «IgroNews starting…» (40) → «ContentCombine starting…».
+- `api/news.py`: `ws.title="IgroNews Export"` (213) → «ContentCombine Export».
+- `parsers/bluesky_parser.py`: User-Agent `IgroNews/1.0` → `ContentCombine/1.0`.
+- `bot/telegram_bot.py`: строки бота (косметика).
+- (внутреннее `TELEGRAM_SESSION`, докстринги — не трогаем.)
+
+**Иконка** (favicon + логотип в шапке) — концепт «combine: много источников → одна лента»:
+синяя плитка-accent + белый глиф «три потока сходятся в один». Inline SVG (data-URI),
+без эмодзи, по global-design (solid accent, белый глиф, без градиент-текста):
+```
+<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'>
+  <rect width='100' height='100' rx='22' fill='#2563eb'/>
+  <path d='M26 30 L50 54 M50 30 L50 54 M74 30 L50 54' stroke='#fff' stroke-width='8'
+        stroke-linecap='round' fill='none'/>
+  <rect x='44' y='54' width='12' height='22' rx='6' fill='#fff'/>
+</svg>
+```
+Шапка: тот же глиф ~28px + словознак **Content**(text)**Combine**(accent), без градиента.
 
 ### Ф1 — Каркас вкладок + Лента без статусов
 - Скрыть платные вкладки/кнопки (CSS `display:none` / комментарий в разметке).
@@ -69,7 +95,8 @@
 «топ-источники недели» / «темы на подъёме» в Аналитике.
 
 ## Затрагиваемые файлы
-- `static/dashboard.html` — вкладки, Лента, Тренды, Кейсы, Telegram-модалка, KPI (global-design).
+- `static/dashboard.html` — ребрендинг+иконка, вкладки, Лента, Тренды, Кейсы, Telegram-модалка, KPI (global-design).
+- `web.py`, `main.py`, `api/news.py`, `parsers/bluesky_parser.py`, `bot/telegram_bot.py` — ребрендинг строк.
 - `api/dashboard.py` — `get_storylines` (действия), новый `topic_cloud`.
 - `api/news.py` — `get_news_unified` (фильтр cases, убрать статус-зависимости в UI-слое),
   `set_case`, защита чисток.
@@ -79,7 +106,8 @@
 - `bot/telegram_bot.py` или новый `apis/tg_publish.py` — отправка поста в канал.
 
 ## Критерии успеха
-- Видны только 6 вкладок; платные скрыты; LLM-кнопок нет; деплой SUCCESS.
+- Нигде в UI нет «IgroNews» — везде ContentCombine; новая иконка в табе браузера и шапке.
+- Видны только 6 вкладок; платные скрыты; LLM-кнопок нет; деплой SUCCESS (**один** редеплой).
 - Тренды — стартовая; облако тем дня отражает реальные теги/источники.
 - 📌 кладёт в Кейсы; кейсы не исчезают после фрешнесс-чистки (>14д).
 - 📤 даёт корректный предпросмотр поста; без токена — копирование, с токеном — отправка.
