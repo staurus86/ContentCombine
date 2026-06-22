@@ -1174,7 +1174,7 @@ def redate_missing_dates(limit: int = 2000):
     cur.execute(f"""SELECT id, url FROM news
                     WHERE (published_at IS NULL OR published_at='')
                       AND COALESCE(is_deleted,0)=0 AND url LIKE 'http%'
-                    LIMIT {_ph}""", (limit,))
+                    LIMIT {int(limit)}""")
     rows = cur.fetchall()
     fixed = junk = 0
     now = datetime.now(timezone.utc).isoformat()
