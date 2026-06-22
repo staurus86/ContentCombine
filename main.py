@@ -76,12 +76,13 @@ def main():
             logging.critical("Cannot connect to database. Exiting.")
             sys.exit(1)
 
-    # Создание заголовков в Sheets (если пусто)
-    setup_headers()
-
-    # Запуск веб-дашборда на порту 8080
+    # Запуск веб-дашборда на порту 8080 — ПЕРВЫМ, чтобы healthcheck /api/diag
+    # прошёл сразу, не дожидаясь сетевого вызова Sheets ниже.
     start_web()
     logging.info("Dashboard running on port 8080")
+
+    # Создание заголовков в Sheets (если пусто) — в фоне, не блокирует старт
+    threading.Thread(target=setup_headers, daemon=True).start()
 
     # Запуск Telegram-бота (если токен задан)
     if config.TELEGRAM_BOT_TOKEN:
