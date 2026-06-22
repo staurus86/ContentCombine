@@ -7,6 +7,7 @@
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%232563eb'/><path d='M26 30 L50 54 M50 30 L50 54 M74 30 L50 54' stroke='%23fff' stroke-width='8' stroke-linecap='round' fill='none'/><rect x='44' y='54' width='12' height='22' rx='6' fill='%23fff'/></svg>">
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
+:root { --c-muted:#aab4be; --c-faint:#97a4b0; }  /* приглушённый текст — контраст AA на тёмном */
 body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; background:#0f1923; color:#e1e8ed; font-size:15px; }
 .container { max-width:1600px; margin:0 auto; padding:15px; }
 h1 { color:#1da1f2; font-size:1.5em; }
@@ -15,7 +16,7 @@ header { background:linear-gradient(135deg,#192734 0%,#1a3a4a 100%); padding:10p
 
 /* Tabs */
 .tabs { display:flex; align-items:center; gap:0; background:#192734; border-radius:8px; margin:15px 0; overflow:hidden; box-shadow:0 1px 4px rgba(0,0,0,0.2); }
-.tab { padding:10px 20px; cursor:pointer; color:#8899a6; border:none; background:none; font-size:0.9em; transition:all .2s; position:relative; }
+.tab { padding:10px 20px; cursor:pointer; color:var(--c-muted); border:none; background:none; font-size:0.9em; transition:all .2s; position:relative; }
 .tab:hover { color:#e1e8ed; background:#22303c; }
 .tab.active { color:#1da1f2; background:#22303c; border-bottom:2px solid #1da1f2; }
 
@@ -25,7 +26,7 @@ header { background:linear-gradient(135deg,#192734 0%,#1a3a4a 100%); padding:10p
 
 /* Settings sub-tabs */
 .settings-nav { display:flex; gap:0; background:#192734; border-radius:8px; margin-bottom:15px; overflow:hidden; box-shadow:0 1px 4px rgba(0,0,0,0.2); flex-wrap:wrap; }
-.settings-tab { padding:8px 16px; cursor:pointer; color:#8899a6; font-size:0.85em; transition:all .2s; }
+.settings-tab { padding:8px 16px; cursor:pointer; color:var(--c-muted); font-size:0.85em; transition:all .2s; }
 .settings-tab:hover { color:#e1e8ed; background:#22303c; }
 .settings-tab.active { color:#ffad1f; background:#22303c; border-bottom:2px solid #ffad1f; }
 .settings-section { display:none; animation:fadeIn .3s; }
@@ -37,7 +38,7 @@ header { background:linear-gradient(135deg,#192734 0%,#1a3a4a 100%); padding:10p
 .stat:hover { border-color:#38444d; transform:translateY(-2px); box-shadow:0 4px 12px rgba(0,0,0,0.3); }
 .stat.active-filter { border-color:#1da1f2; box-shadow:0 0 0 1px #1da1f2; }
 .stat .num { font-size:1.8em; font-weight:bold; color:#1da1f2; }
-.stat .lbl { color:#8899a6; font-size:0.8em; }
+.stat .lbl { color:var(--c-muted); font-size:0.8em; }
 .stat.new .num { color:#ffad1f; }
 .stat.proc .num { color:#17bf63; }
 
@@ -61,7 +62,7 @@ header { background:linear-gradient(135deg,#192734 0%,#1a3a4a 100%); padding:10p
 
 /* Table */
 table { width:100%; border-collapse:collapse; background:#192734; border-radius:10px; overflow:hidden; font-size:0.88em; }
-th { background:#22303c; text-align:left; padding:10px 12px; color:#8899a6; font-size:0.82em; white-space:nowrap; position:sticky; top:0; z-index:2; user-select:none; }
+th { background:#22303c; text-align:left; padding:10px 12px; color:var(--c-muted); font-size:0.82em; white-space:nowrap; position:sticky; top:0; z-index:2; user-select:none; }
 th.sortable { cursor:pointer; transition:color .2s; }
 th.sortable:hover { color:#1da1f2; }
 th.sortable .sort-arrow { margin-left:3px; font-size:0.75em; opacity:0.4; }
@@ -86,7 +87,7 @@ a:hover { text-decoration:underline; }
 
 /* Forms */
 .form-group { margin-bottom:12px; }
-.form-group label { display:block; color:#8899a6; font-size:0.85em; margin-bottom:4px; }
+.form-group label { display:block; color:var(--c-muted); font-size:0.85em; margin-bottom:4px; }
 input, select { background:#22303c; border:1px solid #38444d; color:#e1e8ed; padding:8px 12px; border-radius:6px; width:100%; font-size:0.9em; transition:border-color .2s; }
 textarea { background:#22303c; border:1px solid #38444d; color:#e1e8ed; padding:10px; border-radius:6px; width:100%; font-size:0.85em; font-family:monospace; min-height:150px; resize:vertical; }
 input:focus, textarea:focus, select:focus { outline:none; border-color:#1da1f2; box-shadow:0 0 0 2px #1da1f233; }
@@ -109,7 +110,7 @@ input:focus, textarea:focus, select:focus { outline:none; border-color:#1da1f2; 
 .dash-filters select, .dash-filters input { width:auto; min-width:130px; padding:6px 10px; font-size:0.85em; }
 .dash-filters input[type="search"] { min-width:200px; }
 .dash-filters input[type="date"] { min-width:140px; }
-.dash-filters .filter-label { color:#8899a6; font-size:0.8em; margin-right:-4px; }
+.dash-filters .filter-label { color:var(--c-muted); font-size:0.8em; margin-right:-4px; }
 .dash-filters .filter-sep { width:1px; height:24px; background:#38444d; margin:0 4px; }
 .active-filters { display:flex; gap:6px; margin-bottom:10px; flex-wrap:wrap; }
 .active-filter-chip { background:#1da1f233; color:#1da1f2; padding:3px 10px; border-radius:12px; font-size:0.78em; display:flex; align-items:center; gap:4px; cursor:pointer; transition:all .2s; }
@@ -138,7 +139,7 @@ input:focus, textarea:focus, select:focus { outline:none; border-color:#1da1f2; 
 .tag-content { background:#17bf6333; color:#2ee08a; }
 .tag-links { background:#ffad1f33; color:#ffc04d; }
 .tag-local { background:#0ea5e933; color:#5cc8f7; }
-.tag-analytics { background:#8899a633; color:#aab4c0; }
+.tag-analytics { background:var(--c-muted)33; color:#aab4c0; }
 .tag-tool { background:#9b59b633; color:#c08cdb; }
 .tag-industry { background:#6c5ce733; color:#a29bfe; }
 .tag-research { background:#f1c40f33; color:#f5d650; }
@@ -150,7 +151,7 @@ input:focus, textarea:focus, select:focus { outline:none; border-color:#1da1f2; 
 
 /* Copyable tooltip */
 .tip-wrap { position:relative; display:inline-block; cursor:pointer; }
-.tip-wrap .tip-count { color:#8899a6; border-bottom:1px dashed #38444d; }
+.tip-wrap .tip-count { color:var(--c-muted); border-bottom:1px dashed #38444d; }
 .tip-wrap .tip-box { display:none; position:absolute; z-index:50; left:0; top:0; padding-top:28px; font-size:0.82em; }
 .tip-wrap .tip-box-inner { background:#22303c; border:1px solid #38444d; border-radius:8px; padding:8px 0; min-width:220px; max-width:320px; max-height:260px; overflow-y:auto; box-shadow:0 8px 24px rgba(0,0,0,0.5); }
 .tip-wrap:hover .tip-box { display:block; }
@@ -161,15 +162,15 @@ input:focus, textarea:focus, select:focus { outline:none; border-color:#1da1f2; 
 .tip-box .tip-copy { opacity:0; background:none; border:none; color:#1da1f2; cursor:pointer; font-size:0.85em; padding:0 4px; margin-left:4px; transition:opacity .15s; }
 .tip-box .tip-row:hover .tip-copy { opacity:1; }
 .tip-box .tip-header { padding:4px 10px 6px; border-bottom:1px solid #38444d; margin-bottom:4px; display:flex; justify-content:space-between; align-items:center; }
-.tip-box .tip-header span { color:#8899a6; font-size:0.85em; }
+.tip-box .tip-header span { color:var(--c-muted); font-size:0.85em; }
 .tip-box .tip-copy-all { background:none; border:none; color:#1da1f2; cursor:pointer; font-size:0.8em; padding:2px 6px; }
 .tip-box .tip-copy-all:hover { text-decoration:underline; }
 
 /* Table counter */
-.table-info { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; color:#8899a6; font-size:0.82em; }
+.table-info { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; color:var(--c-muted); font-size:0.82em; }
 
 /* Empty state */
-.empty-state { text-align:center; padding:40px 20px; color:#8899a6; }
+.empty-state { text-align:center; padding:40px 20px; color:var(--c-muted); }
 .empty-state .empty-icon { font-size:2.5em; margin-bottom:10px; opacity:0.5; }
 
 /* Responsive */
@@ -226,31 +227,31 @@ input:focus, textarea:focus, select:focus { outline:none; border-color:#1da1f2; 
 .ops-action-card[data-type="opportunity"] { border-left-color:#ffad1f; }
 .ops-action-card[data-type="warning"] { border-left-color:#f5a623; }
 .ops-action-card[data-type="publish"] { border-left-color:#17bf63; }
-.ops-action-card[data-type="draft"] { border-left-color:#8899a6; }
+.ops-action-card[data-type="draft"] { border-left-color:var(--c-muted); }
 .ops-action-count { font-size:1.4em; font-weight:bold; min-width:36px; text-align:center; }
 .ops-action-title { font-size:0.95em; }
 
 /* Feature Flag Toggle */
 .flag-row { display:flex; align-items:center; justify-content:space-between; background:#192734; border-radius:6px; padding:8px 14px; margin-bottom:4px; }
 .flag-row .flag-name { font-weight:600; font-size:0.9em; }
-.flag-row .flag-desc { color:#8899a6; font-size:0.8em; }
-.flag-row .flag-phase { color:#8899a6; font-size:0.75em; background:#22303c; padding:2px 6px; border-radius:4px; }
+.flag-row .flag-desc { color:var(--c-muted); font-size:0.8em; }
+.flag-row .flag-phase { color:var(--c-muted); font-size:0.75em; background:#22303c; padding:2px 6px; border-radius:4px; }
 .flag-toggle { position:relative; width:40px; height:22px; cursor:pointer; }
 .flag-toggle input { opacity:0; width:0; height:0; }
 .flag-toggle .slider { position:absolute; top:0; left:0; right:0; bottom:0; background:#38444d; border-radius:22px; transition:.3s; }
-.flag-toggle .slider:before { content:''; position:absolute; width:16px; height:16px; left:3px; bottom:3px; background:#8899a6; border-radius:50%; transition:.3s; }
+.flag-toggle .slider:before { content:''; position:absolute; width:16px; height:16px; left:3px; bottom:3px; background:var(--c-muted); border-radius:50%; transition:.3s; }
 .flag-toggle input:checked + .slider { background:#17bf63; }
 .flag-toggle input:checked + .slider:before { transform:translateX(18px); background:#fff; }
 
 /* Explain Drawer */
 .explain-drawer { position:fixed; top:0; right:-540px; width:460px; height:100vh; background:#192734; border-left:1px solid #22303c; z-index:1000; transition:right .3s ease; overflow-y:auto; padding:20px; box-shadow:-4px 0 20px rgba(0,0,0,0.4); }
 .explain-drawer.open { right:0 !important; }
-.explain-drawer .close-btn { position:absolute; top:12px; right:16px; cursor:pointer; color:#8899a6; font-size:1.3em; background:none; border:none; }
+.explain-drawer .close-btn { position:absolute; top:12px; right:16px; cursor:pointer; color:var(--c-muted); font-size:1.3em; background:none; border:none; }
 .explain-drawer .close-btn:hover { color:#e1e8ed; }
 .explain-section { margin-bottom:16px; }
 .explain-section h3 { color:#1da1f2; font-size:0.95em; margin-bottom:8px; }
 .score-bar { display:flex; align-items:center; gap:8px; margin-bottom:4px; }
-.score-bar .bar-label { min-width:100px; font-size:0.82em; color:#8899a6; }
+.score-bar .bar-label { min-width:100px; font-size:0.82em; color:var(--c-muted); }
 .score-bar .bar-track { flex:1; height:8px; background:#22303c; border-radius:4px; overflow:hidden; }
 .score-bar .bar-fill { height:100%; border-radius:4px; transition:width .5s; }
 .score-bar .bar-val { min-width:32px; text-align:right; font-size:0.82em; font-weight:600; }
@@ -258,35 +259,35 @@ input:focus, textarea:focus, select:focus { outline:none; border-color:#1da1f2; 
 .trace-step[data-decision="in_review"] { border-left-color:#1da1f2; }
 .trace-step[data-decision="approved"] { border-left-color:#17bf63; }
 .trace-step[data-decision="rejected"], .trace-step[data-decision="auto_rejected"] { border-left-color:#e0245e; }
-.trace-step[data-decision="duplicate"] { border-left-color:#8899a6; }
+.trace-step[data-decision="duplicate"] { border-left-color:var(--c-muted); }
 .trace-step[data-decision="enriched"] { border-left-color:#ffad1f; }
 .reason-badge { display:inline-block; padding:2px 8px; border-radius:12px; font-size:0.75em; font-weight:600; }
 .reason-badge.positive { background:rgba(23,191,99,0.2); color:#17bf63; }
 .reason-badge.negative { background:rgba(224,36,94,0.2); color:#e0245e; }
-.reason-badge.neutral { background:rgba(136,153,166,0.2); color:#8899a6; }
+.reason-badge.neutral { background:rgba(136,153,166,0.2); color:var(--c-muted); }
 
 /* Triage Mode Switcher */
 .triage-modes { display:flex; gap:0; margin-bottom:12px; background:#192734; border-radius:8px; overflow:hidden; }
-.triage-mode { padding:6px 14px; cursor:pointer; color:#8899a6; font-size:0.82em; border:none; background:none; transition:all .2s; }
+.triage-mode { padding:6px 14px; cursor:pointer; color:var(--c-muted); font-size:0.82em; border:none; background:none; transition:all .2s; }
 .triage-mode:hover { color:#e1e8ed; background:#22303c; }
 .triage-mode.active { color:#1da1f2; background:#22303c; border-bottom:2px solid #1da1f2; }
 
 /* Card mode (triage flow) */
 .triage-card { background:#192734; border-radius:12px; padding:24px; max-width:800px; margin:0 auto; border:1px solid #22303c; }
 .triage-card .tc-title { font-size:1.15em; font-weight:600; line-height:1.4; margin-bottom:12px; }
-.triage-card .tc-meta { display:flex; gap:16px; margin-bottom:16px; flex-wrap:wrap; font-size:0.85em; color:#8899a6; }
+.triage-card .tc-meta { display:flex; gap:16px; margin-bottom:16px; flex-wrap:wrap; font-size:0.85em; color:var(--c-muted); }
 .triage-card .tc-meta span { display:flex; align-items:center; gap:4px; }
 .triage-card .tc-text { font-size:0.92em; line-height:1.6; color:#ccd6dd; margin-bottom:16px; max-height:200px; overflow-y:auto; }
 .triage-card .tc-scores { display:flex; gap:12px; margin-bottom:16px; flex-wrap:wrap; }
 .triage-card .tc-score-item { background:#22303c; border-radius:8px; padding:8px 14px; text-align:center; min-width:70px; }
 .triage-card .tc-score-item .val { font-size:1.3em; font-weight:bold; }
-.triage-card .tc-score-item .lbl { font-size:0.72em; color:#8899a6; }
+.triage-card .tc-score-item .lbl { font-size:0.72em; color:var(--c-muted); }
 .triage-card .tc-actions { display:flex; gap:10px; justify-content:center; margin-top:16px; }
 .triage-card .tc-actions .btn { padding:10px 24px; font-size:0.95em; }
-.triage-counter { text-align:center; color:#8899a6; font-size:0.85em; margin-bottom:12px; }
+.triage-counter { text-align:center; color:var(--c-muted); font-size:0.85em; margin-bottom:12px; }
 
 /* Hotkey hints */
-.hotkey-hint { display:inline-block; background:#22303c; border:1px solid #38444d; border-radius:4px; padding:1px 5px; font-size:0.72em; color:#8899a6; margin-left:4px; font-family:monospace; }
+.hotkey-hint { display:inline-block; background:#22303c; border:1px solid #38444d; border-radius:4px; padding:1px 5px; font-size:0.72em; color:var(--c-muted); margin-left:4px; font-family:monospace; }
 
 /* Storyline cards */
 .storyline-card { background:#192734; border-radius:10px; padding:16px; margin-bottom:12px; border:1px solid #22303c; transition:border-color .2s; }
@@ -299,7 +300,7 @@ input:focus, textarea:focus, select:focus { outline:none; border-color:#1da1f2; 
 .storyline-members { margin-top:8px; }
 .storyline-member { padding:6px 0; border-bottom:1px solid #22303c; font-size:0.85em; display:flex; gap:8px; align-items:center; }
 .storyline-member:last-child { border-bottom:none; }
-.storyline-member .sm-source { color:#8899a6; min-width:80px; font-size:0.8em; }
+.storyline-member .sm-source { color:var(--c-muted); min-width:80px; font-size:0.8em; }
 .storyline-member .sm-score { color:#1da1f2; font-weight:600; min-width:35px; text-align:right; }
 .storyline-member .sm-title-link:hover { color:#1da1f2 !important; text-decoration:underline; }
 .sl-action { display:inline-flex; align-items:center; gap:6px; padding:6px 14px; border-radius:6px; font-size:0.82em; font-weight:500; background:#38444d; color:#e1e8ed; border:none; cursor:pointer; transition:background .15s, color .15s, border-color .15s; }
@@ -311,7 +312,7 @@ input:focus, textarea:focus, select:focus { outline:none; border-color:#1da1f2; 
 .topic-chip:hover { filter:brightness(1.18); border-color:#3a4b59; }
 .storyline-stats { display:flex; gap:12px; font-size:0.82em; color:#aab4be; }
 .storyline-tags { display:flex; flex-wrap:wrap; gap:6px; align-items:center; margin-bottom:8px; }
-.stl-label { font-size:0.8em; color:#8899a6; margin-right:2px; }
+.stl-label { font-size:0.8em; color:var(--c-muted); margin-right:2px; }
 .stl-tag { display:inline-block; padding:2px 10px; border-radius:12px; font-size:0.78em; font-weight:500; }
 .stl-tag.game { background:#1a3a2a; color:#17bf63; border:1px solid #22503a; }
 .stl-tag.trigger { background:#3a2a1a; color:#ffad1f; border:1px solid #504022; }
@@ -320,24 +321,24 @@ input:focus, textarea:focus, select:focus { outline:none; border-color:#1da1f2; 
 .health-rec { display:inline-block; padding:3px 8px; border-radius:6px; font-size:0.78em; margin:2px; }
 .health-rec.error { background:#3d2e2e; color:#e0245e; }
 .health-rec.warning { background:#3d3a2e; color:#ffad1f; }
-.health-rec.info { background:#1e3a4e; color:#8899a6; }
+.health-rec.info { background:#1e3a4e; color:var(--c-muted); }
 .sparkline { display:inline-flex; align-items:flex-end; gap:2px; height:24px; vertical-align:middle; }
 .sparkline-bar { width:8px; border-radius:2px 2px 0 0; background:#1da1f2; min-height:2px; transition:height .3s; }
 .trend-arrow { font-weight:bold; font-size:0.9em; }
 .trend-arrow.up { color:#17bf63; }
 .trend-arrow.down { color:#e0245e; }
-.trend-arrow.stable { color:#8899a6; }
+.trend-arrow.stable { color:var(--c-muted); }
 
 /* Simulator */
 .sim-stat { display:inline-block; background:#192734; border-radius:8px; padding:12px 20px; margin:6px; text-align:center; min-width:120px; }
 .sim-stat .val { font-size:1.4em; font-weight:bold; color:#e1e8ed; }
-.sim-stat .lbl { font-size:0.78em; color:#8899a6; display:block; margin-top:4px; }
+.sim-stat .lbl { font-size:0.78em; color:var(--c-muted); display:block; margin-top:4px; }
 .sim-bar { display:flex; height:28px; border-radius:6px; overflow:hidden; background:#22303c; margin:8px 0; }
 .sim-bar div { display:flex; align-items:center; justify-content:center; font-size:0.72em; color:#fff; font-weight:600; transition:width .3s; }
 
 /* Pipeline progress */
 .pipeline-progress { display:inline-flex; align-items:center; gap:2px; font-size:0.8em; }
-.pipeline-step { padding:2px 8px; border-radius:4px; background:#253341; color:#8899a6; }
+.pipeline-step { padding:2px 8px; border-radius:4px; background:#253341; color:var(--c-muted); }
 .pipeline-step.active { background:#1da1f2; color:#fff; animation: pulse 1.5s infinite; }
 .pipeline-step.done { background:#17bf63; color:#fff; }
 @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.6} }
@@ -351,7 +352,7 @@ input:focus, textarea:focus, select:focus { outline:none; border-color:#1da1f2; 
 
 /* Funnel */
 .funnel-bar { display:flex; align-items:center; gap:10px; }
-.funnel-bar .fb-label { min-width:100px; font-size:0.82em; color:#8899a6; text-align:right; }
+.funnel-bar .fb-label { min-width:100px; font-size:0.82em; color:var(--c-muted); text-align:right; }
 .funnel-bar .fb-track { flex:1; height:24px; background:#22303c; border-radius:4px; overflow:hidden; position:relative; }
 .funnel-bar .fb-fill { height:100%; border-radius:4px; transition:width .6s; display:flex; align-items:center; padding:0 8px; font-size:0.75em; font-weight:600; color:#fff; min-width:fit-content; }
 .funnel-bar .fb-val { min-width:50px; font-size:0.85em; font-weight:600; }
@@ -368,12 +369,12 @@ input:focus, textarea:focus, select:focus { outline:none; border-color:#1da1f2; 
     </svg>
     <h1>Content<span style="color:#2563eb">Combine</span></h1>
   </div>
-  <span style="color:#8899a6;font-size:0.85em" id="clock"></span>
-  <label style="display:inline-flex;align-items:center;gap:4px;margin-left:12px;cursor:pointer;font-size:0.82em;color:#8899a6" title="Браузерные уведомления">
+  <span style="color:var(--c-muted);font-size:0.85em" id="clock"></span>
+  <label style="display:inline-flex;align-items:center;gap:4px;margin-left:12px;cursor:pointer;font-size:0.82em;color:var(--c-muted)" title="Браузерные уведомления">
     <input type="checkbox" id="notif-toggle" style="width:14px;height:14px;cursor:pointer" onchange="toggleNotifications(this.checked)">
     &#128276; Уведомления
   </label>
-  <button onclick="showHotkeys()" style="background:none;border:1px solid #38444d;color:#8899a6;border-radius:6px;padding:2px 8px;cursor:pointer;font-size:0.82em;margin-left:8px" title="Горячие клавиши">?</button>
+  <button onclick="showHotkeys()" style="background:none;border:1px solid #38444d;color:var(--c-muted);border-radius:6px;padding:2px 8px;cursor:pointer;font-size:0.82em;margin-left:8px" title="Горячие клавиши">?</button>
 </header>
 <div id="hotkeys-modal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);z-index:10000;align-items:center;justify-content:center">
   <div style="background:#192734;border:1px solid #38444d;border-radius:12px;padding:24px;max-width:420px;width:90%;color:#e1e8ed">
@@ -386,7 +387,7 @@ input:focus, textarea:focus, select:focus { outline:none; border-color:#1da1f2; 
       <tr><td style="padding:4px 0"><kbd style="background:#253341;padding:2px 8px;border-radius:4px;font-family:monospace">R</kbd></td><td>Отклонить (в режиме Triage)</td></tr>
       <tr><td style="padding:4px 0"><kbd style="background:#253341;padding:2px 8px;border-radius:4px;font-family:monospace">S</kbd></td><td>Пропустить (в режиме Triage)</td></tr>
       <tr><td style="padding:4px 0"><kbd style="background:#253341;padding:2px 8px;border-radius:4px;font-family:monospace">?</kbd></td><td>Объяснить скор (Explain Drawer)</td></tr>
-      <tr><td colspan="2" style="padding:8px 0 4px;color:#8899a6;font-size:0.9em">Triage режим включается в <b>Редакция → Triage</b></td></tr>
+      <tr><td colspan="2" style="padding:8px 0 4px;color:var(--c-muted);font-size:0.9em">Triage режим включается в <b>Редакция → Triage</b></td></tr>
     </table>
   </div>
 </div>
@@ -434,8 +435,8 @@ input:focus, textarea:focus, select:focus { outline:none; border-color:#1da1f2; 
       <div class="stat" id="ops-errors"><div class="num" id="ops-errors-num" style="color:#e0245e">—</div><div class="lbl">Ошибки очереди</div></div>
       <div class="stat" id="ops-candidates"><div class="num" id="ops-candidates-num" style="color:#ffad1f">—</div><div class="lbl">Кандидаты ≥60</div></div>
       <div class="stat" id="ops-degraded"><div class="num" id="ops-degraded-num" style="color:#e0245e">—</div><div class="lbl">Источники &#9888;</div></div>
-      <div class="stat" id="ops-cost"><div class="num" id="ops-cost-num" style="color:#8899a6;font-size:1.2em">—</div><div class="lbl">API сегодня ($)</div></div>
-      <div class="stat" id="ops-drafts"><div class="num" id="ops-drafts-num" style="color:#8899a6">—</div><div class="lbl">Черновики</div></div>
+      <div class="stat" id="ops-cost"><div class="num" id="ops-cost-num" style="color:var(--c-muted);font-size:1.2em">—</div><div class="lbl">API сегодня ($)</div></div>
+      <div class="stat" id="ops-drafts"><div class="num" id="ops-drafts-num" style="color:var(--c-muted)">—</div><div class="lbl">Черновики</div></div>
     </div>
     <div id="ops-flags" style="margin-top:20px">
       <h2 style="margin-bottom:8px">&#9873; Feature Flags</h2>
@@ -515,8 +516,8 @@ input:focus, textarea:focus, select:focus { outline:none; border-color:#1da1f2; 
       <input id="ed-search" placeholder="Поиск по заголовку..." oninput="debounceEdSearch()" style="padding:4px 8px;background:#192734;color:#e1e8ed;border:1px solid #38444d;border-radius:6px;min-width:180px">
       <button class="btn btn-sm btn-secondary" onclick="loadEditorial()">&#128269;</button>
       <button class="btn btn-sm btn-secondary" onclick="resetEdFilters()" title="Сбросить фильтры">&#10005;</button>
-      <span style="color:#8899a6;font-size:0.85em" id="ed-count"></span>
-      <span style="color:#657786;font-size:0.78em;margin-left:auto" id="ed-last-update"></span>
+      <span style="color:var(--c-muted);font-size:0.85em" id="ed-count"></span>
+      <span style="color:var(--c-faint);font-size:0.78em;margin-left:auto" id="ed-last-update"></span>
     </div>
 
     <!-- Bulk actions -->
@@ -538,7 +539,7 @@ input:focus, textarea:focus, select:focus { outline:none; border-color:#1da1f2; 
         <button id="btn-pipeline-stop" class="btn btn-sm btn-danger" style="display:none" onclick="stopPipeline()">&#9724; Стоп</button>
         <span id="pipeline-status" style="display:none;margin-left:8px;padding:4px 12px;border-radius:8px;background:#253341;font-size:0.85em;color:#ffad1f;border:1px solid #38444d"></span>
       </span>
-      <span id="ed-selected-count" style="color:#8899a6;font-size:0.85em"></span>
+      <span id="ed-selected-count" style="color:var(--c-muted);font-size:0.85em"></span>
     </div>
 
     <!-- Table -->
@@ -576,17 +577,17 @@ input:focus, textarea:focus, select:focus { outline:none; border-color:#1da1f2; 
       .art-card:hover { box-shadow:0 2px 12px rgba(0,0,0,0.2); }
       .art-card.selected { border-left-color:#1da1f2; background:#1da1f215; }
       .art-status { display:inline-block; padding:2px 8px; border-radius:10px; font-size:0.75em; font-weight:500; }
-      .art-status-draft { background:#38444d; color:#8899a6; }
+      .art-status-draft { background:#38444d; color:var(--c-muted); }
       .art-status-ready { background:#17bf6320; color:#17bf63; }
       .art-status-published { background:#1da1f220; color:#1da1f2; }
       .art-status-scheduled { background:#ffad1f20; color:#ffad1f; }
       .art-actions-bar { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px; }
       .art-editor { background:#192734; border-radius:10px; padding:16px; }
       .art-field { margin-bottom:12px; }
-      .art-field label { display:block; font-size:0.75em; color:#8899a6; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px; }
+      .art-field label { display:block; font-size:0.75em; color:var(--c-muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px; }
       .art-field input, .art-field textarea { width:100%; background:#22303c; border:1px solid #38444d; border-radius:6px; color:#e1e8ed; padding:8px 12px; font-size:0.9em; font-family:inherit; resize:vertical; }
       .art-field input:focus, .art-field textarea:focus { border-color:#1da1f2; outline:none; }
-      .art-field .char-count { font-size:0.72em; color:#657786; text-align:right; margin-top:2px; }
+      .art-field .char-count { font-size:0.72em; color:var(--c-faint); text-align:right; margin-top:2px; }
       .art-improve-btn { padding:6px 12px; background:#22303c; border:1px solid #38444d; border-radius:6px; color:#e1e8ed; cursor:pointer; font-size:0.82em; transition:all .15s; }
       .art-improve-btn:hover { border-color:#1da1f2; color:#1da1f2; }
       .art-improve-btn.loading { opacity:0.5; pointer-events:none; }
@@ -597,8 +598,8 @@ input:focus, textarea:focus, select:focus { outline:none; border-color:#1da1f2; 
       <div class="editor-list-card">
         <!-- Tab switcher: Статьи / Новости -->
         <div style="display:flex;margin-bottom:10px;border-bottom:2px solid #22303c">
-          <button id="cnt-tab-articles" class="cnt-tab active" onclick="switchContentList('articles')" style="flex:1;padding:8px;background:none;border:none;color:#1da1f2;font-size:0.9em;font-weight:600;cursor:pointer;border-bottom:2px solid #1da1f2;margin-bottom:-2px">Статьи <span id="art-count" style="font-size:0.8em;font-weight:normal;color:#8899a6"></span></button>
-          <button id="cnt-tab-news" class="cnt-tab" onclick="switchContentList('news')" style="flex:1;padding:8px;background:none;border:none;color:#8899a6;font-size:0.9em;font-weight:500;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px">Новости <span id="cnt-news-count" style="font-size:0.8em;font-weight:normal"></span></button>
+          <button id="cnt-tab-articles" class="cnt-tab active" onclick="switchContentList('articles')" style="flex:1;padding:8px;background:none;border:none;color:#1da1f2;font-size:0.9em;font-weight:600;cursor:pointer;border-bottom:2px solid #1da1f2;margin-bottom:-2px">Статьи <span id="art-count" style="font-size:0.8em;font-weight:normal;color:var(--c-muted)"></span></button>
+          <button id="cnt-tab-news" class="cnt-tab" onclick="switchContentList('news')" style="flex:1;padding:8px;background:none;border:none;color:var(--c-muted);font-size:0.9em;font-weight:500;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px">Новости <span id="cnt-news-count" style="font-size:0.8em;font-weight:normal"></span></button>
         </div>
 
         <!-- ARTICLES LIST -->
@@ -654,7 +655,7 @@ input:focus, textarea:focus, select:focus { outline:none; border-color:#1da1f2; 
 
       <!-- RIGHT: editor -->
       <div class="art-editor" id="art-editor-panel">
-        <div id="art-empty" style="text-align:center;padding:80px 20px;color:#8899a6">
+        <div id="art-empty" style="text-align:center;padding:80px 20px;color:var(--c-muted)">
           <div style="font-size:2em;margin-bottom:10px;opacity:0.3">&#128221;</div>
           <div>Выберите статью из списка или создайте новую в Редакторе</div>
         </div>
@@ -710,7 +711,7 @@ input:focus, textarea:focus, select:focus { outline:none; border-color:#1da1f2; 
 
           <!-- AI Actions -->
           <div style="margin-top:8px;padding:12px;background:#22303c;border-radius:8px">
-            <div style="font-size:0.75em;color:#8899a6;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">AI-действия</div>
+            <div style="font-size:0.75em;color:var(--c-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">AI-действия</div>
             <div style="display:flex;gap:6px;flex-wrap:wrap">
               <button class="art-improve-btn" onclick="improveArticle('improve')">&#9998; Улучшить стиль</button>
               <button class="art-improve-btn" onclick="improveArticle('expand')">&#128200; Расширить</button>
@@ -718,19 +719,19 @@ input:focus, textarea:focus, select:focus { outline:none; border-color:#1da1f2; 
               <button class="art-improve-btn" onclick="improveArticle('fix_grammar')">&#128221; Грамматика</button>
               <button class="art-improve-btn" onclick="improveArticle('add_seo')">&#128269; Добавить SEO</button>
               <button class="art-improve-btn" onclick="improveArticle('make_engaging')">&#128293; Вовлекающий</button>
-              <span style="margin-left:8px;font-size:0.8em;color:#657786">|</span>
+              <span style="margin-left:8px;font-size:0.8em;color:var(--c-faint)">|</span>
               <button class="art-improve-btn" onclick="rewriteArticleInStyle('news')">&#128240; Новость</button>
               <button class="art-improve-btn" onclick="rewriteArticleInStyle('seo')">&#128269; SEO</button>
               <button class="art-improve-btn" onclick="rewriteArticleInStyle('clickbait')">&#128293; Кликбейт</button>
               <button class="art-improve-btn" onclick="rewriteArticleInStyle('social')">&#128242; Соцсети</button>
               <button class="art-improve-btn" onclick="rewriteArticleInStyle('short')">&#9889; Кратко</button>
-              <span style="margin-left:8px;font-size:0.8em;color:#657786">|</span>
+              <span style="margin-left:8px;font-size:0.8em;color:var(--c-faint)">|</span>
               <button class="art-improve-btn" onclick="generateMultiOutput(['social','short','news'])" title="Telegram + Short + Новость">&#128172; Multi-output</button>
               <button class="art-improve-btn" onclick="regenerateField('title')" title="Перегенерировать заголовок">&#127922; Заголовок</button>
               <button class="art-improve-btn" onclick="regenerateField('seo_title')">&#128269; SEO Title</button>
               <button class="art-improve-btn" onclick="regenerateField('tags')">&#127991; Теги</button>
             </div>
-            <div id="art-ai-loading" style="display:none;margin-top:8px;font-size:0.85em;color:#8899a6">
+            <div id="art-ai-loading" style="display:none;margin-top:8px;font-size:0.85em;color:var(--c-muted)">
               <span class="spinner" style="width:14px;height:14px;border:2px solid #38444d;border-top-color:#1da1f2;border-radius:50%;animation:spin .8s linear infinite;display:inline-block;vertical-align:middle"></span>
               <span id="art-ai-loading-text">Обрабатываем...</span>
             </div>
@@ -743,7 +744,7 @@ input:focus, textarea:focus, select:focus { outline:none; border-color:#1da1f2; 
           <!-- SEO Analysis -->
           <div style="margin-top:8px;padding:12px;background:#22303c;border-radius:8px">
             <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-              <div style="font-size:0.75em;color:#8899a6;text-transform:uppercase;letter-spacing:0.5px">SEO-анализ</div>
+              <div style="font-size:0.75em;color:var(--c-muted);text-transform:uppercase;letter-spacing:0.5px">SEO-анализ</div>
               <button class="art-improve-btn" onclick="runSeoCheck()">&#128202; SEO-анализ</button>
               <span id="seo-score-badge" style="display:none;padding:2px 10px;border-radius:12px;font-size:0.85em;font-weight:600"></span>
             </div>
@@ -752,7 +753,7 @@ input:focus, textarea:focus, select:focus { outline:none; border-color:#1da1f2; 
 
           <!-- Schedule publication -->
           <div style="margin-top:8px;padding:12px;background:#22303c;border-radius:8px">
-            <div style="font-size:0.75em;color:#8899a6;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">Запланировать публикацию</div>
+            <div style="font-size:0.75em;color:var(--c-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">Запланировать публикацию</div>
             <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
               <input type="datetime-local" id="art-schedule-datetime" style="padding:5px 8px;background:#192734;border:1px solid #38444d;border-radius:6px;color:#e1e8ed;font-size:0.85em">
               <button class="btn btn-sm btn-primary" onclick="scheduleArticle()">Запланировать</button>
@@ -763,8 +764,8 @@ input:focus, textarea:focus, select:focus { outline:none; border-color:#1da1f2; 
 
           <!-- Original text (collapsed) -->
           <details style="margin-top:12px" id="art-original-block">
-            <summary style="cursor:pointer;font-size:0.82em;color:#8899a6">Оригинал</summary>
-            <div id="art-original-text" style="margin-top:8px;padding:12px;background:#22303c;border-radius:8px;font-size:0.83em;color:#8899a6;max-height:300px;overflow-y:auto;white-space:pre-wrap;line-height:1.5"></div>
+            <summary style="cursor:pointer;font-size:0.82em;color:var(--c-muted)">Оригинал</summary>
+            <div id="art-original-text" style="margin-top:8px;padding:12px;background:#22303c;border-radius:8px;font-size:0.83em;color:var(--c-muted);max-height:300px;overflow-y:auto;white-space:pre-wrap;line-height:1.5"></div>
           </details>
         </div>
       </div>
@@ -865,7 +866,7 @@ input:focus, textarea:focus, select:focus { outline:none; border-color:#1da1f2; 
 
     <!-- Table -->
     <div style="margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
-      <span id="viral-count" style="color:#8899a6;font-size:0.85em"></span>
+      <span id="viral-count" style="color:var(--c-muted);font-size:0.85em"></span>
       <div style="display:flex;gap:6px">
         <button class="btn btn-sm" style="background:#64c8ff22;color:#64c8ff;border:1px solid #64c8ff44" onclick="sendViralToEditor('high')">HIGH &#8594; Редактор</button>
         <button class="btn btn-sm" style="background:#64c8ff22;color:#64c8ff;border:1px solid #64c8ff44" onclick="sendViralToEditor('medium')">MED &#8594; Редактор</button>
@@ -888,7 +889,7 @@ input:focus, textarea:focus, select:focus { outline:none; border-color:#1da1f2; 
       </tr></thead>
       <tbody id="viral-table"></tbody>
     </table>
-    <div id="viral-empty" style="display:none;text-align:center;padding:40px;color:#8899a6">Нет данных о виральности. Новости появятся после парсинга и скоринга.<br><button class="btn btn-sm btn-secondary" onclick="loadViral()" style="margin-top:12px">Обновить</button></div>
+    <div id="viral-empty" style="display:none;text-align:center;padding:40px;color:var(--c-muted)">Нет данных о виральности. Новости появятся после парсинга и скоринга.<br><button class="btn btn-sm btn-secondary" onclick="loadViral()" style="margin-top:12px">Обновить</button></div>
   </div>
 
   <div class="panel" id="panel-analytics">
@@ -960,7 +961,7 @@ input:focus, textarea:focus, select:focus { outline:none; border-color:#1da1f2; 
       <div class="card">
         <h3 style="font-size:0.95em;margin-bottom:10px">Конверсия по дням</h3>
         <div id="analytics-conversion" style="display:flex;align-items:flex-end;gap:3px;height:120px"></div>
-        <div style="margin-top:6px;display:flex;gap:12px;font-size:0.75em;color:#8899a6">
+        <div style="margin-top:6px;display:flex;gap:12px;font-size:0.75em;color:var(--c-muted)">
           <span><span style="display:inline-block;width:10px;height:10px;background:#17bf63;border-radius:2px;margin-right:3px"></span>Одобрено</span>
           <span><span style="display:inline-block;width:10px;height:10px;background:#e0245e;border-radius:2px;margin-right:3px"></span>Отклонено</span>
         </div>
@@ -1007,7 +1008,7 @@ input:focus, textarea:focus, select:focus { outline:none; border-color:#1da1f2; 
           <button class="btn btn-sm btn-secondary" onclick="loadSavedDigests()">Обновить</button>
         </div>
       </div>
-      <div id="saved-digests-list" style="color:#8899a6;font-size:0.85em">Нажмите «Обновить» для загрузки</div>
+      <div id="saved-digests-list" style="color:var(--c-muted);font-size:0.85em">Нажмите «Обновить» для загрузки</div>
     </div>
   </div>
 
@@ -1049,7 +1050,7 @@ input:focus, textarea:focus, select:focus { outline:none; border-color:#1da1f2; 
       </table>
     </div>
     <div style="margin-top:8px;display:flex;gap:8px">
-      <span id="q-selected-count" style="color:#8899a6;font-size:0.85em;line-height:28px"></span>
+      <span id="q-selected-count" style="color:var(--c-muted);font-size:0.85em;line-height:28px"></span>
       <button class="btn btn-sm btn-danger" onclick="cancelSelectedQueue()">Отменить выбранные</button>
       <button class="btn btn-sm btn-primary" onclick="retrySelectedQueue()">&#128260; Повторить выбранные</button>
       <button class="btn btn-sm btn-warning" onclick="retryAllErrors()" id="q-retry-errors-btn" style="display:none">&#128260; Повторить все ошибки</button>
@@ -1061,7 +1062,7 @@ input:focus, textarea:focus, select:focus { outline:none; border-color:#1da1f2; 
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
       <h2>Здоровье источников</h2>
       <div>
-        <span id="health-summary" style="color:#8899a6;font-size:0.85em;margin-right:12px"></span>
+        <span id="health-summary" style="color:var(--c-muted);font-size:0.85em;margin-right:12px"></span>
         <button class="btn btn-sm btn-warning" onclick="healAllSick()" id="btn-heal-all" style="display:none" title="Диагностика и лечение всех проблемных источников">&#128138; Вылечить все</button>
         <button class="btn btn-sm btn-secondary" onclick="loadHealth()">24ч</button>
         <button class="btn btn-sm btn-primary" onclick="loadHealthPlus()" id="btn-health-plus">7д расширенный</button>
@@ -1080,7 +1081,7 @@ input:focus, textarea:focus, select:focus { outline:none; border-color:#1da1f2; 
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
       <h2>&#128204; Кейсы <span style="font-size:0.72em;color:#aab4be;font-weight:normal">закладки для чтения · не удаляются автоматически</span></h2>
       <div style="display:flex;align-items:center;gap:8px">
-        <span id="cases-count" style="color:#8899a6;font-size:0.85em"></span>
+        <span id="cases-count" style="color:var(--c-muted);font-size:0.85em"></span>
         <button class="btn btn-sm btn-secondary" onclick="loadCases()">Обновить</button>
       </div>
     </div>
@@ -1094,7 +1095,7 @@ input:focus, textarea:focus, select:focus { outline:none; border-color:#1da1f2; 
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
       <h2>&#128293; Тренды <span id="sl-days-label" style="font-size:0.72em;color:#aab4be;font-weight:normal">кросс-источниковые сюжеты за 3 дня</span></h2>
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end">
-        <span id="storylines-count" style="color:#8899a6;font-size:0.85em"></span>
+        <span id="storylines-count" style="color:var(--c-muted);font-size:0.85em"></span>
         <select id="sl-days" onchange="loadStorylines()" style="width:auto;flex:0 0 auto;background:#253341;color:#e1e8ed;border:1px solid #38444d;border-radius:6px;padding:3px 8px;font-size:0.85em">
           <option value="1">1 день</option>
           <option value="2">2 дня</option>
@@ -1106,7 +1107,7 @@ input:focus, textarea:focus, select:focus { outline:none; border-color:#1da1f2; 
         <button class="btn btn-sm btn-secondary" onclick="loadStorylines()">Обновить</button>
         <button class="btn btn-sm btn-success" onclick="exportStorylinesToSheets()" title="Экспорт сюжетов в Google Sheets (вкладка Сюжеты)" style="white-space:nowrap;flex-shrink:0">В Sheets</button>
         <button class="btn btn-sm btn-secondary" onclick="toggleSlSettings()" title="Настройки авто-экспорта">&#9881;</button>
-        <span id="sl-auto-badge" style="font-size:0.82em;color:#8899a6;margin-left:4px"></span>
+        <span id="sl-auto-badge" style="font-size:0.82em;color:var(--c-muted);margin-left:4px"></span>
       </div>
     </div>
     <!-- Auto-export settings -->
@@ -1117,13 +1118,13 @@ input:focus, textarea:focus, select:focus { outline:none; border-color:#1da1f2; 
           <span>Авто-экспорт в Sheets</span>
         </label>
         <label style="display:flex;align-items:center;gap:6px">
-          <span style="color:#8899a6;font-size:0.9em">Время (МСК):</span>
+          <span style="color:var(--c-muted);font-size:0.9em">Время (МСК):</span>
           <input type="number" id="sl-auto-hour" min="0" max="23" value="9" style="width:50px;background:#253341;color:#e1e8ed;border:1px solid #38444d;border-radius:6px;padding:4px 8px;font-size:0.9em">
           <span>:</span>
           <input type="number" id="sl-auto-minute" min="0" max="59" value="0" style="width:50px;background:#253341;color:#e1e8ed;border:1px solid #38444d;border-radius:6px;padding:4px 8px;font-size:0.9em">
         </label>
         <label style="display:flex;align-items:center;gap:6px">
-          <span style="color:#8899a6;font-size:0.9em">Период:</span>
+          <span style="color:var(--c-muted);font-size:0.9em">Период:</span>
           <select id="sl-auto-days" style="background:#253341;color:#e1e8ed;border:1px solid #38444d;border-radius:6px;padding:4px 8px;font-size:0.9em">
             <option value="1">1 день</option>
             <option value="2">2 дня</option>
@@ -1134,9 +1135,9 @@ input:focus, textarea:focus, select:focus { outline:none; border-color:#1da1f2; 
           </select>
         </label>
         <button class="btn btn-sm btn-primary" onclick="saveSlSettings()">Сохранить</button>
-        <span id="sl-settings-status" style="color:#8899a6;font-size:0.85em"></span>
+        <span id="sl-settings-status" style="color:var(--c-muted);font-size:0.85em"></span>
       </div>
-      <div id="sl-export-history" style="margin-top:12px;font-size:0.85em;color:#8899a6"></div>
+      <div id="sl-export-history" style="margin-top:12px;font-size:0.85em;color:var(--c-muted)"></div>
     </div>
     <div id="storylines-list"></div>
   </div>
@@ -1194,7 +1195,7 @@ input:focus, textarea:focus, select:focus { outline:none; border-color:#1da1f2; 
       <button class="btn btn-success btn-sm" onclick="exportSelectedToSheets()">&#9776; В Sheets</button>
       <button class="btn btn-primary btn-sm" onclick="sendSelectedToContent()" style="background:#9b59b6;border-color:#9b59b6" title="Отправить выбранные на рерайт в Контент">&#9998; В контент</button>
       <span id="news-selected-count" style="color:#1da1f2;font-size:0.85em;margin-left:8px"></span>
-      <span id="news-count" style="color:#8899a6;font-size:0.85em;margin-left:auto"></span>
+      <span id="news-count" style="color:var(--c-muted);font-size:0.85em;margin-left:auto"></span>
     </div>
     <table id="news-main-table">
       <thead><tr>
@@ -1220,7 +1221,7 @@ input:focus, textarea:focus, select:focus { outline:none; border-color:#1da1f2; 
   <!-- FINAL -->
   <div class="panel" id="panel-final">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
-      <h2>Финал <span style="font-size:0.65em;color:#8899a6;font-weight:normal">только publish_now</span></h2>
+      <h2>Финал <span style="font-size:0.65em;color:var(--c-muted);font-weight:normal">только publish_now</span></h2>
       <div style="display:flex;gap:8px;align-items:center">
         <span class="filter-label">Источник:</span>
         <select id="fin-source" onchange="loadFinal(0)" style="padding:4px 8px;background:#192734;color:#e1e8ed;border:1px solid #38444d;border-radius:6px">
@@ -1255,7 +1256,7 @@ input:focus, textarea:focus, select:focus { outline:none; border-color:#1da1f2; 
       </table>
     </div>
     <div id="fin-pagination" style="margin-top:10px;display:flex;gap:8px;justify-content:center"></div>
-    <div id="fin-count" style="text-align:center;margin-top:6px;color:#8899a6;font-size:0.85em"></div>
+    <div id="fin-count" style="text-align:center;margin-top:6px;color:var(--c-muted);font-size:0.85em"></div>
   </div>
 
   <!-- LOGS -->
@@ -1267,7 +1268,7 @@ input:focus, textarea:focus, select:focus { outline:none; border-color:#1da1f2; 
     <div class="btn-group" style="margin:10px 0">
       <button class="btn btn-primary btn-sm" onclick="exportTrashToSheets()">Выгрузить в Sheets</button>
       <button class="btn btn-danger btn-sm" onclick="purgeAllTrash()">Очистить корзину</button>
-      <span id="trash-count" style="color:#8899a6;font-size:0.85em"></span>
+      <span id="trash-count" style="color:var(--c-muted);font-size:0.85em"></span>
     </div>
     <div id="trash-list"></div>
     <div id="trash-pagination" style="margin-top:10px;display:flex;gap:4px;align-items:center"></div>
@@ -1317,7 +1318,7 @@ input:focus, textarea:focus, select:focus { outline:none; border-color:#1da1f2; 
             <button class="btn btn-primary" onclick="saveSettings()">Сохранить</button>
             <button class="btn btn-secondary" onclick="testSheets()">Проверить Sheets</button>
           </div>
-          <div id="sheets-test-result" style="color:#8899a6;font-size:0.85em;margin-top:6px"></div>
+          <div id="sheets-test-result" style="color:var(--c-muted);font-size:0.85em;margin-top:6px"></div>
           <hr style="border-color:#38444d;margin:15px 0">
           <h3 style="margin-bottom:10px">Автоматизация</h3>
           <div class="form-group"><label>Порог авто-одобрения (0 = выкл)</label><input type="number" id="set-auto-approve" min="0" max="100" value="70"></div>
@@ -1337,7 +1338,7 @@ input:focus, textarea:focus, select:focus { outline:none; border-color:#1da1f2; 
             <button class="btn btn-warning btn-sm" onclick="cleanupShortNews()">Удалить короткие (&lt; 100 символов)</button>
             <button class="btn btn-warning btn-sm" onclick="cleanupOldNews()">Удалить старые (&gt; 7 дней)</button>
           </div>
-          <div id="cleanup-result" style="color:#8899a6;font-size:0.85em;margin-top:6px"></div>
+          <div id="cleanup-result" style="color:var(--c-muted);font-size:0.85em;margin-top:6px"></div>
         </div>
         <div class="card">
           <h2>API ключи и подключения</h2>
@@ -1346,14 +1347,14 @@ input:focus, textarea:focus, select:focus { outline:none; border-color:#1da1f2; 
           <div class="form-group"><label>Keys.so API Key</label><input type="password" id="set-keyso-key" placeholder="Keys.so API key" autocomplete="off"><button class="btn btn-sm btn-secondary" onclick="this.previousElementSibling.type=this.previousElementSibling.type==='password'?'text':'password'" style="margin-left:4px">&#128065;</button></div>
           <div class="form-group"><label>VK API Token</label><input type="password" id="set-vk-token" placeholder="VK service token" autocomplete="off"><button class="btn btn-sm btn-secondary" onclick="this.previousElementSibling.type=this.previousElementSibling.type==='password'?'text':'password'" style="margin-left:4px">&#128065;</button></div>
           <div class="form-group"><label>Telegram Bot Token</label><input type="password" id="set-tg-bot-token" placeholder="123456:ABC..." autocomplete="off"><button class="btn btn-sm btn-secondary" onclick="this.previousElementSibling.type=this.previousElementSibling.type==='password'?'text':'password'" style="margin-left:4px">&#128065;</button></div>
-          <p style="color:#657786;font-size:0.78em;margin:4px 0">Заполните только те поля, которые хотите изменить. Пустые поля не перезаписываются.</p>
+          <p style="color:var(--c-faint);font-size:0.78em;margin:4px 0">Заполните только те поля, которые хотите изменить. Пустые поля не перезаписываются.</p>
           <button class="btn btn-primary btn-sm" onclick="saveSettings()">Сохранить</button>
         </div>
       </div>
       <div class="grid-2" style="margin-top:15px">
         <div class="card">
           <h2>База данных</h2>
-          <div id="db-info" style="color:#8899a6;font-size:0.9em">Загрузка...</div>
+          <div id="db-info" style="color:var(--c-muted);font-size:0.9em">Загрузка...</div>
         </div>
         <div class="card">
           <h2>Быстрые действия</h2>
@@ -1370,7 +1371,7 @@ input:focus, textarea:focus, select:focus { outline:none; border-color:#1da1f2; 
       <div class="grid-2" style="margin-top:15px">
         <div class="card">
           <h2>Формула скоринга</h2>
-          <p style="color:#657786;font-size:0.82em;margin-bottom:8px">Веса компонентов (сумма должна быть 1.0)</p>
+          <p style="color:var(--c-faint);font-size:0.82em;margin-bottom:8px">Веса компонентов (сумма должна быть 1.0)</p>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
             <div class="form-group"><label>Internal</label><input type="number" step="0.05" min="0" max="1" id="set-sw-internal" oninput="updateScoreWeightSum()"></div>
             <div class="form-group"><label>Viral</label><input type="number" step="0.05" min="0" max="1" id="set-sw-viral" oninput="updateScoreWeightSum()"></div>
@@ -1378,7 +1379,7 @@ input:focus, textarea:focus, select:focus { outline:none; border-color:#1da1f2; 
             <div class="form-group"><label>Trends</label><input type="number" step="0.05" min="0" max="1" id="set-sw-trends" oninput="updateScoreWeightSum()"></div>
             <div class="form-group"><label>Headline</label><input type="number" step="0.05" min="0" max="1" id="set-sw-headline" oninput="updateScoreWeightSum()"></div>
           </div>
-          <div id="sw-sum" style="color:#8899a6;font-size:0.82em;margin:4px 0"></div>
+          <div id="sw-sum" style="color:var(--c-muted);font-size:0.82em;margin:4px 0"></div>
           <button class="btn btn-primary btn-sm" onclick="saveSettings()">Сохранить</button>
         </div>
         <div class="card">
@@ -1418,7 +1419,7 @@ input:focus, textarea:focus, select:focus { outline:none; border-color:#1da1f2; 
         </div>
         <div class="card">
           <h2>Крон-расписание</h2>
-          <p style="color:#657786;font-size:0.82em;margin-bottom:8px">Час запуска (0-23, UTC)</p>
+          <p style="color:var(--c-faint);font-size:0.82em;margin-bottom:8px">Час запуска (0-23, UTC)</p>
           <div class="form-group"><label>Авто-рескоринг</label><input type="number" id="set-cron-rescore" min="0" max="23"></div>
           <div class="form-group"><label>Авто-дайджест</label><input type="number" id="set-cron-digest" min="0" max="23"></div>
           <div class="form-group"><label>Экспорт сюжетов</label><input type="number" id="set-cron-storylines" min="0" max="23"></div>
@@ -1482,12 +1483,12 @@ input:focus, textarea:focus, select:focus { outline:none; border-color:#1da1f2; 
     <div class="settings-section" id="stab-prompts">
       <div class="card" style="margin-bottom:15px">
         <h2>Промпт рерайта новостей <span style="color:#1da1f2;font-size:0.7em">(основной)</span></h2>
-        <p style="color:#657786;font-size:0.82em;margin-bottom:8px">Этот промпт используется для генерации контента. Переменные: {title}, {text}, {style_instructions}, {language}</p>
+        <p style="color:var(--c-faint);font-size:0.82em;margin-bottom:8px">Этот промпт используется для генерации контента. Переменные: {title}, {text}, {style_instructions}, {language}</p>
         <textarea id="prompt-rewrite" rows="16" style="font-family:monospace;font-size:0.85em"></textarea>
       </div>
       <div class="card" style="margin-bottom:15px">
         <h2>Стили рерайта</h2>
-        <p style="color:#657786;font-size:0.82em;margin-bottom:8px">Инструкции для каждого стиля (подставляются в {style_instructions})</p>
+        <p style="color:var(--c-faint);font-size:0.82em;margin-bottom:8px">Инструкции для каждого стиля (подставляются в {style_instructions})</p>
         <div id="rewrite-styles-editor"></div>
       </div>
       <div style="display:flex;gap:8px;margin-bottom:15px;flex-wrap:wrap;align-items:center">
@@ -1545,11 +1546,11 @@ input:focus, textarea:focus, select:focus { outline:none; border-color:#1da1f2; 
       </div>
       <div id="vt-add-form" style="display:none;margin-bottom:15px;padding:15px;background:#192734;border-radius:8px;border:1px solid #38444d">
         <div style="display:grid;grid-template-columns:1fr 1fr 100px;gap:10px;margin-bottom:10px">
-          <div><label style="color:#8899a6;font-size:0.8em">ID</label><input id="vt-new-id" placeholder="my_trigger" style="width:100%;padding:6px;border-radius:4px;border:1px solid #38444d;background:#15202b;color:#d9d9d9" autocomplete="off"></div>
-          <div><label style="color:#8899a6;font-size:0.8em">Название</label><input id="vt-new-label" placeholder="My Trigger" style="width:100%;padding:6px;border-radius:4px;border:1px solid #38444d;background:#15202b;color:#d9d9d9" autocomplete="off"></div>
-          <div><label style="color:#8899a6;font-size:0.8em">Скор</label><input id="vt-new-weight" type="number" value="30" min="0" max="100" style="width:100%;padding:6px;border-radius:4px;border:1px solid #38444d;background:#15202b;color:#d9d9d9" autocomplete="off"></div>
+          <div><label style="color:var(--c-muted);font-size:0.8em">ID</label><input id="vt-new-id" placeholder="my_trigger" style="width:100%;padding:6px;border-radius:4px;border:1px solid #38444d;background:#15202b;color:#d9d9d9" autocomplete="off"></div>
+          <div><label style="color:var(--c-muted);font-size:0.8em">Название</label><input id="vt-new-label" placeholder="My Trigger" style="width:100%;padding:6px;border-radius:4px;border:1px solid #38444d;background:#15202b;color:#d9d9d9" autocomplete="off"></div>
+          <div><label style="color:var(--c-muted);font-size:0.8em">Скор</label><input id="vt-new-weight" type="number" value="30" min="0" max="100" style="width:100%;padding:6px;border-radius:4px;border:1px solid #38444d;background:#15202b;color:#d9d9d9" autocomplete="off"></div>
         </div>
-        <div><label style="color:#8899a6;font-size:0.8em">Ключевые слова (через запятую)</label><textarea id="vt-new-keywords" rows="2" placeholder="keyword1, keyword2, ключ3" style="width:100%;padding:6px;border-radius:4px;border:1px solid #38444d;background:#15202b;color:#d9d9d9;resize:vertical" autocomplete="off"></textarea></div>
+        <div><label style="color:var(--c-muted);font-size:0.8em">Ключевые слова (через запятую)</label><textarea id="vt-new-keywords" rows="2" placeholder="keyword1, keyword2, ключ3" style="width:100%;padding:6px;border-radius:4px;border:1px solid #38444d;background:#15202b;color:#d9d9d9;resize:vertical" autocomplete="off"></textarea></div>
         <div style="margin-top:10px;display:flex;gap:8px">
           <button class="btn btn-success" onclick="saveNewViralTrigger()">Сохранить</button>
           <button class="btn btn-secondary" onclick="document.getElementById('vt-add-form').style.display='none'">Отмена</button>
@@ -1568,14 +1569,14 @@ input:focus, textarea:focus, select:focus { outline:none; border-color:#1da1f2; 
           <tbody id="vt-table"></tbody>
         </table>
       </div>
-      <div id="vt-stats" style="margin-top:10px;color:#8899a6;font-size:0.85em"></div>
+      <div id="vt-stats" style="margin-top:10px;color:var(--c-muted);font-size:0.85em"></div>
     </div>
 
     <!-- Threshold Simulator -->
     <div class="settings-section" id="stab-simulator">
       <div class="card">
         <h2>Симулятор порогов</h2>
-        <p style="color:#8899a6;font-size:0.85em;margin-bottom:12px">Симулируйте влияние порогов на количество прошедших новостей (данные за 7 дней)</p>
+        <p style="color:var(--c-muted);font-size:0.85em;margin-bottom:12px">Симулируйте влияние порогов на количество прошедших новостей (данные за 7 дней)</p>
         <div class="grid-2">
           <div>
             <div class="form-group"><label>Внутренний скор (мин)</label><input type="range" id="sim-score-min" min="0" max="100" value="70" oninput="updateSimLabel(this,'sim-score-min-val')"><span id="sim-score-min-val" style="color:#1da1f2;margin-left:8px">70</span></div>
@@ -1597,25 +1598,25 @@ input:focus, textarea:focus, select:focus { outline:none; border-color:#1da1f2; 
           <h2>Тест LLM</h2>
           <div class="form-group"><label>Промпт</label><textarea id="test-llm-prompt" rows="4">Ты аналитик. Ответь JSON: {"test": "ok", "model": "your_model"}</textarea></div>
           <button class="btn btn-primary" onclick="testLLM()">&#9654; Отправить</button>
-          <pre id="test-llm-result" style="margin-top:10px;color:#8899a6;font-size:0.85em;white-space:pre-wrap"></pre>
+          <pre id="test-llm-result" style="margin-top:10px;color:var(--c-muted);font-size:0.85em;white-space:pre-wrap"></pre>
         </div>
         <div class="card">
           <h2>Тест Keys.so</h2>
           <div class="form-group"><label>Ключевое слово</label><input id="test-keyso-kw" value="gta 6"></div>
           <button class="btn btn-primary" onclick="testKeyso()">&#9654; Проверить</button>
-          <pre id="test-keyso-result" style="margin-top:10px;color:#8899a6;font-size:0.85em;white-space:pre-wrap"></pre>
+          <pre id="test-keyso-result" style="margin-top:10px;color:var(--c-muted);font-size:0.85em;white-space:pre-wrap"></pre>
         </div>
       </div>
       <div class="card" style="margin-top:15px">
         <h2>Тест Google Sheets</h2>
         <button class="btn btn-primary" onclick="testSheets()">Проверить соединение</button>
-        <pre id="test-sheets-result" style="margin-top:10px;color:#8899a6;font-size:0.85em;white-space:pre-wrap"></pre>
+        <pre id="test-sheets-result" style="margin-top:10px;color:var(--c-muted);font-size:0.85em;white-space:pre-wrap"></pre>
       </div>
       <div class="card" style="margin-top:15px">
         <h2>Тест парсинга URL</h2>
         <div class="form-group"><label>URL статьи</label><input id="test-parse-url" placeholder="https://example.com/article" autocomplete="off"></div>
         <button class="btn btn-primary" onclick="testParse()">Парсить</button>
-        <pre id="test-parse-result" style="margin-top:10px;color:#8899a6;font-size:0.85em;white-space:pre-wrap"></pre>
+        <pre id="test-parse-result" style="margin-top:10px;color:var(--c-muted);font-size:0.85em;white-space:pre-wrap"></pre>
       </div>
     </div>
 
@@ -1655,7 +1656,7 @@ input:focus, textarea:focus, select:focus { outline:none; border-color:#1da1f2; 
         <tbody id="queue-table"></tbody>
       </table>
       <div style="margin-top:8px;display:flex;gap:8px">
-        <span id="queue-selected-count" style="color:#8899a6;font-size:0.85em;line-height:28px"></span>
+        <span id="queue-selected-count" style="color:var(--c-muted);font-size:0.85em;line-height:28px"></span>
         <button class="btn btn-sm btn-danger" onclick="cancelSelectedQueue()">Отменить выбранные</button>
         <button class="btn btn-sm btn-primary" onclick="retrySelectedQueue()">&#128260; Повторить выбранные</button>
       </div>
@@ -1756,16 +1757,16 @@ input:focus, textarea:focus, select:focus { outline:none; border-color:#1da1f2; 
   </div>
   <div class="explain-section">
     <h3>Причина статуса</h3>
-    <div id="explain-reason" style="font-size:0.9em;color:#8899a6"></div>
+    <div id="explain-reason" style="font-size:0.9em;color:var(--c-muted)"></div>
   </div>
 </div>
 
 <!-- News text preview drawer -->
 <div class="explain-drawer" id="text-drawer" style="width:520px">
   <button class="close-btn" onclick="document.getElementById('text-drawer').classList.remove('open')">&times;</button>
-  <div id="text-drawer-source" style="color:#8899a6;font-size:0.8em;margin-bottom:4px"></div>
+  <div id="text-drawer-source" style="color:var(--c-muted);font-size:0.8em;margin-bottom:4px"></div>
   <h2 id="text-drawer-title" style="margin-bottom:8px;font-size:1.1em;line-height:1.4"></h2>
-  <div id="text-drawer-meta" style="color:#8899a6;font-size:0.82em;margin-bottom:12px;display:flex;gap:12px;flex-wrap:wrap"></div>
+  <div id="text-drawer-meta" style="color:var(--c-muted);font-size:0.82em;margin-bottom:12px;display:flex;gap:12px;flex-wrap:wrap"></div>
   <div id="text-drawer-desc" style="background:#22303c;border-radius:6px;padding:10px;margin-bottom:12px;font-size:0.9em;color:#e1e8ed;line-height:1.5;display:none"></div>
   <div id="text-drawer-text" style="font-size:0.88em;line-height:1.6;color:#c8d6e5;white-space:pre-wrap;word-break:break-word"></div>
   <div id="text-drawer-url" style="margin-top:12px"></div>
@@ -1923,7 +1924,7 @@ function renderNewsPagination() {
   if (totalPages <= 1) { el.innerHTML = ''; return; }
   let html = '<div style="display:flex;gap:4px;align-items:center;margin-top:10px;justify-content:center">';
   if (currentPage > 1) html += `<button class="btn btn-sm btn-secondary" onclick="loadNewsPage(${(_newsOffset - _newsPageSize)})">&#9664; Назад</button>`;
-  html += `<span style="color:#8899a6;font-size:0.85em;margin:0 8px">Стр. ${currentPage} из ${totalPages} (всего ${_newsTotal})</span>`;
+  html += `<span style="color:var(--c-muted);font-size:0.85em;margin:0 8px">Стр. ${currentPage} из ${totalPages} (всего ${_newsTotal})</span>`;
   html += `<input type="number" min="1" max="${totalPages}" value="${currentPage}" style="width:50px;padding:3px 6px;background:#192734;color:#e1e8ed;border:1px solid #38444d;border-radius:4px;font-size:0.85em;text-align:center" onchange="jumpToNewsPage(this.value)" onkeydown="if(event.key==='Enter')jumpToNewsPage(this.value)">`;
   if (currentPage < totalPages) html += `<button class="btn btn-sm btn-secondary" onclick="loadNewsPage(${(_newsOffset + _newsPageSize)})">Далее &#9654;</button>`;
   html += '</div>';
@@ -2015,9 +2016,9 @@ async function loadSources() {
     return `<tr>
       <td>${icon}</td>
       <td><b>${s.name}</b></td>
-      <td><span class="badge" style="background:#22303c;color:#8899a6">${s.type}</span></td>
+      <td><span class="badge" style="background:#22303c;color:var(--c-muted)">${s.type}</span></td>
       <td>${cnt}</td>
-      <td style="font-size:0.8em;color:#8899a6">${lastP}${minAgo ? '<br>'+minAgo+' назад' : ''}</td>
+      <td style="font-size:0.8em;color:var(--c-muted)">${lastP}${minAgo ? '<br>'+minAgo+' назад' : ''}</td>
       <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis" title="${esc(s.url||s.channel||s.group_id||s.screen_name||s.handle||'')}">${esc(s.url||s.channel||s.group_id||s.screen_name||s.handle||'')}</td>
       <td>${s.interval} мин</td>
       <td style="white-space:nowrap">
@@ -2130,14 +2131,14 @@ async function previewRewrite() {
   const el = document.getElementById('preview-result');
   const cnt = document.getElementById('preview-content');
   el.style.display = 'block';
-  cnt.innerHTML = '<span style="color:#8899a6">Генерация превью...</span>';
+  cnt.innerHTML = '<span style="color:var(--c-muted)">Генерация превью...</span>';
   try {
     const style = document.getElementById('preview-style').value;
     const r = await api('/api/preview_rewrite', {style});
     if (r.status === 'ok' && r.result) {
       const d = r.result;
       cnt.innerHTML =
-        `<p style="color:#657786;margin-bottom:6px">Оригинал: <b>${r.original_title||''}</b></p>` +
+        `<p style="color:var(--c-faint);margin-bottom:6px">Оригинал: <b>${r.original_title||''}</b></p>` +
         `<p><b>Заголовок:</b> ${d.title||''}</p>` +
         `<p><b>SEO Title:</b> ${d.seo_title||''}</p>` +
         `<p><b>SEO Desc:</b> ${d.seo_description||''}</p>` +
@@ -2157,15 +2158,15 @@ async function loadPromptVersionsInSettings() {
   const el = document.getElementById('prompt-versions-list');
   if (!el) return;
   if (r.status !== 'ok' || !r.versions?.length) {
-    el.innerHTML = '<span style="color:#8899a6;font-size:0.82em">Нет сохранённых версий</span>';
+    el.innerHTML = '<span style="color:var(--c-muted);font-size:0.82em">Нет сохранённых версий</span>';
     return;
   }
   el.innerHTML = r.versions.map(v =>
     `<div style="display:flex;align-items:center;gap:8px;margin-bottom:3px;font-size:0.82em;padding:4px 8px;background:${v.is_active?'#17bf6318':'transparent'};border-radius:6px">
       <span style="font-weight:500;min-width:100px">${v.prompt_name}</span>
-      <span style="color:#8899a6">v${v.version}</span>
-      <span style="color:#657786;flex:1">${v.notes||''}</span>
-      <span style="color:#8899a6;font-size:0.9em">${(v.created_at||'').slice(0,16).replace('T',' ')}</span>
+      <span style="color:var(--c-muted)">v${v.version}</span>
+      <span style="color:var(--c-faint);flex:1">${v.notes||''}</span>
+      <span style="color:var(--c-muted);font-size:0.9em">${(v.created_at||'').slice(0,16).replace('T',' ')}</span>
       ${v.is_active ? '<span style="color:#17bf63;font-weight:bold">ACTIVE</span>' : `<button class="btn btn-sm" style="padding:1px 6px;font-size:0.8em" onclick="activatePromptVer('${v.id}')">Откатить</button>`}
     </div>`
   ).join('');
@@ -2246,7 +2247,7 @@ async function loadSettings() {
   document.getElementById('set-sheets-interval').value = s.sheets_min_api_interval ?? 1.2;
   document.getElementById('set-sheets-ttl').value = s.sheets_client_ttl ?? 3000;
   // API status with masked keys
-  const _s = (set, masked) => set ? `<span style="color:#17bf63">OK</span> <code style="font-size:0.8em;color:#657786">${masked||''}</code>` : '<span style="color:#e0245e">Not set</span>';
+  const _s = (set, masked) => set ? `<span style="color:#17bf63">OK</span> <code style="font-size:0.8em;color:var(--c-faint)">${masked||''}</code>` : '<span style="color:#e0245e">Not set</span>';
   document.getElementById('api-status').innerHTML =
     `<p style="margin:4px 0">OpenAI: ${_s(s.openai_key_set, s.openai_key_masked)}</p>` +
     `<p style="margin:4px 0">Keys.so: ${_s(s.keyso_key_set, s.keyso_key_masked)}</p>` +
@@ -2355,10 +2356,10 @@ async function testKeyso() {
 async function loadUsers() {
   const users = await api('/api/users');
   const roleLabels = {admin:'Админ',editor:'Редактор',viewer:'Читатель'};
-  const roleColors = {admin:'#e0245e',editor:'#1da1f2',viewer:'#8899a6'};
+  const roleColors = {admin:'#e0245e',editor:'#1da1f2',viewer:'var(--c-muted)'};
   document.getElementById('users-table').innerHTML = users.map(u => {
     const rl = roleLabels[u.role]||u.role;
-    const rc = roleColors[u.role]||'#8899a6';
+    const rc = roleColors[u.role]||'var(--c-muted)';
     return `<tr><td>${esc(u.username)}</td><td style="color:${rc};font-weight:600">${rl}</td><td>${u.username==='admin'?'':'<button class="btn btn-sm btn-danger" onclick="deleteUser(\''+u.username+'\')">Удалить</button>'}</td></tr>`;
   }).join('');
   const sel = document.getElementById('chpass-user');
@@ -2452,7 +2453,7 @@ async function healSource(name) {
       ${r.new_articles > 0 ? '<div style="color:#17bf63;margin-bottom:8px">Получено новых статей: '+r.new_articles+'</div>' : ''}
       <div style="margin-bottom:10px"><b>Шаги диагностики:</b></div>`;
     for (const s of r.steps) {
-      const color = s.status==='ok'?'#17bf63':s.status==='fail'?'#e0245e':s.status==='found'?'#1da1f2':s.status==='skip'?'#657786':'#ffad1f';
+      const color = s.status==='ok'?'#17bf63':s.status==='fail'?'#e0245e':s.status==='found'?'#1da1f2':s.status==='skip'?'var(--c-faint)':'#ffad1f';
       html += `<div style="padding:4px 0;border-bottom:1px solid #22303c">
         <span style="color:${color};font-weight:bold">[${s.status}]</span> ${s.action}: ${s.detail}</div>`;
     }
@@ -2613,7 +2614,7 @@ function renderNewsFiltered() {
       <td style="font-size:0.82em">${trendsLabel}</td>
       <td style="font-size:0.82em">${esc(n.llm_recommendation||'-')}</td>
       <td>${n.llm_trend_forecast||'-'}</td>
-      <td style="font-size:0.82em;color:${analyzed!=='-'?'#17bf63':'#8899a6'}">${analyzed}</td>
+      <td style="font-size:0.82em;color:${analyzed!=='-'?'#17bf63':'var(--c-muted)'}">${analyzed}</td>
       <td style="white-space:nowrap">
         <button class="btn btn-sm btn-primary" onclick="processOne('${n.id}')" title="Анализ API">&#9654;</button>
         <button class="btn btn-sm btn-success" onclick="exportOne('${n.id}')" title="В Google Sheets">&#9776;</button>
@@ -2725,7 +2726,7 @@ async function loadDbInfo() {
     `<p style="margin:6px 0">Всего новостей: <b>${info.total_news}</b></p>` +
     `<p style="margin:6px 0">Проанализировано: <b>${info.total_analyzed}</b></p>` +
     `<p style="margin:6px 0">Новые: ${info.status_new} | Одобрены: ${info.status_approved} | Обогащены: ${info.status_processed} | Отклонены: ${info.status_rejected}</p>` +
-    `<p style="margin:6px 0;font-size:0.85em;color:#8899a6">Период: ${fmtDate(info.oldest)} — ${fmtDate(info.newest)}</p>`;
+    `<p style="margin:6px 0;font-size:0.85em;color:var(--c-muted)">Период: ${fmtDate(info.oldest)} — ${fmtDate(info.newest)}</p>`;
 }
 
 // Reparse all
@@ -2786,10 +2787,10 @@ function switchContentList(which) {
   const newsTab = document.getElementById('cnt-tab-news');
   if (which === 'articles') {
     artTab.style.color = '#1da1f2'; artTab.style.borderBottomColor = '#1da1f2'; artTab.style.fontWeight = '600';
-    newsTab.style.color = '#8899a6'; newsTab.style.borderBottomColor = 'transparent'; newsTab.style.fontWeight = '500';
+    newsTab.style.color = 'var(--c-muted)'; newsTab.style.borderBottomColor = 'transparent'; newsTab.style.fontWeight = '500';
   } else {
     newsTab.style.color = '#1da1f2'; newsTab.style.borderBottomColor = '#1da1f2'; newsTab.style.fontWeight = '600';
-    artTab.style.color = '#8899a6'; artTab.style.borderBottomColor = 'transparent'; artTab.style.fontWeight = '500';
+    artTab.style.color = 'var(--c-muted)'; artTab.style.borderBottomColor = 'transparent'; artTab.style.fontWeight = '500';
     loadContentNews();
   }
 }
@@ -2823,7 +2824,7 @@ function filterContentNews() {
 function renderContentNewsList(news) {
   const el = document.getElementById('cnt-news-list');
   if (!news.length) {
-    el.innerHTML = '<div style="text-align:center;padding:40px;color:#8899a6"><div style="font-size:2em;margin-bottom:10px;opacity:0.3">&#128240;</div>Нет одобренных новостей<br><span style="font-size:0.85em">Одобрите новости в Редакции</span></div>';
+    el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--c-muted)"><div style="font-size:2em;margin-bottom:10px;opacity:0.3">&#128240;</div>Нет одобренных новостей<br><span style="font-size:0.85em">Одобрите новости в Редакции</span></div>';
     return;
   }
   el.innerHTML = news.map(n => {
@@ -2839,8 +2840,8 @@ function renderContentNewsList(news) {
         <input type="checkbox" ${isChecked?'checked':''} onclick="event.stopPropagation();cntToggleNews('${n.id}',this.checked)" style="margin-top:2px;cursor:pointer;width:16px;height:16px;min-width:16px;flex-shrink:0">
         <div style="flex:1;min-width:0">
           <div style="font-size:0.88em;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${esc(n.title||'')}</div>
-          <div style="font-size:0.72em;color:#8899a6;margin-top:3px;display:flex;align-items:center;gap:6px;flex-wrap:wrap">
-            <span style="font-weight:500;color:#657786">${n.source}</span>
+          <div style="font-size:0.72em;color:var(--c-muted);margin-top:3px;display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+            <span style="font-weight:500;color:var(--c-faint)">${n.source}</span>
             <span style="color:${scoreColor};font-weight:bold">${score}</span>
             <span>${dateStr}</span>
             ${statusBadge}
@@ -2870,7 +2871,7 @@ async function cntPreviewNews(id) {
     document.getElementById('art-editor-panel').appendChild(preview);
   }
   preview.style.display = 'block';
-  preview.innerHTML = '<div style="text-align:center;padding:30px;color:#8899a6">Загрузка...</div>';
+  preview.innerHTML = '<div style="text-align:center;padding:30px;color:var(--c-muted)">Загрузка...</div>';
 
   const r = await api('/api/news/detail', {news_id: id});
   if (r.status !== 'ok') { toast(r.message, true); return; }
@@ -2879,15 +2880,15 @@ async function cntPreviewNews(id) {
 
   let html = `<div style="margin-bottom:12px">`;
   html += `<div style="color:#1da1f2;font-size:1.1em;font-weight:600;line-height:1.3;margin-bottom:6px">${esc(n.title||'')}</div>`;
-  html += `<div style="display:flex;gap:10px;align-items:center;font-size:0.82em;color:#8899a6;flex-wrap:wrap">`;
-  html += `<span style="font-weight:500;color:#657786">${n.source}</span>`;
+  html += `<div style="display:flex;gap:10px;align-items:center;font-size:0.82em;color:var(--c-muted);flex-wrap:wrap">`;
+  html += `<span style="font-weight:500;color:var(--c-faint)">${n.source}</span>`;
   html += `<span>${fmtDate(n.published_at)}</span>`;
   html += `<a href="${n.url}" target="_blank" style="color:#1da1f2">Оригинал &#8599;</a>`;
   if (a && a.total_score) html += `<span style="font-weight:bold;color:${a.total_score>=70?'#17bf63':a.total_score>=40?'#ffad1f':'#e0245e'}">Скор: ${a.total_score}</span>`;
   html += `</div></div>`;
 
-  if (n.h1 && n.h1 !== n.title) html += `<div style="margin-bottom:6px;padding:6px 10px;background:#22303c;border-radius:6px;font-size:0.85em"><span style="color:#8899a6">H1:</span> ${esc(n.h1)}</div>`;
-  if (n.description) html += `<div style="margin-bottom:6px;padding:6px 10px;background:#22303c;border-radius:6px;font-size:0.85em"><span style="color:#8899a6">Desc:</span> ${esc(n.description).slice(0,300)}</div>`;
+  if (n.h1 && n.h1 !== n.title) html += `<div style="margin-bottom:6px;padding:6px 10px;background:#22303c;border-radius:6px;font-size:0.85em"><span style="color:var(--c-muted)">H1:</span> ${esc(n.h1)}</div>`;
+  if (n.description) html += `<div style="margin-bottom:6px;padding:6px 10px;background:#22303c;border-radius:6px;font-size:0.85em"><span style="color:var(--c-muted)">Desc:</span> ${esc(n.description).slice(0,300)}</div>`;
 
   // Tags & scores
   if (a) {
@@ -2900,7 +2901,7 @@ async function cntPreviewNews(id) {
 
   // Rewrite action bar
   html += `<div style="margin:12px 0;padding:12px;background:#22303c;border-radius:8px">`;
-  html += `<div style="font-size:0.75em;color:#8899a6;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">Быстрый рерайт</div>`;
+  html += `<div style="font-size:0.75em;color:var(--c-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">Быстрый рерайт</div>`;
   html += `<div style="display:flex;gap:6px;flex-wrap:wrap">`;
   html += `<button class="art-improve-btn" onclick="cntQuickRewrite('${n.id}','news')">&#128240; Новость</button>`;
   html += `<button class="art-improve-btn" onclick="cntQuickRewrite('${n.id}','seo')">&#128269; SEO</button>`;
@@ -2909,12 +2910,12 @@ async function cntPreviewNews(id) {
   html += `<button class="art-improve-btn" onclick="cntQuickRewrite('${n.id}','short')">&#9889; Кратко</button>`;
   html += `<button class="art-improve-btn" onclick="cntQuickRewrite('${n.id}','social')">&#128242; Соцсети</button>`;
   html += `</div>`;
-  html += `<div id="cnt-rewrite-loading" style="display:none;margin-top:8px;font-size:0.85em;color:#8899a6"></div>`;
+  html += `<div id="cnt-rewrite-loading" style="display:none;margin-top:8px;font-size:0.85em;color:var(--c-muted)"></div>`;
   html += `</div>`;
 
   // Text
   const textLen = (n.plain_text||'').length;
-  html += `<div style="font-size:0.75em;color:#8899a6;margin-bottom:4px">Текст (${textLen} симв.)</div>`;
+  html += `<div style="font-size:0.75em;color:var(--c-muted);margin-bottom:4px">Текст (${textLen} симв.)</div>`;
   html += `<div style="padding:12px;background:#22303c;border-radius:8px;font-size:0.85em;max-height:350px;overflow-y:auto;white-space:pre-wrap;line-height:1.55;color:#d9d9d9">${esc(n.plain_text||'Текст не загружен')}</div>`;
 
   preview.innerHTML = html;
@@ -2982,7 +2983,7 @@ let _artSelectedIds = new Set();
 function renderArticlesList(articles) {
   const el = document.getElementById('articles-list');
   if (!articles.length) {
-    el.innerHTML = '<div style="text-align:center;padding:40px;color:#8899a6"><div style="font-size:2em;margin-bottom:10px;opacity:0.3">&#128221;</div>Нет статей<br><span style="font-size:0.85em">Создайте статью в Редакторе</span></div>';
+    el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--c-muted)"><div style="font-size:2em;margin-bottom:10px;opacity:0.3">&#128221;</div>Нет статей<br><span style="font-size:0.85em">Создайте статью в Редакторе</span></div>';
     return;
   }
   el.innerHTML = articles.map(a => {
@@ -2996,7 +2997,7 @@ function renderArticlesList(articles) {
         <input type="checkbox" ${isChecked?'checked':''} onclick="event.stopPropagation();toggleArtSelect('${a.id}',this.checked)" style="margin-top:2px;cursor:pointer;width:16px;height:16px;min-width:16px;flex-shrink:0">
         <div style="flex:1;min-width:0">
           <div style="font-size:0.92em;font-weight:500;line-height:1.3;margin-bottom:4px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${esc(a.title||'Без заголовка')}</div>
-          <div style="font-size:0.75em;color:#8899a6;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <div style="font-size:0.75em;color:var(--c-muted);display:flex;gap:8px;align-items:center;flex-wrap:wrap">
             <span class="${statusCls}">${{draft:'Черновик',ready:'Готово',scheduled:'Запланировано',published:'Опубликовано'}[a.status]||a.status}</span>
             <span>${a.style||''}</span>
             <span>${textLen} симв.</span>
@@ -3081,7 +3082,7 @@ function artCharCount(id, max) {
   const len = (el.value||'').length;
   if (max > 0) {
     cnt.textContent = len + '/' + max;
-    cnt.style.color = len > max ? '#e0245e' : '#657786';
+    cnt.style.color = len > max ? '#e0245e' : 'var(--c-faint)';
   } else {
     cnt.textContent = len + ' симв.';
   }
@@ -3193,7 +3194,7 @@ async function runSeoCheck() {
   const panel = document.getElementById('seo-results');
   badge.style.display = 'none';
   panel.style.display = 'none';
-  panel.innerHTML = '<span style="color:#8899a6;font-size:0.85em">Анализируем...</span>';
+  panel.innerHTML = '<span style="color:var(--c-muted);font-size:0.85em">Анализируем...</span>';
   panel.style.display = 'block';
   try {
     const r = await api('/api/seo_check', {title, seo_title, seo_description, text, tags});
@@ -3361,7 +3362,7 @@ async function loadArticleVersions(articleId) {
     html += r.versions.slice(0, 10).map(v => `
       <div style="background:#22303c;border-radius:6px;padding:8px;margin-bottom:4px;font-size:0.85em;display:flex;justify-content:space-between">
         <span>v${v.version} — ${v.change_type} (${v.changed_by})</span>
-        <span style="color:#8899a6">${v.created_at ? new Date(v.created_at).toLocaleString('ru') : ''}</span>
+        <span style="color:var(--c-muted)">${v.created_at ? new Date(v.created_at).toLocaleString('ru') : ''}</span>
       </div>
     `).join('');
     html += '</div>';
@@ -3400,13 +3401,13 @@ async function loadAnalytics() {
   document.getElementById('analytics-summary').innerHTML = `
     <div class="card" style="text-align:center">
       <div style="font-size:2em;font-weight:700;color:#1da1f2">${r.total_news||0}</div>
-      <div style="font-size:0.82em;color:#8899a6">Всего новостей</div>
+      <div style="font-size:0.82em;color:var(--c-muted)">Всего новостей</div>
       <div style="font-size:0.82em;color:#17bf63;margin-top:4px">Конверсия: ${r.approval_rate||0}%</div>
     </div>
     <div class="card" style="text-align:center">
       <div style="font-size:2em;font-weight:700;color:#17bf63">${r.total_articles||0}</div>
-      <div style="font-size:0.82em;color:#8899a6">Статей</div>
-      <div style="font-size:0.82em;color:#8899a6;margin-top:4px">${Object.entries(r.article_stats||{}).map(([k,v])=>k+':'+v).join(' | ')}</div>
+      <div style="font-size:0.82em;color:var(--c-muted)">Статей</div>
+      <div style="font-size:0.82em;color:var(--c-muted);margin-top:4px">${Object.entries(r.article_stats||{}).map(([k,v])=>k+':'+v).join(' | ')}</div>
     </div>
   `;
 
@@ -3418,7 +3419,7 @@ async function loadAnalytics() {
       <div style="flex:1;background:#22303c;border-radius:4px;height:18px;overflow:hidden">
         <div style="width:${s.count/maxSrc*100}%;background:#1da1f2;height:100%;border-radius:4px;transition:width .3s"></div>
       </div>
-      <span style="font-size:0.82em;color:#8899a6;width:40px">${s.count}</span>
+      <span style="font-size:0.82em;color:var(--c-muted);width:40px">${s.count}</span>
     </div>`
   ).join('');
 
@@ -3428,9 +3429,9 @@ async function loadAnalytics() {
     const h = Math.max(4, d.count/maxD*110);
     const day = d.date ? d.date.slice(5) : '';
     return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px">
-      <span style="font-size:0.7em;color:#8899a6">${d.count}</span>
+      <span style="font-size:0.7em;color:var(--c-muted)">${d.count}</span>
       <div style="width:100%;height:${h}px;background:#1da1f2;border-radius:3px 3px 0 0"></div>
-      <span style="font-size:0.65em;color:#657786">${day}</span>
+      <span style="font-size:0.65em;color:var(--c-faint)">${day}</span>
     </div>`;
   }).join('');
 
@@ -3438,13 +3439,13 @@ async function loadAnalytics() {
   document.getElementById('analytics-peak-hours').innerHTML = (r.peak_hours||[]).map((h,i) =>
     `<div style="display:flex;align-items:center;gap:8px;margin-bottom:3px">
       <span style="font-size:0.85em;font-weight:${i===0?'700':'400'};color:${i===0?'#ffad1f':'#e1e8ed'}">${h.hour}:00</span>
-      <span style="font-size:0.82em;color:#8899a6">${h.count} новостей</span>
+      <span style="font-size:0.82em;color:var(--c-muted)">${h.count} новостей</span>
     </div>`
   ).join('');
 
   // Bigrams
   document.getElementById('analytics-bigrams').innerHTML = (r.top_bigrams||[]).map(([term, cnt]) =>
-    `<span style="padding:3px 8px;background:#1da1f218;border:1px solid #1da1f2;border-radius:12px;font-size:0.78em;color:#1da1f2">${term} <span style="color:#8899a6">${cnt}</span></span>`
+    `<span style="padding:3px 8px;background:#1da1f218;border:1px solid #1da1f2;border-radius:12px;font-size:0.78em;color:#1da1f2">${term} <span style="color:var(--c-muted)">${cnt}</span></span>`
   ).join('');
 
   // Score trend (line chart via bars with dots)
@@ -3457,7 +3458,7 @@ async function loadAnalytics() {
     return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px" title="${day}: ${d.avg_score} (${d.count} шт)">
       <span style="font-size:0.7em;color:${color};font-weight:500">${d.avg_score}</span>
       <div style="width:100%;height:${h}px;background:${color};border-radius:3px 3px 0 0;opacity:0.8"></div>
-      <span style="font-size:0.65em;color:#657786">${day}</span>
+      <span style="font-size:0.65em;color:var(--c-faint)">${day}</span>
     </div>`;
   }).join('');
 
@@ -3471,12 +3472,12 @@ async function loadAnalytics() {
     const day = d.date ? d.date.slice(5) : '';
     const pct = total > 0 ? Math.round(d.approved / total * 100) : 0;
     return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:0" title="${day}: ${d.approved} одобр / ${d.rejected} откл (${pct}%)">
-      <span style="font-size:0.65em;color:#8899a6">${pct}%</span>
+      <span style="font-size:0.65em;color:var(--c-muted)">${pct}%</span>
       <div style="width:100%;display:flex;flex-direction:column;gap:1px">
         <div style="width:100%;height:${hR}px;background:#e0245e;border-radius:3px 3px 0 0;opacity:0.7"></div>
         <div style="width:100%;height:${hA}px;background:#17bf63;border-radius:0 0 3px 3px;opacity:0.8"></div>
       </div>
-      <span style="font-size:0.65em;color:#657786">${day}</span>
+      <span style="font-size:0.65em;color:var(--c-faint)">${day}</span>
     </div>`;
   }).join('');
 
@@ -3486,11 +3487,11 @@ async function loadAnalytics() {
     const rateColor = rate>=70?'#17bf63':rate>=40?'#ffad1f':'#e0245e';
     return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:3px;font-size:0.82em">
       <span style="width:100px">${s.source}</span>
-      <span style="color:#8899a6">${s.total} шт</span>
+      <span style="color:var(--c-muted)">${s.total} шт</span>
       <span style="color:${rateColor}">${rate}% одобр.</span>
       <span style="color:#1da1f2;font-weight:500">x${s.weight}</span>
     </div>`;
-  }).join('') || '<span style="color:#8899a6;font-size:0.82em">Нет данных</span>';
+  }).join('') || '<span style="color:var(--c-muted);font-size:0.82em">Нет данных</span>';
 
   // Load prompt versions
   loadPromptVersions();
@@ -3501,14 +3502,14 @@ async function loadPromptVersions() {
   if (r.status !== 'ok') return;
   const el = document.getElementById('analytics-prompts');
   if (!r.versions || !r.versions.length) {
-    el.innerHTML = '<span style="color:#8899a6;font-size:0.82em">Нет сохранённых версий</span>';
+    el.innerHTML = '<span style="color:var(--c-muted);font-size:0.82em">Нет сохранённых версий</span>';
     return;
   }
   el.innerHTML = r.versions.map(v =>
     `<div style="display:flex;align-items:center;gap:8px;margin-bottom:3px;font-size:0.82em;padding:4px 8px;background:${v.is_active?'#17bf6318':'transparent'};border-radius:6px">
       <span style="font-weight:500">${v.prompt_name}</span>
-      <span style="color:#8899a6">v${v.version}</span>
-      <span style="color:#8899a6">${v.notes||''}</span>
+      <span style="color:var(--c-muted)">v${v.version}</span>
+      <span style="color:var(--c-muted)">${v.notes||''}</span>
       ${v.is_active ? '<span style="color:#17bf63">ACTIVE</span>' : `<button class="btn btn-sm" style="padding:1px 6px;font-size:0.8em" onclick="activatePromptVersion('${v.id}')">Активировать</button>`}
     </div>`
   ).join('');
@@ -3546,7 +3547,7 @@ async function generateDigest(period) {
       <div style="margin-bottom:10px;line-height:1.6">${d.summary||''}</div>
       ${d.top_news ? '<div style="margin-bottom:8px"><b>Главные новости:</b><ul style="margin:4px 0">' + d.top_news.map(n=>'<li>'+n+'</li>').join('') + '</ul></div>' : ''}
       ${d.trends ? '<div><b>Тренды:</b> ' + d.trends.join(', ') + '</div>' : ''}
-      <div style="margin-top:8px;font-size:0.82em;color:#8899a6">Использовано ${r.news_count} новостей</div>
+      <div style="margin-top:8px;font-size:0.82em;color:var(--c-muted)">Использовано ${r.news_count} новостей</div>
     `;
   } else {
     el.style.display = 'block';
@@ -3564,14 +3565,14 @@ async function loadSavedDigests() {
       <div class="card" style="margin-bottom:8px;padding:10px">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
           <span style="font-weight:600;color:#1da1f2;font-size:0.95em">${d.title||'Дайджест'}</span>
-          <span style="font-size:0.78em;color:#8899a6">${d.digest_date||''} &middot; ${styleLabels[d.style]||d.style} &middot; ${d.news_count||0} новостей</span>
+          <span style="font-size:0.78em;color:var(--c-muted)">${d.digest_date||''} &middot; ${styleLabels[d.style]||d.style} &middot; ${d.news_count||0} новостей</span>
         </div>
         <div style="white-space:pre-wrap;line-height:1.5;font-size:0.88em;color:#e1e8ed">${(d.text||'').replace(/</g,'&lt;')}</div>
-        <div style="margin-top:6px;font-size:0.75em;color:#657786">${d.created_at||''}</div>
+        <div style="margin-top:6px;font-size:0.75em;color:var(--c-faint)">${d.created_at||''}</div>
       </div>
     `).join('');
   } else {
-    el.innerHTML = '<div style="text-align:center;padding:20px;color:#657786">Нет сохранённых дайджестов</div>';
+    el.innerHTML = '<div style="text-align:center;padding:20px;color:var(--c-faint)">Нет сохранённых дайджестов</div>';
   }
 }
 
@@ -3620,11 +3621,11 @@ function renderQueueTable() {
   const stats = {};
   _queueTasks.forEach(t => { stats[t.status] = (stats[t.status] || 0) + 1; });
   const statLabels = {pending:'Ожидает',processing:'Обработка',running:'Работает',done:'Готово',error:'Ошибка',cancelled:'Отменено',skipped:'Пропущено'};
-  const statColors = {pending:'#f5a623',processing:'#1da1f2',running:'#1da1f2',done:'#17bf63',error:'#e0245e',cancelled:'#71767b',skipped:'#8899a6'};
+  const statColors = {pending:'#f5a623',processing:'#1da1f2',running:'#1da1f2',done:'#17bf63',error:'#e0245e',cancelled:'#71767b',skipped:'var(--c-muted)'};
   const curStatusF = document.getElementById('queue-filter-status')?.value || '';
   document.getElementById('queue-stats').innerHTML = Object.entries(stats).map(([k,v]) => {
     const isActive = curStatusF === k;
-    return `<span onclick="document.getElementById('queue-filter-status').value=document.getElementById('queue-filter-status').value==='${k}'?'':'${k}';renderQueueTable()" style="padding:4px 10px;background:${isActive?statColors[k]||'#38444d':(statColors[k]||'#38444d')+'22'};border:1px solid ${statColors[k]||'#38444d'};border-radius:12px;font-size:0.82em;color:${isActive?'#fff':statColors[k]||'#8899a6'};cursor:pointer">${statLabels[k]||k}: ${v}</span>`;
+    return `<span onclick="document.getElementById('queue-filter-status').value=document.getElementById('queue-filter-status').value==='${k}'?'':'${k}';renderQueueTable()" style="padding:4px 10px;background:${isActive?statColors[k]||'#38444d':(statColors[k]||'#38444d')+'22'};border:1px solid ${statColors[k]||'#38444d'};border-radius:12px;font-size:0.82em;color:${isActive?'#fff':statColors[k]||'var(--c-muted)'};cursor:pointer">${statLabels[k]||k}: ${v}</span>`;
   }).join('');
 
   const typeLabels = {rewrite:'Переписка', sheets:'Sheets', full_auto:'Полный автомат', no_llm:'Без LLM', mod_rewrite:'Рерайт (мод.)'};
@@ -3660,12 +3661,12 @@ function renderQueueTable() {
       <td>${typeIcons[t.task_type]||''} ${typeLabels[t.task_type]||t.task_type}</td>
       <td style="max-width:300px"><div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:300px" title="${(t.news_title||'').replace(/"/g,'&quot;')}">${t.news_title||t.news_id}</div></td>
       <td>${t.style||'—'}</td>
-      <td><span style="color:${statColors[t.status]||'#8899a6'}">${statusIcons[t.status]||''} ${statLabels[t.status]||t.status}</span></td>
-      <td style="max-width:200px;font-size:0.82em;color:#8899a6"><div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:200px">${resultText}</div></td>
-      <td style="font-size:0.82em;color:#8899a6;white-space:nowrap">${timeAgo}</td>
+      <td><span style="color:${statColors[t.status]||'var(--c-muted)'}">${statusIcons[t.status]||''} ${statLabels[t.status]||t.status}</span></td>
+      <td style="max-width:200px;font-size:0.82em;color:var(--c-muted)"><div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:200px">${resultText}</div></td>
+      <td style="font-size:0.82em;color:var(--c-muted);white-space:nowrap">${timeAgo}</td>
       <td style="white-space:nowrap">${canCancel ? `<button class="btn btn-sm btn-danger" onclick="cancelQueueTask('${t.id}')">Отменить</button>` : ''}${canRetry ? `<button class="btn btn-sm btn-primary" onclick="retryQueueTask('${t.id}')">Повторить</button>` : ''}</td>
     </tr>`;
-  }).join('') || '<tr><td colspan="8" style="text-align:center;color:#8899a6;padding:20px">Очередь пуста</td></tr>';
+  }).join('') || '<tr><td colspan="8" style="text-align:center;color:var(--c-muted);padding:20px">Очередь пуста</td></tr>';
   updateQueueSelectedCount();
 }
 
@@ -3773,12 +3774,12 @@ function renderQueueStandalone() {
   const stats = {};
   _queueTasks.forEach(t => { stats[t.status] = (stats[t.status] || 0) + 1; });
   const statLabels = {pending:'Ожидает',processing:'Обработка',running:'Работает',done:'Готово',error:'Ошибка',cancelled:'Отменено',skipped:'Пропущено'};
-  const statColors = {pending:'#f5a623',processing:'#1da1f2',running:'#1da1f2',done:'#17bf63',error:'#e0245e',cancelled:'#71767b',skipped:'#8899a6'};
+  const statColors = {pending:'#f5a623',processing:'#1da1f2',running:'#1da1f2',done:'#17bf63',error:'#e0245e',cancelled:'#71767b',skipped:'var(--c-muted)'};
   const qStatsEl = document.getElementById('q-stats');
   if (qStatsEl) {
     qStatsEl.innerHTML = Object.entries(stats).map(([k,v]) => {
       const isActive = statusF === k;
-      return `<span onclick="qFilterByStatus('${k}')" style="padding:4px 12px;background:${isActive ? statColors[k]||'#38444d' : (statColors[k]||'#38444d')+'22'};border:1px solid ${statColors[k]||'#38444d'};border-radius:12px;font-size:0.85em;color:${isActive?'#fff':statColors[k]||'#8899a6'};cursor:pointer;user-select:none;transition:all .15s">${statLabels[k]||k}: ${v}</span>`;
+      return `<span onclick="qFilterByStatus('${k}')" style="padding:4px 12px;background:${isActive ? statColors[k]||'#38444d' : (statColors[k]||'#38444d')+'22'};border:1px solid ${statColors[k]||'#38444d'};border-radius:12px;font-size:0.85em;color:${isActive?'#fff':statColors[k]||'var(--c-muted)'};cursor:pointer;user-select:none;transition:all .15s">${statLabels[k]||k}: ${v}</span>`;
     }).join('');
   }
 
@@ -3817,12 +3818,12 @@ function renderQueueStandalone() {
       <td>${typeIcons[t.task_type]||''} ${typeLabels[t.task_type]||t.task_type}</td>
       <td style="max-width:300px"><div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:300px" title="${(t.news_title||'').replace(/"/g,'&quot;')}">${t.news_title||t.news_id}</div></td>
       <td>${t.style||'—'}</td>
-      <td><span style="color:${statColors[t.status]||'#8899a6'}">${statusIcons[t.status]||''} ${statLabels[t.status]||t.status}</span></td>
-      <td style="max-width:200px;font-size:0.82em;color:#8899a6"><div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:200px">${resultText}</div></td>
-      <td style="font-size:0.82em;color:#8899a6;white-space:nowrap">${timeAgo}</td>
+      <td><span style="color:${statColors[t.status]||'var(--c-muted)'}">${statusIcons[t.status]||''} ${statLabels[t.status]||t.status}</span></td>
+      <td style="max-width:200px;font-size:0.82em;color:var(--c-muted)"><div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:200px">${resultText}</div></td>
+      <td style="font-size:0.82em;color:var(--c-muted);white-space:nowrap">${timeAgo}</td>
       <td style="white-space:nowrap">${canCancel ? `<button class="btn btn-sm btn-danger" onclick="cancelQueueTask('${t.id}')">Отменить</button>` : ''}${canRetry ? `<button class="btn btn-sm btn-primary" onclick="retryQueueTask('${t.id}')">Повторить</button>` : ''}</td>
     </tr>`;
-  }).join('') || '<tr><td colspan="8" style="text-align:center;color:#8899a6;padding:20px">Очередь пуста</td></tr>';
+  }).join('') || '<tr><td colspan="8" style="text-align:center;color:var(--c-muted);padding:20px">Очередь пуста</td></tr>';
 
   const cnt = document.querySelectorAll('#q-table .queue-check:checked').length;
   const cntEl = document.getElementById('q-selected-count');
@@ -3870,11 +3871,11 @@ async function loadLogs() {
   const logs = resp.logs || [];
   const tb = document.getElementById('logs-table');
   if (!tb) return;
-  const levelColors = {ERROR:'#e0245e', WARNING:'#ffad1f', INFO:'#17bf63', DEBUG:'#8899a6'};
+  const levelColors = {ERROR:'#e0245e', WARNING:'#ffad1f', INFO:'#17bf63', DEBUG:'var(--c-muted)'};
   tb.innerHTML = logs.reverse().map(l => `<tr>
-    <td style="font-size:0.8em;color:#8899a6;white-space:nowrap">${(l.time||'').replace('T',' ').slice(0,19)}</td>
-    <td style="font-size:0.78em;font-weight:600;color:${levelColors[l.level]||'#8899a6'}">${l.level}</td>
-    <td style="font-size:0.78em;color:#8899a6">${esc(l.logger||'')}</td>
+    <td style="font-size:0.8em;color:var(--c-muted);white-space:nowrap">${(l.time||'').replace('T',' ').slice(0,19)}</td>
+    <td style="font-size:0.78em;font-weight:600;color:${levelColors[l.level]||'var(--c-muted)'}">${l.level}</td>
+    <td style="font-size:0.78em;color:var(--c-muted)">${esc(l.logger||'')}</td>
     <td style="font-size:0.82em;white-space:pre-wrap;word-break:break-word">${esc(l.message||'')}</td>
   </tr>`).join('');
 
@@ -3888,14 +3889,14 @@ async function loadLogs() {
       const pct = data.limit > 0 ? Math.round(data.used / data.limit * 100) : 0;
       const color = pct > 80 ? '#e0245e' : pct > 50 ? '#ffad1f' : '#17bf63';
       html += `<div style="background:#192734;border-radius:8px;padding:10px 14px;min-width:120px">
-        <div style="font-size:0.78em;color:#8899a6;text-transform:uppercase">${svc}</div>
-        <div style="font-size:1.3em;font-weight:bold;color:${color}">${data.used}<span style="font-size:0.5em;color:#8899a6">/${data.limit}</span></div>
-        <div style="font-size:0.75em;color:#8899a6">осталось: ${data.remaining}</div>
+        <div style="font-size:0.78em;color:var(--c-muted);text-transform:uppercase">${svc}</div>
+        <div style="font-size:1.3em;font-weight:bold;color:${color}">${data.used}<span style="font-size:0.5em;color:var(--c-muted)">/${data.limit}</span></div>
+        <div style="font-size:0.75em;color:var(--c-muted)">осталось: ${data.remaining}</div>
       </div>`;
     }
     html += `<div style="background:#192734;border-radius:8px;padding:10px 14px;min-width:120px">
-      <div style="font-size:0.78em;color:#8899a6;text-transform:uppercase">Cache</div>
-      <div style="font-size:1.3em;font-weight:bold;color:#1da1f2">${cache.alive||0}<span style="font-size:0.5em;color:#8899a6">/${cache.max||0}</span></div>
+      <div style="font-size:0.78em;color:var(--c-muted);text-transform:uppercase">Cache</div>
+      <div style="font-size:1.3em;font-weight:bold;color:#1da1f2">${cache.alive||0}<span style="font-size:0.5em;color:var(--c-muted)">/${cache.max||0}</span></div>
       <div style="font-size:0.75em"><button class="btn btn-sm btn-secondary" onclick="clearApiCache()" style="padding:2px 8px;font-size:0.85em">Очистить</button></div>
     </div>`;
     statsEl.innerHTML = html;
@@ -3945,21 +3946,21 @@ function renderViralTriggers() {
   const tbody = document.getElementById('vt-table');
   tbody.innerHTML = data.map(t => {
     const wColor = t.weight >= 50 ? '#e0245e' : t.weight >= 30 ? '#ffad1f' : '#1da1f2';
-    const typeLabel = t.is_custom ? '<span style="color:#794bc4">Кастомный</span>' : (t.modified ? '<span style="color:#ffad1f">Изменён</span>' : '<span style="color:#657786">Стандартный</span>');
+    const typeLabel = t.is_custom ? '<span style="color:#794bc4">Кастомный</span>' : (t.modified ? '<span style="color:#ffad1f">Изменён</span>' : '<span style="color:var(--c-faint)">Стандартный</span>');
     const kwShort = t.keywords.slice(0,5).join(', ') + (t.keywords.length > 5 ? ` +${t.keywords.length-5}` : '');
     const opacity = t.is_active ? '1' : '0.4';
     return `<tr style="opacity:${opacity}">
       <td><input type="checkbox" ${t.is_active?'checked':''} onchange="toggleViralTrigger('${t.id}',this.checked)" title="Вкл/выкл" style="width:16px;height:16px"></td>
-      <td><b style="color:#d9d9d9">${t.label}</b><br><span style="color:#657786;font-size:0.75em">${t.id}</span></td>
+      <td><b style="color:#d9d9d9">${t.label}</b><br><span style="color:var(--c-faint);font-size:0.75em">${t.id}</span></td>
       <td style="text-align:center"><span style="color:${wColor};font-weight:bold;font-size:1.1em">${t.weight}</span></td>
-      <td style="font-size:0.82em;color:#8899a6;max-width:300px"><div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:300px" title="${t.keywords.join(', ')}">${kwShort}</div></td>
+      <td style="font-size:0.82em;color:var(--c-muted);max-width:300px"><div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:300px" title="${t.keywords.join(', ')}">${kwShort}</div></td>
       <td style="font-size:0.82em">${typeLabel}</td>
       <td style="white-space:nowrap">
         <button class="btn btn-sm btn-secondary" onclick="editViralTrigger('${t.id}')">&#9998;</button>
         ${t.is_custom ? `<button class="btn btn-sm btn-danger" onclick="deleteViralTrigger('${t.id}')">&#10005;</button>` : (t.modified ? `<button class="btn btn-sm btn-secondary" onclick="resetViralTrigger('${t.id}')" title="Сбросить">&#8634;</button>` : '')}
       </td>
     </tr>`;
-  }).join('') || '<tr><td colspan="6" style="text-align:center;color:#8899a6;padding:20px">Нет триггеров</td></tr>';
+  }).join('') || '<tr><td colspan="6" style="text-align:center;color:var(--c-muted);padding:20px">Нет триггеров</td></tr>';
 }
 
 function showAddViralTrigger() {
@@ -4045,16 +4046,16 @@ async function aiRecommend(newsId) {
     const rec = r.recommendation;
     const verdictColors = {publish:'#17bf63', rewrite:'#ffad1f', skip:'#e0245e'};
     const verdictLabels = {publish:'Публиковать', rewrite:'Переписать', skip:'Пропустить'};
-    const html = `<div style="padding:15px;background:#192734;border-radius:10px;border-left:4px solid ${verdictColors[rec.verdict]||'#8899a6'}">
-      <div style="font-size:1.1em;font-weight:bold;color:${verdictColors[rec.verdict]||'#8899a6'};margin-bottom:6px">${verdictLabels[rec.verdict]||rec.verdict} <span style="font-size:0.7em;color:#8899a6">(${Math.round((rec.confidence||0)*100)}%)</span></div>
+    const html = `<div style="padding:15px;background:#192734;border-radius:10px;border-left:4px solid ${verdictColors[rec.verdict]||'var(--c-muted)'}">
+      <div style="font-size:1.1em;font-weight:bold;color:${verdictColors[rec.verdict]||'var(--c-muted)'};margin-bottom:6px">${verdictLabels[rec.verdict]||rec.verdict} <span style="font-size:0.7em;color:var(--c-muted)">(${Math.round((rec.confidence||0)*100)}%)</span></div>
       <div style="margin-bottom:6px">${esc(rec.reason||'')}</div>
       ${rec.suggested_angle ? `<div style="color:#1da1f2;font-size:0.9em">Ракурс: ${esc(rec.suggested_angle)}</div>` : ''}
-      <div style="margin-top:6px;font-size:0.8em;color:#8899a6">Приоритет: ${rec.priority || '-'}</div>
+      <div style="margin-top:6px;font-size:0.8em;color:var(--c-muted)">Приоритет: ${rec.priority || '-'}</div>
     </div>`;
     // Show in a toast-like popup
     let popup = document.getElementById('ai-rec-popup');
     if (!popup) { popup = document.createElement('div'); popup.id = 'ai-rec-popup'; popup.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:200;max-width:460px;width:90vw;box-shadow:0 12px 40px rgba(0,0,0,0.6);border-radius:12px;background:#192734;padding:20px'; document.body.appendChild(popup); }
-    popup.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><h3 style="color:#1da1f2;margin:0;font-size:1em">AI Рекомендация</h3><button onclick="this.parentElement.parentElement.remove()" style="background:none;border:none;color:#8899a6;font-size:1.3em;cursor:pointer">&times;</button></div>${html}`;
+    popup.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><h3 style="color:#1da1f2;margin:0;font-size:1em">AI Рекомендация</h3><button onclick="this.parentElement.parentElement.remove()" style="background:none;border:none;color:var(--c-muted);font-size:1.3em;cursor:pointer">&times;</button></div>${html}`;
   } else toast(r.message, true);
 }
 
@@ -4105,7 +4106,7 @@ async function loadViral() {
   // Calendar banner
   const calEl = document.getElementById('viral-calendar');
   if (r.calendar && r.calendar.event) {
-    calEl.innerHTML = '<span style="font-size:1.1em;margin-right:8px">&#128197;</span> <b>' + esc(r.calendar.event) + '</b> <span style="color:#8899a6;margin-left:8px">(+' + r.calendar.boost + ' ко всем скорам)</span>';
+    calEl.innerHTML = '<span style="font-size:1.1em;margin-right:8px">&#128197;</span> <b>' + esc(r.calendar.event) + '</b> <span style="color:var(--c-muted);margin-left:8px">(+' + r.calendar.boost + ' ко всем скорам)</span>';
     calEl.style.display = 'block';
   } else {
     calEl.style.display = 'none';
@@ -4122,7 +4123,7 @@ async function loadViral() {
   const maxTrig = tt.length ? tt[0][1] : 1;
   document.getElementById('viral-top-triggers').innerHTML = tt.map(([label, count]) =>
     `<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
-      <span style="min-width:140px;font-size:0.82em;color:#8899a6;text-align:right">${esc(label)}</span>
+      <span style="min-width:140px;font-size:0.82em;color:var(--c-muted);text-align:right">${esc(label)}</span>
       <div style="flex:1;background:#192734;border-radius:4px;height:18px;overflow:hidden">
         <div style="width:${(count/maxTrig*100).toFixed(1)}%;height:100%;background:linear-gradient(90deg,#e0245e,#ffad1f);border-radius:4px;transition:width .3s"></div>
       </div>
@@ -4136,7 +4137,7 @@ async function loadViral() {
   const catColors = {'Скандалы':'#e0245e','Утечки':'#794bc4','Shadow Drops':'#17bf63','Плохие релизы':'#ff6300','AI':'#1da1f2','Ивенты':'#ffad1f','Деньги':'#00bcd4','Культура':'#e8598b','Персоны':'#8bc34a','Скорость':'#ff9800','Базовые':'#38444d','Прочее':'#455a64'};
   document.getElementById('viral-categories').innerHTML = cats.map(([cat, count]) =>
     `<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
-      <span style="min-width:120px;font-size:0.82em;color:${catColors[cat]||'#8899a6'};text-align:right;font-weight:500">${esc(cat)}</span>
+      <span style="min-width:120px;font-size:0.82em;color:${catColors[cat]||'var(--c-muted)'};text-align:right;font-weight:500">${esc(cat)}</span>
       <div style="flex:1;background:#192734;border-radius:4px;height:18px;overflow:hidden">
         <div style="width:${(count/maxCat*100).toFixed(1)}%;height:100%;background:${catColors[cat]||'#38444d'};border-radius:4px;opacity:0.7"></div>
       </div>
@@ -4153,10 +4154,10 @@ async function loadViral() {
   document.getElementById('viral-sentiment-chart').innerHTML =
     `<div style="flex:1;display:flex;height:24px;border-radius:6px;overflow:hidden">
       <div style="width:${pPct}%;background:#17bf63" title="Позитив: ${sent.positive||0} (${pPct}%)"></div>
-      <div style="width:${nPct}%;background:#8899a6" title="Нейтрал: ${sent.neutral||0} (${nPct}%)"></div>
+      <div style="width:${nPct}%;background:var(--c-muted)" title="Нейтрал: ${sent.neutral||0} (${nPct}%)"></div>
       <div style="width:${negPct}%;background:#e0245e" title="Негатив: ${sent.negative||0} (${negPct}%)"></div>
     </div>
-    <div style="font-size:0.8em;color:#8899a6;min-width:200px;text-align:right">
+    <div style="font-size:0.8em;color:var(--c-muted);min-width:200px;text-align:right">
       <span style="color:#17bf63">&#9679; ${sent.positive||0}</span>
       <span style="margin:0 6px">&#9679; ${sent.neutral||0}</span>
       <span style="color:#e0245e">&#9679; ${sent.negative||0}</span>
@@ -4167,7 +4168,7 @@ async function loadViral() {
   const maxAvg = srcAvg.length ? srcAvg[0].avg : 1;
   document.getElementById('viral-source-avg').innerHTML = srcAvg.slice(0,10).map(s =>
     `<div style="display:flex;align-items:center;gap:8px;margin-bottom:3px">
-      <span style="min-width:100px;font-size:0.82em;color:#8899a6;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(s.source)}</span>
+      <span style="min-width:100px;font-size:0.82em;color:var(--c-muted);text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(s.source)}</span>
       <div style="flex:1;background:#192734;border-radius:4px;height:16px;overflow:hidden">
         <div style="width:${(s.avg/100*100).toFixed(1)}%;height:100%;background:${s.avg>=50?'#e0245e':s.avg>=25?'#ffad1f':'#1da1f2'};border-radius:4px;opacity:0.7"></div>
       </div>
@@ -4196,11 +4197,11 @@ function renderViralTable() {
   const levelColors = {high:'#e0245e',medium:'#ffad1f',low:'#1da1f2',none:'#38444d'};
   const levelLabels = {high:'HIGH',medium:'MED',low:'LOW',none:'-'};
   const sentIcons = {positive:'&#9650;',negative:'&#9660;',neutral:'&#9679;'};
-  const sentColors = {positive:'#17bf63',negative:'#e0245e',neutral:'#8899a6'};
+  const sentColors = {positive:'#17bf63',negative:'#e0245e',neutral:'var(--c-muted)'};
 
   tb.innerHTML = items.map(n => {
     const triggers = (n.triggers||[]).map(t =>
-      `<span style="display:inline-block;background:#192734;border:1px solid ${levelColors[n.viral_level]||'#38444d'}33;border-radius:4px;padding:1px 5px;font-size:0.75em;margin:1px;color:${levelColors[n.viral_level]||'#8899a6'}" title="Вес: ${t.weight}">${esc(t.label)}</span>`
+      `<span style="display:inline-block;background:#192734;border:1px solid ${levelColors[n.viral_level]||'#38444d'}33;border-radius:4px;padding:1px 5px;font-size:0.75em;margin:1px;color:${levelColors[n.viral_level]||'var(--c-muted)'}" title="Вес: ${t.weight}">${esc(t.label)}</span>`
     ).join('');
     const tags = (n.tags||[]).map(t =>
       `<span class="tag tag-${t.id}">${t.label}</span>`
@@ -4212,9 +4213,9 @@ function renderViralTable() {
       ? `<button class="btn btn-sm" style="background:#64c8ff33;color:#64c8ff;border:none;padding:3px 6px;font-size:0.8em" disabled title="Уже в редакторе">&#10003;</button>`
       : `<button class="btn btn-sm" style="background:#64c8ff22;color:#64c8ff;border:1px solid #64c8ff44;padding:3px 6px;font-size:0.8em" onclick="sendOneToEditor('${n.id}')" title="В редактор">&#9998;</button>`;
     return `<tr style="${rowBg}">
-      <td style="text-align:center"><span style="font-weight:700;font-size:1.1em;color:${levelColors[n.viral_level]||'#8899a6'}">${n.viral_score}</span></td>
-      <td><span style="padding:2px 8px;border-radius:4px;font-size:0.8em;font-weight:600;background:${levelColors[n.viral_level]||'#38444d'}22;color:${levelColors[n.viral_level]||'#8899a6'}">${levelLabels[n.viral_level]||'-'}</span></td>
-      <td style="text-align:center"><span style="color:${sentColors[n.sentiment]||'#8899a6'};font-size:1.1em" title="${n.sentiment} (${n.sentiment_score})">${sentIcons[n.sentiment]||''}</span></td>
+      <td style="text-align:center"><span style="font-weight:700;font-size:1.1em;color:${levelColors[n.viral_level]||'var(--c-muted)'}">${n.viral_score}</span></td>
+      <td><span style="padding:2px 8px;border-radius:4px;font-size:0.8em;font-weight:600;background:${levelColors[n.viral_level]||'#38444d'}22;color:${levelColors[n.viral_level]||'var(--c-muted)'}">${levelLabels[n.viral_level]||'-'}</span></td>
+      <td style="text-align:center"><span style="color:${sentColors[n.sentiment]||'var(--c-muted)'};font-size:1.1em" title="${n.sentiment} (${n.sentiment_score})">${sentIcons[n.sentiment]||''}</span></td>
       <td style="font-size:0.85em">${esc(n.source)}</td>
       <td class="td-title"><a href="${n.url}" target="_blank">${esc(n.title||'')}</a>${isPick ? '<span class="viral-pick-badge">VIRAL</span>' : ''}</td>
       <td style="max-width:250px">${triggers || '<span style="color:#38444d">-</span>'}</td>
@@ -4365,26 +4366,26 @@ function renderFinalPagination(total) {
   if (pages <= 1) { el.innerHTML = ''; return; }
   let html = '';
   if (_finPage > 0) {
-    html += `<button onclick="loadFinal(${_finPage - 1})" style="padding:4px 10px;border:1px solid #38444d;border-radius:4px;cursor:pointer;background:#192734;color:#8899a6">&laquo;</button>`;
+    html += `<button onclick="loadFinal(${_finPage - 1})" style="padding:4px 10px;border:1px solid #38444d;border-radius:4px;cursor:pointer;background:#192734;color:var(--c-muted)">&laquo;</button>`;
   }
   const maxVisible = 7;
   let start = Math.max(0, _finPage - Math.floor(maxVisible / 2));
   let end = Math.min(pages, start + maxVisible);
   if (end - start < maxVisible) start = Math.max(0, end - maxVisible);
   if (start > 0) {
-    html += `<button onclick="loadFinal(0)" style="padding:4px 10px;border:1px solid #38444d;border-radius:4px;cursor:pointer;background:#192734;color:#8899a6">1</button>`;
-    if (start > 1) html += `<span style="color:#657786;padding:4px">...</span>`;
+    html += `<button onclick="loadFinal(0)" style="padding:4px 10px;border:1px solid #38444d;border-radius:4px;cursor:pointer;background:#192734;color:var(--c-muted)">1</button>`;
+    if (start > 1) html += `<span style="color:var(--c-faint);padding:4px">...</span>`;
   }
   for (let i = start; i < end; i++) {
-    const active = i === _finPage ? 'background:#1da1f2;color:#fff' : 'background:#192734;color:#8899a6';
+    const active = i === _finPage ? 'background:#1da1f2;color:#fff' : 'background:#192734;color:var(--c-muted)';
     html += `<button onclick="loadFinal(${i})" style="padding:4px 10px;border:1px solid #38444d;border-radius:4px;cursor:pointer;${active}">${i+1}</button>`;
   }
   if (end < pages) {
-    if (end < pages - 1) html += `<span style="color:#657786;padding:4px">...</span>`;
-    html += `<button onclick="loadFinal(${pages - 1})" style="padding:4px 10px;border:1px solid #38444d;border-radius:4px;cursor:pointer;background:#192734;color:#8899a6">${pages}</button>`;
+    if (end < pages - 1) html += `<span style="color:var(--c-faint);padding:4px">...</span>`;
+    html += `<button onclick="loadFinal(${pages - 1})" style="padding:4px 10px;border:1px solid #38444d;border-radius:4px;cursor:pointer;background:#192734;color:var(--c-muted)">${pages}</button>`;
   }
   if (_finPage < pages - 1) {
-    html += `<button onclick="loadFinal(${_finPage + 1})" style="padding:4px 10px;border:1px solid #38444d;border-radius:4px;cursor:pointer;background:#192734;color:#8899a6">&raquo;</button>`;
+    html += `<button onclick="loadFinal(${_finPage + 1})" style="padding:4px 10px;border:1px solid #38444d;border-radius:4px;cursor:pointer;background:#192734;color:var(--c-muted)">&raquo;</button>`;
   }
   el.innerHTML = html;
 }
@@ -4414,7 +4415,7 @@ function renderFinalTable() {
     const fs = n.final_score || 0;
     const scColor = sc >= 70 ? '#17bf63' : sc >= 40 ? '#ffad1f' : '#e0245e';
     const fsColor = fs >= 60 ? '#17bf63' : fs >= 35 ? '#ffad1f' : '#e0245e';
-    const viralBadge = n.viral_level === 'high' ? 'background:#e0245e33;color:#e0245e' : n.viral_level === 'medium' ? 'background:#ffad1f33;color:#ffad1f' : 'background:#38444d;color:#8899a6';
+    const viralBadge = n.viral_level === 'high' ? 'background:#e0245e33;color:#e0245e' : n.viral_level === 'medium' ? 'background:#ffad1f33;color:#ffad1f' : 'background:#38444d;color:var(--c-muted)';
     let viralTriggers = '';
     try {
       const vd = JSON.parse(n.viral_data || '[]');
@@ -4563,7 +4564,7 @@ function loadHealthBar() {
         const title = s.healthy ? 'OK' : `${s.last_error || ''} (${s.consecutive_failures || 0} fails)`;
         return `<span title="${name}: ${title}" style="display:inline-flex;align-items:center;gap:3px;padding:2px 8px;background:#2a2a3e;border-radius:4px;color:#ccc;font-size:11px"><span style="width:8px;height:8px;border-radius:50%;background:${color};display:inline-block"></span>${name}</span>`;
       }).join('');
-      document.getElementById('hbar-sources').innerHTML = srcHtml || '<span style="color:#657786">нет данных</span>';
+      document.getElementById('hbar-sources').innerHTML = srcHtml || '<span style="color:var(--c-faint)">нет данных</span>';
 
       const circuitEntries = Object.entries(circuits);
       if (circuitEntries.length > 0) {
@@ -4653,7 +4654,7 @@ async function loadEditorial(page) {
 
   // Render stats
   const statsEl = document.getElementById('ed-stats');
-  const sColors = {new:'#ffad1f',in_review:'#1da1f2',moderation:'#f5a623',approved:'#17bf63',processed:'#794bc4',duplicate:'#657786',rejected:'#e0245e',ready:'#17bf63'};
+  const sColors = {new:'#ffad1f',in_review:'#1da1f2',moderation:'#f5a623',approved:'#17bf63',processed:'#794bc4',duplicate:'var(--c-faint)',rejected:'#e0245e',ready:'#17bf63'};
   const sLabels = {new:'Новые',in_review:'Проверка',moderation:'Модерация',approved:'Одобрены',processed:'Обработаны',duplicate:'Дубли',rejected:'Отклонены',ready:'Готовы'};
   const totalAll = Object.values(stats).reduce((a,b) => a + (b||0), 0);
   _edTotalAll = totalAll;
@@ -4695,7 +4696,7 @@ function renderEdTable() {
 
   const tbody = document.getElementById('ed-table');
   if (!data.length) {
-    tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;padding:40px;color:#8899a6">
+    tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;padding:40px;color:var(--c-muted)">
       <div style="font-size:1.3em;margin-bottom:12px">Нет новостей для отображения</div>
       <div style="margin-bottom:8px">Всего в базе: <b>${_edTotalAll}</b> новостей</div>
       <div style="margin-bottom:12px">${_edTotalAll === 0
@@ -4710,13 +4711,13 @@ function renderEdTable() {
   tbody.innerHTML = data.map(n => {
     const sc = n.total_score || 0;
     const scColor = sc >= 70 ? '#17bf63' : sc >= 40 ? '#ffad1f' : '#e0245e';
-    const stColor = {new:'#ffad1f',in_review:'#1da1f2',moderation:'#f5a623',approved:'#17bf63',processed:'#794bc4',duplicate:'#657786',rejected:'#e0245e',ready:'#17bf63'}[n.status] || '#8899a6';
+    const stColor = {new:'#ffad1f',in_review:'#1da1f2',moderation:'#f5a623',approved:'#17bf63',processed:'#794bc4',duplicate:'var(--c-faint)',rejected:'#e0245e',ready:'#17bf63'}[n.status] || 'var(--c-muted)';
     const stLabel = {new:'Новая',in_review:'Проверка',moderation:'Модерация',approved:'Одобрена',processed:'Обработана',duplicate:'Дубль',rejected:'Отклонена',ready:'Готова'}[n.status] || n.status;
 
     // Viral
     const vl = n.viral_level || '';
     const vs = n.viral_score || 0;
-    const vlColor = {high:'#e0245e',medium:'#ffad1f',low:'#1da1f2'}[vl] || '#657786';
+    const vlColor = {high:'#e0245e',medium:'#ffad1f',low:'#1da1f2'}[vl] || 'var(--c-faint)';
 
     // Freshness
     const fh = n.freshness_hours;
@@ -4727,7 +4728,7 @@ function renderEdTable() {
     // Sentiment
     const sl = n.sentiment_label || '';
     const sEmoji = sl === 'positive' ? '⊕' : sl === 'negative' ? '⊖' : '⊘';
-    const slColor = sl === 'positive' ? '#17bf63' : sl === 'negative' ? '#e0245e' : '#8899a6';
+    const slColor = sl === 'positive' ? '#17bf63' : sl === 'negative' ? '#e0245e' : 'var(--c-muted)';
 
     // Tags
     let tags = [];
@@ -4743,7 +4744,7 @@ function renderEdTable() {
     let ents = [];
     try { ents = JSON.parse(n.entity_names || '[]'); } catch(e) {}
     const entTier = n.entity_best_tier || '';
-    const entHtml = entTier ? `<span style="color:${entTier==='S'?'#e0245e':entTier==='A'?'#ffad1f':'#8899a6'};font-size:0.7em;font-weight:bold">${entTier}</span>` : '';
+    const entHtml = entTier ? `<span style="color:${entTier==='S'?'#e0245e':entTier==='A'?'#ffad1f':'var(--c-muted)'};font-size:0.7em;font-weight:bold">${entTier}</span>` : '';
 
     // Viral triggers tooltip
     let vTriggers = [];
@@ -4772,20 +4773,20 @@ function renderEdTable() {
 
     return `<tr class="ed-row" data-id="${n.id}">
       <td><input type="checkbox" class="ed-cb" value="${n.id}" style="width:15px;height:15px"></td>
-      <td style="font-size:0.8em;color:#8899a6">${n.source} ${entHtml}</td>
+      <td style="font-size:0.8em;color:var(--c-muted)">${n.source} ${entHtml}</td>
       <td>
         <div style="cursor:pointer" onclick="openTextDrawer('${n.id}')">
           <div style="font-size:0.9em;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${n.title}</div>
         </div>
       </td>
       <td style="text-align:center"><span style="color:${scColor};font-weight:bold;font-size:1.1em">${sc}</span></td>
-      <td style="text-align:center;font-size:0.8em;color:#8899a6">${qs}/${rs}</td>
+      <td style="text-align:center;font-size:0.8em;color:var(--c-muted)">${qs}/${rs}</td>
       <td style="text-align:center;cursor:help" title="${vTriggersTooltip}"><span style="color:${vlColor};font-weight:bold">${vs}</span><br><span style="font-size:0.7em;color:${vlColor}">${vl}</span></td>
       <td style="text-align:center"><span style="color:${fColor};font-size:0.85em">${fLabel}</span></td>
-      <td style="text-align:center;font-size:0.72em;white-space:nowrap" title="${n.word_count||0} слов · ${n.image_count||0} картинок"><span style="color:${(n.word_count||0)>=300?'#17bf63':(n.word_count||0)>=120?'#ffad1f':'#e0245e'}">&#128221;${n.word_count||0}</span>${(n.image_count||0)?` <span style="color:#8899a6">&#128247;${n.image_count}</span>`:''}</td>
+      <td style="text-align:center;font-size:0.72em;white-space:nowrap" title="${n.word_count||0} слов · ${n.image_count||0} картинок"><span style="color:${(n.word_count||0)>=300?'#17bf63':(n.word_count||0)>=120?'#ffad1f':'#e0245e'}">&#128221;${n.word_count||0}</span>${(n.image_count||0)?` <span style="color:var(--c-muted)">&#128247;${n.image_count}</span>`:''}</td>
       <td style="text-align:center"><span style="color:${slColor}" title="${sl}">${sEmoji}</span></td>
       <td>${tagsHtml}</td>
-      <td style="font-size:0.72em;color:#8899a6;white-space:nowrap">${fmtDate(n.published_ts || n.published_at)}</td>
+      <td style="font-size:0.72em;color:var(--c-muted);white-space:nowrap">${fmtDate(n.published_ts || n.published_at)}</td>
       <td style="white-space:nowrap">${caseBtn} ${tgBtn} ${textBtn} ${hideBtn}</td>
     </tr>
     <tr class="ed-detail" id="ed-detail-${n.id}" style="display:none">
@@ -4808,7 +4809,7 @@ function _edRenderDetail(n, ents, tags) {
   ).join(' ');
 
   // Entities
-  const entHtml = ents.length > 0 ? ents.join(', ') : '<span style="color:#657786">нет</span>';
+  const entHtml = ents.length > 0 ? ents.join(', ') : '<span style="color:var(--c-faint)">нет</span>';
 
   // Enrichment data (if available)
   let keysoHtml = '-', trendsHtml = '-', llmHtml = '-', bigramsHtml = '-';
@@ -4842,17 +4843,17 @@ function _edRenderDetail(n, ents, tags) {
           Свежесть: <b>${freshLabel}</b>
         </div>
         <div style="margin-bottom:8px"><b style="color:#1da1f2">Сущности:</b> ${entHtml}</div>
-        <div style="margin-bottom:8px"><b style="color:#1da1f2">Вирал. тригеры:</b> ${trigHtml || '<span style="color:#657786">нет</span>'}</div>
-        <div><b style="color:#1da1f2">Биграммы:</b> <span style="color:#8899a6">${bigramsHtml}</span></div>
-        <div id="chain-${n.id}" style="margin-top:8px"><span style="color:#657786;font-size:0.8em">Цепочка: загрузка...</span></div>
+        <div style="margin-bottom:8px"><b style="color:#1da1f2">Вирал. тригеры:</b> ${trigHtml || '<span style="color:var(--c-faint)">нет</span>'}</div>
+        <div><b style="color:#1da1f2">Биграммы:</b> <span style="color:var(--c-muted)">${bigramsHtml}</span></div>
+        <div id="chain-${n.id}" style="margin-top:8px"><span style="color:var(--c-faint);font-size:0.8em">Цепочка: загрузка...</span></div>
       </div>
       <div>
-        <div style="margin-bottom:8px"><b style="color:#1da1f2">Keys.so:</b> <span style="color:#8899a6">${keysoHtml}</span></div>
-        <div style="margin-bottom:8px"><b style="color:#1da1f2">Trends:</b> <span style="color:#8899a6">${trendsHtml}</span></div>
-        <div style="margin-bottom:8px"><b style="color:#1da1f2">LLM:</b> <span style="color:#8899a6">${llmHtml}</span></div>
+        <div style="margin-bottom:8px"><b style="color:#1da1f2">Keys.so:</b> <span style="color:var(--c-muted)">${keysoHtml}</span></div>
+        <div style="margin-bottom:8px"><b style="color:#1da1f2">Trends:</b> <span style="color:var(--c-muted)">${trendsHtml}</span></div>
+        <div style="margin-bottom:8px"><b style="color:#1da1f2">LLM:</b> <span style="color:var(--c-muted)">${llmHtml}</span></div>
         <div style="margin-bottom:8px">
           <a href="${n.url}" target="_blank" style="color:#1da1f2;font-size:0.85em">Открыть оригинал &#8599;</a>
-          &middot; <span style="color:#657786;font-size:0.8em">${n.published_at || ''}</span>
+          &middot; <span style="color:var(--c-faint);font-size:0.8em">${n.published_at || ''}</span>
         </div>
         <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">
           ${['new','in_review'].includes(n.status) ? `<button class="btn btn-sm btn-primary" onclick="edApprove('${n.id}')">&#10003; Одобрить</button><button class="btn btn-sm btn-danger" onclick="edReject('${n.id}')">&#10007; Отклонить</button>` : ''}
@@ -4879,24 +4880,24 @@ function edToggleDetail(id) {
         .then(r => r.json())
         .then(data => {
           if (!data || data.phase === 'single' || !data.chain || data.chain.length === 0) {
-            chainEl.innerHTML = '<b style="color:#1da1f2">Цепочка:</b> <span style="color:#657786;font-size:0.85em">нет связанных</span>';
+            chainEl.innerHTML = '<b style="color:#1da1f2">Цепочка:</b> <span style="color:var(--c-faint);font-size:0.85em">нет связанных</span>';
             return;
           }
           const phaseColors = {emerging:'#ffad1f',developing:'#1da1f2',trending:'#e0245e'};
           const phaseLabels = {emerging:'Зарождение',developing:'Развитие',trending:'Тренд'};
-          const pc = phaseColors[data.phase] || '#8899a6';
+          const pc = phaseColors[data.phase] || 'var(--c-muted)';
           const pl = phaseLabels[data.phase] || data.phase;
           const badge = '<span style="display:inline-block;padding:1px 8px;border-radius:10px;font-size:0.75em;font-weight:600;background:' + pc + '22;color:' + pc + ';border:1px solid ' + pc + '44">' + pl + ' (' + data.chain_length + ')</span>';
           const items = data.chain.slice(0, 10).map(c => {
             const d = c.published_at ? c.published_at.substring(0, 10) : '';
-            return '<div style="font-size:0.8em;padding:2px 0;color:#d9d9d9"><span style="color:#657786">' + d + '</span> <span style="color:#8899a6">[' + (c.source||'') + ']</span> ' + (c.title||'') + '</div>';
+            return '<div style="font-size:0.8em;padding:2px 0;color:#d9d9d9"><span style="color:var(--c-faint)">' + d + '</span> <span style="color:var(--c-muted)">[' + (c.source||'') + ']</span> ' + (c.title||'') + '</div>';
           }).join('');
           const srcInfo = data.unique_sources > 1 ? ' &middot; ' + data.unique_sources + ' источн.' : '';
           const spanInfo = data.days_span > 0 ? ' &middot; ' + data.days_span + ' дн.' : '';
           chainEl.innerHTML = '<b style="color:#1da1f2">Цепочка:</b> ' + badge + srcInfo + spanInfo + '<div style="margin-top:4px;padding-left:8px;border-left:2px solid ' + pc + '44">' + items + '</div>';
         })
         .catch(() => {
-          chainEl.innerHTML = '<b style="color:#1da1f2">Цепочка:</b> <span style="color:#657786">ошибка загрузки</span>';
+          chainEl.innerHTML = '<b style="color:#1da1f2">Цепочка:</b> <span style="color:var(--c-faint)">ошибка загрузки</span>';
         });
     }
   }
@@ -4980,10 +4981,10 @@ function renderEdPagination(total) {
   if (pages <= 1) { document.getElementById('ed-pagination').innerHTML = ''; return; }
   let html = '';
   for (let i = 0; i < pages; i++) {
-    const active = i === _edPage ? 'background:#1da1f2;color:#fff' : 'background:#192734;color:#8899a6';
+    const active = i === _edPage ? 'background:#1da1f2;color:#fff' : 'background:#192734;color:var(--c-muted)';
     html += `<button onclick="loadEditorial(${i})" style="padding:4px 10px;border:1px solid #38444d;border-radius:4px;cursor:pointer;${active}">${i+1}</button>`;
   }
-  html += `<span style="margin-left:8px;color:#8899a6;font-size:0.85em;display:inline-flex;align-items:center;gap:4px">Стр. <input type="number" min="1" max="${pages}" value="${_edPage+1}" style="width:50px;padding:3px 6px;background:#192734;color:#e1e8ed;border:1px solid #38444d;border-radius:4px;font-size:0.9em;text-align:center" onchange="jumpToPage(this.value)" onkeydown="if(event.key==='Enter')jumpToPage(this.value)"> из ${pages}</span>`;
+  html += `<span style="margin-left:8px;color:var(--c-muted);font-size:0.85em;display:inline-flex;align-items:center;gap:4px">Стр. <input type="number" min="1" max="${pages}" value="${_edPage+1}" style="width:50px;padding:3px 6px;background:#192734;color:#e1e8ed;border:1px solid #38444d;border-radius:4px;font-size:0.9em;text-align:center" onchange="jumpToPage(this.value)" onkeydown="if(event.key==='Enter')jumpToPage(this.value)"> из ${pages}</span>`;
   document.getElementById('ed-pagination').innerHTML = html;
 }
 
@@ -5147,7 +5148,7 @@ async function loadTopicCloud() {
     const max = Math.max.apply(null, topics.map(t => t.sources)) || 1;
     el.innerHTML =
       '<div class="topic-cloud-box">' +
-      '<div style="font-size:0.7em;color:#8899a6;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;font-weight:600">Облако тем дня · кто о чём пишет</div>' +
+      '<div style="font-size:0.7em;color:var(--c-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;font-weight:600">Облако тем дня · кто о чём пишет</div>' +
       '<div style="display:flex;flex-wrap:wrap;gap:8px">' +
       topics.map(t => {
         const w = t.sources / max;
@@ -5164,13 +5165,13 @@ async function loadTopicCloud() {
 async function loadCases() {
   const el = document.getElementById('cases-list');
   if (!el) return;
-  el.innerHTML = '<div style="color:#8899a6;padding:20px;text-align:center">Загрузка…</div>';
+  el.innerHTML = '<div style="color:var(--c-muted);padding:20px;text-align:center">Загрузка…</div>';
   const r = await api('/api/news/list?cases=1&limit=200');
   const items = (r && r.news) || [];
   const cnt = document.getElementById('cases-count');
   if (cnt) cnt.textContent = items.length + ' кейсов';
   if (!items.length) {
-    el.innerHTML = '<div style="color:#8899a6;padding:30px;text-align:center">Пока пусто. Жми 📌 на новости в Ленте или Трендах — кейсы копятся здесь и не удаляются автоматически.</div>';
+    el.innerHTML = '<div style="color:var(--c-muted);padding:30px;text-align:center">Пока пусто. Жми 📌 на новости в Ленте или Трендах — кейсы копятся здесь и не удаляются автоматически.</div>';
     return;
   }
   el.innerHTML = items.map(n => {
@@ -5181,7 +5182,7 @@ async function loadCases() {
     return `<div style="display:flex;gap:10px;align-items:flex-start;padding:10px 4px;border-bottom:1px solid #22303c">
       <div style="flex:1;min-width:0">
         <a href="${n.url}" target="_blank" style="color:#e1e8ed;text-decoration:none;font-size:0.95em">${esc(n.title)}</a>
-        <div style="font-size:0.74em;color:#8899a6;margin-top:3px">${esc(n.source)} · ${fmtDate(n.published_ts || n.published_at)} · &#128221;${n.word_count || 0} ${tg}</div>
+        <div style="font-size:0.74em;color:var(--c-muted);margin-top:3px">${esc(n.source)} · ${fmtDate(n.published_ts || n.published_at)} · &#128221;${n.word_count || 0} ${tg}</div>
       </div>
       <button class="btn btn-sm btn-secondary" title="В Telegram" onclick="openTgModal('${n.id}')">&#128228;</button>
       <button class="btn btn-sm btn-secondary" title="Убрать из Кейсов" onclick="setCase('${n.id}',false,true)">&#128204;&#10007;</button>
@@ -5506,12 +5507,12 @@ async function loadOpsDashboard() {
     // Render action cards
     const actEl = document.getElementById('ops-actions');
     if (actEl && data.actions) {
-      const typeColors = {review:'#1da1f2', error:'#e0245e', opportunity:'#ffad1f', warning:'#f5a623', publish:'#17bf63', draft:'#8899a6'};
+      const typeColors = {review:'#1da1f2', error:'#e0245e', opportunity:'#ffad1f', warning:'#f5a623', publish:'#17bf63', draft:'var(--c-muted)'};
       actEl.innerHTML = data.actions.length === 0
-        ? '<div style="color:#8899a6;padding:12px">Всё под контролем &#10004;</div>'
+        ? '<div style="color:var(--c-muted);padding:12px">Всё под контролем &#10004;</div>'
         : data.actions.map(a => `
           <div class="ops-action-card" data-type="${a.type}" onclick="switchToTab('${a.tab}')">
-            <div class="ops-action-count" style="color:${typeColors[a.type] || '#8899a6'}">${a.count}</div>
+            <div class="ops-action-count" style="color:${typeColors[a.type] || 'var(--c-muted)'}">${a.count}</div>
             <div class="ops-action-title">${esc(a.title)}</div>
           </div>
         `).join('');
@@ -5572,7 +5573,7 @@ function openExplainDrawer(newsId, title) {
   const drawer = document.getElementById('explain-drawer');
   if (!drawer) return;
   document.getElementById('explain-title').textContent = title || '';
-  document.getElementById('explain-scores').innerHTML = '<div style="color:#8899a6">Загрузка...</div>';
+  document.getElementById('explain-scores').innerHTML = '<div style="color:var(--c-muted)">Загрузка...</div>';
   document.getElementById('explain-trace').innerHTML = '';
   document.getElementById('explain-reason').innerHTML = '';
   drawer.classList.add('open');
@@ -5608,7 +5609,7 @@ async function loadExplainData(newsId) {
         {label: 'Виральность', val: breakdown.viral || a.viral_score || 0, color: '#e0245e'},
         {label: 'Заголовок', val: a.headline_score || 0, color: '#794bc4'},
         {label: 'Momentum', val: breakdown.momentum_bonus || a.momentum_score || 0, max: 20, color: '#f5a623'},
-        {label: 'Source Weight', val: Math.round((breakdown.source_weight || 1) * 100), max: 150, color: '#8899a6'},
+        {label: 'Source Weight', val: Math.round((breakdown.source_weight || 1) * 100), max: 150, color: 'var(--c-muted)'},
         {label: 'Feedback', val: breakdown.feedback_adj || 0, max: 20, min: -10, color: '#1da1f2'},
       ];
 
@@ -5623,7 +5624,7 @@ async function loadExplainData(newsId) {
         </div>`;
       }).join('') + `<div style="margin-top:10px;font-size:0.95em"><strong>Total Score: ${a.total_score || 0}</strong></div>`;
     } else {
-      scoresEl.innerHTML = '<div style="color:#8899a6">Нет данных о скоринге</div>';
+      scoresEl.innerHTML = '<div style="color:var(--c-muted)">Нет данных о скоринге</div>';
     }
 
     // Render trace
@@ -5635,12 +5636,12 @@ async function loadExplainData(newsId) {
             <strong>${esc(t.step)}</strong>
             <span class="reason-badge ${t.decision === 'rejected' || t.decision === 'auto_rejected' || t.decision === 'duplicate' ? 'negative' : t.decision === 'approved' || t.decision === 'in_review' ? 'positive' : 'neutral'}">${esc(t.decision)}</span>
           </div>
-          <div style="color:#8899a6">${esc(t.reason)}</div>
+          <div style="color:var(--c-muted)">${esc(t.reason)}</div>
           ${t.score_after ? '<div style="margin-top:4px;font-size:0.8em">Score: ' + t.score_after + '</div>' : ''}
         </div>
       `).join('');
     } else {
-      traceEl.innerHTML = '<div style="color:#8899a6">Нет записей трассировки</div>';
+      traceEl.innerHTML = '<div style="color:var(--c-muted)">Нет записей трассировки</div>';
     }
 
     // Reason summary
@@ -5722,7 +5723,7 @@ async function startTriageFlow() {
 
 function renderTriageCard() {
   if (_triageIndex >= _triageList.length) {
-    document.getElementById('triage-card').innerHTML = '<div style="text-align:center;padding:40px;color:#8899a6"><div style="font-size:1.3em;margin-bottom:12px">Все новости проверены</div><button class="btn btn-primary" onclick="setTriageMode(\'table\')">Вернуться к таблице</button></div>';
+    document.getElementById('triage-card').innerHTML = '<div style="text-align:center;padding:40px;color:var(--c-muted)"><div style="font-size:1.3em;margin-bottom:12px">Все новости проверены</div><button class="btn btn-primary" onclick="setTriageMode(\'table\')">Вернуться к таблице</button></div>';
     document.getElementById('triage-counter').textContent = '';
     return;
   }
@@ -5741,14 +5742,14 @@ function renderTriageCard() {
     <span style="color:#1da1f2">${esc(n.source)}</span>
     <span>&#9201; ${fLabel}</span>
     <span>${n.sentiment_label === 'positive' ? '&#8853;' : n.sentiment_label === 'negative' ? '&#8854;' : '&#8856;'} ${n.sentiment_label || ''}</span>
-    ${n.entity_best_tier ? '<span style="font-weight:bold;color:' + (n.entity_best_tier==='S'?'#e0245e':n.entity_best_tier==='A'?'#ffad1f':'#8899a6') + '">' + n.entity_best_tier + '-tier</span>' : ''}
+    ${n.entity_best_tier ? '<span style="font-weight:bold;color:' + (n.entity_best_tier==='S'?'#e0245e':n.entity_best_tier==='A'?'#ffad1f':'var(--c-muted)') + '">' + n.entity_best_tier + '-tier</span>' : ''}
   `;
   document.getElementById('tc-text').textContent = n.description || n.title || '';
   document.getElementById('tc-scores').innerHTML = `
     <div class="tc-score-item"><div class="val" style="color:${scColor}">${sc}</div><div class="lbl">Total</div></div>
     <div class="tc-score-item"><div class="val">${n.quality_score||0}</div><div class="lbl">Качество</div></div>
     <div class="tc-score-item"><div class="val">${n.relevance_score||0}</div><div class="lbl">Релев.</div></div>
-    <div class="tc-score-item"><div class="val" style="color:${vs>=60?'#e0245e':vs>=30?'#ffad1f':'#8899a6'}">${vs}</div><div class="lbl">Вирал.</div></div>
+    <div class="tc-score-item"><div class="val" style="color:${vs>=60?'#e0245e':vs>=30?'#ffad1f':'var(--c-muted)'}">${vs}</div><div class="lbl">Вирал.</div></div>
     <div class="tc-score-item"><div class="val">${n.headline_score||0}</div><div class="lbl">Заголовок</div></div>
   `;
 }
@@ -5807,7 +5808,7 @@ async function loadFunnelAnalytics() {
   if (!data || data.error) return;
 
   const stages = [
-    {key: 'parsed', label: 'Распарсено', color: '#8899a6'},
+    {key: 'parsed', label: 'Распарсено', color: 'var(--c-muted)'},
     {key: 'reviewed', label: 'Проверено', color: '#1da1f2'},
     {key: 'in_review', label: 'На модерации', color: '#ffad1f'},
     {key: 'approved', label: 'Одобрено', color: '#17bf63'},
@@ -5838,7 +5839,7 @@ async function loadFunnelAnalytics() {
       data.by_source.map(s => {
         const conv = s.total > 0 ? ((s.ready_count / s.total) * 100).toFixed(1) + '%' : '0%';
         const convColor = s.ready_count / s.total > 0.1 ? '#17bf63' : s.ready_count / s.total > 0.03 ? '#ffad1f' : '#e0245e';
-        return `<tr><td>${esc(s.source)}</td><td style="text-align:center">${s.total}</td><td style="text-align:center;color:#17bf63">${s.ready_count}</td><td style="text-align:center;color:#e0245e">${s.rejected_count}</td><td style="text-align:center;color:#8899a6">${s.dup_count}</td><td style="text-align:center;color:${convColor};font-weight:bold">${conv}</td></tr>`;
+        return `<tr><td>${esc(s.source)}</td><td style="text-align:center">${s.total}</td><td style="text-align:center;color:#17bf63">${s.ready_count}</td><td style="text-align:center;color:#e0245e">${s.rejected_count}</td><td style="text-align:center;color:var(--c-muted)">${s.dup_count}</td><td style="text-align:center;color:${convColor};font-weight:bold">${conv}</td></tr>`;
       }).join('') + '</tbody></table>';
   }
 }
@@ -5864,10 +5865,10 @@ async function loadPromptInsights() {
           return '<tr><td>' + esc(m.model||'unknown') + '</td><td style="text-align:center">' + m.call_count +
             '</td><td style="text-align:center;color:#ffad1f">$' + Number(m.total_cost).toFixed(4) +
             '</td><td style="text-align:center">' + Math.round(Number(m.avg_latency)) + 'ms' +
-            '</td><td style="text-align:center;color:#8899a6">' + m.total_tokens_in + ' / ' + m.total_tokens_out + '</td></tr>';
+            '</td><td style="text-align:center;color:var(--c-muted)">' + m.total_tokens_in + ' / ' + m.total_tokens_out + '</td></tr>';
         }).join('') + '</tbody></table>';
     } else if (msEl) {
-      msEl.innerHTML = '<div style="color:#8899a6;font-size:0.85em">Нет данных о вызовах LLM</div>';
+      msEl.innerHTML = '<div style="color:var(--c-muted);font-size:0.85em">Нет данных о вызовах LLM</div>';
     }
 
     // Cost trend mini-chart
@@ -5893,7 +5894,7 @@ async function loadPromptInsights() {
             const active = info.active_version ? 'v' + info.active_version : 'нет';
             return '<div style="background:#192734;border-radius:8px;padding:8px 12px;font-size:0.82em">' +
               '<div style="font-weight:600">' + esc(name) + '</div>' +
-              '<div style="color:#8899a6">' + info.versions + ' версий, активная: <span style="color:#17bf63">' + active + '</span></div>' +
+              '<div style="color:var(--c-muted)">' + info.versions + ' версий, активная: <span style="color:#17bf63">' + active + '</span></div>' +
             '</div>';
           }).join('') + '</div>';
       }
@@ -5933,7 +5934,7 @@ async function loadSlSettings() {
       if (r.enabled) {
         badge.innerHTML = `<span style="color:#17bf63">&#9202; Авто: ${String(r.hour??9).padStart(2,'0')}:${String(r.minute??0).padStart(2,'0')}, ${r.days??3} дн.</span>`;
       } else {
-        badge.innerHTML = '<span style="color:#657786">Авто-экспорт выкл</span>';
+        badge.innerHTML = '<span style="color:var(--c-faint)">Авто-экспорт выкл</span>';
       }
     }
   } catch(e) {}
@@ -5993,7 +5994,7 @@ async function loadStorylines() {
   const el = document.getElementById('storylines-list');
   const countEl = document.getElementById('storylines-count');
   if (!el) return;
-  el.innerHTML = '<div style="color:#8899a6;padding:20px">Загрузка кластеров...</div>';
+  el.innerHTML = '<div style="color:var(--c-muted);padding:20px">Загрузка кластеров...</div>';
   try {
     const days = _getSlDays();
     const labelEl = document.getElementById('sl-days-label');
@@ -6003,7 +6004,7 @@ async function loadStorylines() {
     renderKpi(stories.length);
     if (countEl) countEl.textContent = stories.length + ' сюжетов из ' + (data.total_news||0) + ' новостей';
     if (!stories.length) {
-      el.innerHTML = '<div style="color:#8899a6;padding:20px">Нет кластеров (менее 2 похожих новостей за ' + days + ' дн.)</div>';
+      el.innerHTML = '<div style="color:var(--c-muted);padding:20px">Нет кластеров (менее 2 похожих новостей за ' + days + ' дн.)</div>';
       return;
     }
     el.innerHTML = stories.map(s => {
@@ -6018,7 +6019,7 @@ async function loadStorylines() {
           '<span class="sm-source">' + esc(m.source) + '</span>' +
           titleEl +
           '<span class="sm-score">' + (m.total_score||0) + '</span>' +
-          '<span style="color:#8899a6;font-size:0.75em">' + fmtDate(m.published_ts || m.published_at) + '</span>' +
+          '<span style="color:var(--c-muted);font-size:0.75em">' + fmtDate(m.published_ts || m.published_at) + '</span>' +
         '</div>';
       }).join('');
       const gamesHtml = (s.top_games||[]).length
@@ -6041,7 +6042,7 @@ async function loadStorylines() {
             '<span>' + s.sources.length + ' источников</span>' +
           '</div>' +
         '</div>' +
-        '<div style="font-size:0.8em;color:#8899a6;margin-bottom:6px">Источники: ' + s.sources.join(', ') + '</div>' +
+        '<div style="font-size:0.8em;color:var(--c-muted);margin-bottom:6px">Источники: ' + s.sources.join(', ') + '</div>' +
         '<div style="margin:6px 0 12px;display:flex;gap:8px">' +
           '<button class="sl-action" onclick="slPin(\'' + ids + '\')" title="Сохранить весь сюжет в Кейсы">&#128204; В кейсы</button>' +
           '<button class="sl-action tg" onclick="openTgModal(\'' + topId + '\')" title="Топ-новость сюжета в Telegram">&#128228; В Telegram</button>' +
@@ -6090,7 +6091,7 @@ async function loadHealthPlus() {
   const thead = document.getElementById('health-thead');
   const recsEl = document.getElementById('health-recs');
   if (!el) return;
-  el.innerHTML = '<tr><td colspan="8" style="color:#8899a6;padding:20px">Загрузка расширенных данных...</td></tr>';
+  el.innerHTML = '<tr><td colspan="8" style="color:var(--c-muted);padding:20px">Загрузка расширенных данных...</td></tr>';
   try {
     const data = await api('/api/source_health_plus');
     const sources = data.sources || [];
@@ -6125,7 +6126,7 @@ async function loadHealthPlus() {
         '<td>' + icon + ' ' + s.status + '</td>' +
         '<td>' + esc(s.source) + '</td>' +
         '<td>' + s.count_24h + '</td>' +
-        '<td>' + sparkHtml + ' <span style="color:#8899a6;font-size:0.8em">' + s.total_7d + '</span></td>' +
+        '<td>' + sparkHtml + ' <span style="color:var(--c-muted);font-size:0.8em">' + s.total_7d + '</span></td>' +
         '<td style="color:#1da1f2;font-weight:600">' + s.avg_score + '</td>' +
         '<td style="color:' + convColor + ';font-weight:600">' + s.conversion_pct + '%</td>' +
         '<td><span class="trend-arrow ' + arrClass + '">' + arrSymbol + '</span></td>' +
@@ -6155,7 +6156,7 @@ function updateSimLabel(input, labelId) {
 async function runSimulation() {
   const resEl = document.getElementById('sim-results');
   if (!resEl) return;
-  resEl.innerHTML = '<div style="color:#8899a6">Симуляция...</div>';
+  resEl.innerHTML = '<div style="color:var(--c-muted)">Симуляция...</div>';
   try {
     const data = await api('/api/simulate_thresholds', {
       score_min: parseInt(document.getElementById('sim-score-min').value),
@@ -6176,7 +6177,7 @@ async function runSimulation() {
     // Score distribution bar
     const dist = data.score_distribution || {};
     const total = data.total || 1;
-    const colors = {'0-19':'#e0245e','20-39':'#ffad1f','40-59':'#8899a6','60-79':'#1da1f2','80-100':'#17bf63'};
+    const colors = {'0-19':'#e0245e','20-39':'#ffad1f','40-59':'var(--c-muted)','60-79':'#1da1f2','80-100':'#17bf63'};
     html += '<div style="margin-top:12px"><strong style="font-size:0.85em">Распределение скоров:</strong></div>';
     html += '<div class="sim-bar">';
     for (const [k,v] of Object.entries(dist)) {
@@ -6326,7 +6327,7 @@ async function loadTrash(page) {
   let pHtml = '';
   if (pages > 1) {
     for (let i = 0; i < pages && i < 10; i++) {
-      const active = i === _trashPage ? 'background:#1da1f2;color:#fff' : 'background:#192734;color:#8899a6';
+      const active = i === _trashPage ? 'background:#1da1f2;color:#fff' : 'background:#192734;color:var(--c-muted)';
       pHtml += `<button onclick="loadTrash(${i})" style="padding:4px 10px;border:1px solid #38444d;border-radius:4px;cursor:pointer;${active}">${i+1}</button>`;
     }
   }
@@ -6368,7 +6369,7 @@ async function purgeAllTrash() {
 <div id="pipeline-overlay" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(15,25,35,0.85);z-index:9999;align-items:center;justify-content:center;flex-direction:column">
   <div class="pipeline-spinner"></div>
   <div id="pipeline-overlay-text" style="color:#e1e8ed;font-size:1.1em">Обработка...</div>
-  <div id="pipeline-overlay-detail" style="color:#8899a6;font-size:0.9em;margin-top:8px"></div>
+  <div id="pipeline-overlay-detail" style="color:var(--c-muted);font-size:0.9em;margin-top:8px"></div>
   <button class="btn btn-danger btn-sm" onclick="stopPipeline()" style="margin-top:20px">Остановить</button>
 </div>
 
