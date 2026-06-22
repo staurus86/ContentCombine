@@ -34,13 +34,12 @@ logger = logging.getLogger(__name__)
 RUNNING_SCHEDULER = None
 
 
-def parse_sources(interval_min: int):
-    """Parse all sources with the given interval. Error-isolated per source."""
+def _parse_source_list(sources, label: str):
+    """Parse the given list of sources. Error-isolated per source."""
     from core.watchdog import watchdog
     from core.source_health import source_health
     from core.timeouts import run_with_timeout
 
-    sources = [s for s in config.SOURCES if s["interval"] == interval_min]
     total = 0
     failed = 0
 
@@ -92,7 +91,7 @@ def parse_sources(interval_min: int):
             source_health.record_failure(name, str(e))
             failed += 1
 
-    logger.info("[%dmin] Parsed: %d new, %d failed sources", interval_min, total, failed)
+    logger.info("[%s] Parsed: %d new, %d failed sources", label, total, failed)
     watchdog.heartbeat("scheduler", f"parsed {total} new, {failed} failed")
 
     gc.collect()
@@ -102,6 +101,41 @@ def parse_sources(interval_min: int):
             _auto_review_new()
         except Exception as e:
             logger.error("Auto-review error (non-fatal): %s", e)
+    return total
+
+
+def parse_sources(interval_min: int):
+    """Parse sources whose interval == interval_min (used by watchdog recovery)."""
+    srcs = [s for s in config.SOURCES if s["interval"] == interval_min]
+    return _parse_source_list(srcs, f"{interval_min}min")
+
+
+def parse_all_sources():
+    """Parse ALL configured sources — used by the adaptive cadence controller."""
+    return _parse_source_list(list(config.SOURCES), "all")
+
+
+_LAST_FULL_PARSE = None
+
+
+def adaptive_parse_tick():
+    """Адаптивная автономная частота парсинга: есть активный логин →
+    PARSE_ACTIVE_MIN, иначе PARSE_IDLE_MIN. Тик запускается каждые
+    PARSE_ACTIVE_MIN минут и внутри гейтит реальный парс по времени —
+    так цикл не наслаивается, а частота меняется на лету."""
+    global _LAST_FULL_PARSE
+    from datetime import datetime, timezone
+    from core.activity import is_active
+
+    active = is_active(config.PARSE_ACTIVE_WINDOW_MIN * 60)
+    eff_min = config.PARSE_ACTIVE_MIN if active else config.PARSE_IDLE_MIN
+    now = datetime.now(timezone.utc)
+    if _LAST_FULL_PARSE is not None and (now - _LAST_FULL_PARSE).total_seconds() < eff_min * 60 - 20:
+        logger.debug("Adaptive parse skip: cadence=%dmin (active=%s)", eff_min, active)
+        return
+    logger.info("Adaptive parse: cadence=%dmin (active=%s)", eff_min, active)
+    parse_all_sources()
+    _LAST_FULL_PARSE = now
 
 
 def _recover_stuck_tasks():
@@ -139,10 +173,11 @@ def start_scheduler():
     scheduler = BlockingScheduler(timezone="Europe/Moscow")
     RUNNING_SCHEDULER = scheduler
 
-    # Parsing by interval (includes auto-review)
-    intervals = sorted(set(s["interval"] for s in config.SOURCES))
-    for mins in intervals:
-        scheduler.add_job(parse_sources, "interval", minutes=mins, args=[mins], id=f"parse_{mins}min")
+    # Adaptive autonomous parsing: активный логин → PARSE_ACTIVE_MIN, иначе PARSE_IDLE_MIN.
+    # Тик идёт на быстрой частоте и гейтит реальный парс внутри; max_instances=1 не даёт
+    # циклам наслаиваться, если полный обход источников длится дольше одного тика.
+    scheduler.add_job(adaptive_parse_tick, "interval", minutes=config.PARSE_ACTIVE_MIN,
+                      id="adaptive_parse", max_instances=1, coalesce=True)
 
     # Cleanup old plain_text daily (7 days)
     scheduler.add_job(lambda: cleanup_old_plaintext(days=7), "interval", hours=24, id="cleanup_plaintext")
@@ -226,14 +261,12 @@ def start_scheduler():
 
     def _recovery_parse_restart():
         """Recovery: re-trigger parsing for all intervals."""
-        logger.warning("RECOVERY: re-triggering parse for all intervals")
+        logger.warning("RECOVERY: re-triggering parse for all sources")
         gc.collect()
-        intervals = sorted(set(s["interval"] for s in config.SOURCES))
-        for mins in intervals:
-            try:
-                parse_sources(mins)
-            except Exception as e:
-                logger.error("RECOVERY parse %dmin failed: %s", mins, e)
+        try:
+            parse_all_sources()
+        except Exception as e:
+            logger.error("RECOVERY parse failed: %s", e)
 
     watchdog.register_recovery("scheduler", _recovery_parse_restart)
 
@@ -277,8 +310,7 @@ def start_scheduler():
     scheduler.add_job(_cleanup_health_log, "interval", hours=24, id="cleanup_health_log")
 
     # Initial parse on startup (includes auto-review)
-    for mins in intervals:
-        parse_sources(mins)
+    adaptive_parse_tick()
 
     logger.info("Scheduler started")
     try:

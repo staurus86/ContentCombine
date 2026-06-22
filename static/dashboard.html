@@ -2416,9 +2416,10 @@ async function loadHealth() {
     const barColor = h.status==='healthy'?'#17bf63':h.status==='low'?'#ffad1f':h.status==='warning'?'#f5a623':'#e0245e';
     const isSick = ['warning','down','dead','low'].includes(h.status);
     const healBtn = isSick ? `<button class="btn btn-sm btn-warning" onclick="healSource('${h.source.replace(/'/g,"\\'")}')" style="padding:2px 8px;font-size:0.75em" title="Диагностика и лечение">&#128138;</button>` : '';
+    const srcLink = h.url ? ` <a href="${h.url}" target="_blank" rel="noopener" title="Открыть источник — проверить вручную" style="color:#1da1f2;text-decoration:none">&#8599;</a>` : '';
     return `<tr>
       <td>${icon} <span style="color:${barColor}">${labels[h.status] || h.status}</span></td>
-      <td>${h.source}</td>
+      <td>${h.source}${srcLink}</td>
       <td>${h.count_24h}</td>
       <td><div style="background:#22303c;border-radius:4px;overflow:hidden;height:18px"><div style="background:${barColor};width:${pct}%;height:100%;border-radius:4px;transition:width .5s"></div></div></td>
       <td>${fmtDate(h.last_parsed)}</td>

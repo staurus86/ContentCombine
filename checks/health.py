@@ -7,6 +7,20 @@ from storage.database import get_connection, _is_postgres
 logger = logging.getLogger(__name__)
 
 
+def _source_link(conf: dict) -> str:
+    """Кликабельная ссылка на источник по его конфигу (для ручной проверки)."""
+    if not conf:
+        return ""
+    t = conf.get("type")
+    if t == "telegram":
+        ch = conf.get("channel", "")
+        return f"https://t.me/{ch}" if ch else ""
+    if t == "bluesky":
+        h = conf.get("handle", "")
+        return f"https://bsky.app/profile/{h}" if h else ""
+    return conf.get("url", "") or ""
+
+
 def get_sources_health() -> list[dict]:
     """Возвращает статус здоровья каждого источника за последние 24ч."""
     import config
@@ -47,6 +61,7 @@ def get_sources_health() -> list[dict]:
     db_sources = {row["source"]: row for row in rows}
 
     # Include ALL configured sources
+    conf_by_name = {s["name"]: s for s in config.SOURCES}
     all_source_names = [s["name"] for s in config.SOURCES]
     # Also include sources from DB that aren't in config
     for row in rows:
@@ -88,6 +103,7 @@ def get_sources_health() -> list[dict]:
 
         results.append({
             "source": name,
+            "url": _source_link(conf_by_name.get(name)),
             "count_24h": count,
             "last_parsed": last_parsed,
             "minutes_ago": minutes_ago,

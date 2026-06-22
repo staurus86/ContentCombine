@@ -88,6 +88,11 @@ SOURCE_FAILURE_THRESHOLD = _int_env("SOURCE_FAILURE_THRESHOLD", 5)
 # Источник считается "мёртвым" по времени молчания, а не по "0 за 24ч":
 # редко публикующие официальные источники не должны висеть как dead.
 SOURCE_DEAD_DAYS = _int_env("SOURCE_DEAD_DAYS", 14)
+
+# Адаптивная частота автономного парсинга: есть активный логин — чаще, нет — реже.
+PARSE_ACTIVE_MIN = _int_env("PARSE_ACTIVE_MIN", 15)          # цикл при активном логине
+PARSE_IDLE_MIN = _int_env("PARSE_IDLE_MIN", 60)             # цикл когда никто не залогинен
+PARSE_ACTIVE_WINDOW_MIN = _int_env("PARSE_ACTIVE_WINDOW_MIN", 20)  # «логин активен», если запрос был в эти минуты
 SOURCE_PROBE_COOLDOWN = _int_env("SOURCE_PROBE_COOLDOWN", 600)
 ZOMBIE_THREADS_CRITICAL = _int_env("ZOMBIE_THREADS_CRITICAL", 5)
 

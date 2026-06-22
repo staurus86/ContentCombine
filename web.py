@@ -94,7 +94,14 @@ class AdminHandler(BaseHTTPRequestHandler):
         cookie = SimpleCookie(cookie_header)
         token = cookie.get("session")
         if token:
-            return _verify_cookie(token.value)
+            user = _verify_cookie(token.value)
+            if user:
+                try:
+                    from core.activity import mark_active
+                    mark_active()  # для адаптивной частоты парсинга
+                except Exception:
+                    pass
+            return user
         return None
 
     def _require_auth(self):
