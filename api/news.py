@@ -158,6 +158,7 @@ def get_news_unified(query_params):
                    COALESCE(n.word_count, 0) as word_count,
                    COALESCE(n.image_count, 0) as image_count,
                    COALESCE(n.is_case, 0) as is_case,
+                   COALESCE(n.published_ts, n.parsed_at) as published_ts,
                    COALESCE(a.total_score, 0) as total_score,
                    COALESCE(a.quality_score, 0) as quality_score,
                    COALESCE(a.relevance_score, 0) as relevance_score,

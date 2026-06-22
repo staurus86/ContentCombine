@@ -15,18 +15,12 @@ logger = logging.getLogger(__name__)
 
 
 def _is_too_old(date_str: str) -> bool:
-    """True, если дата старше config.NEWS_MAX_AGE_DAYS. Пустая дата → False
+    """True, если дата старше config.NEWS_MAX_AGE_DAYS. Пустая/непарсибельная → False
     (не блокируем — возраст неизвестен; фоновая джоба разберётся по parsed_at)."""
     if not date_str:
         return False
-    from email.utils import parsedate_to_datetime
-    try:
-        d = datetime.fromisoformat(str(date_str).replace("Z", "+00:00"))
-    except Exception:
-        try:
-            d = parsedate_to_datetime(str(date_str))
-        except Exception:
-            return False
+    from storage.database import _parse_date_loose
+    d = _parse_date_loose(str(date_str))
     if d is None:
         return False
     if d.tzinfo is None:
@@ -36,15 +30,43 @@ def _is_too_old(date_str: str) -> bool:
 
 
 def _date_from_url(url: str) -> str:
-    """Достаёт дату из URL вида /2026/06/15/ или /2026-06-15- — последний фолбэк."""
-    m = re.search(r"/(20\d{2})[/-](\d{1,2})[/-](\d{1,2})", url or "")
+    """Дата из URL: /2026/06/15/ или /2026-06-15-; фолбэк год/месяц /2026/06/ → 1-е."""
+    u = url or ""
+    m = re.search(r"/(20\d{2})[/-](\d{1,2})[/-](\d{1,2})", u)
     if m:
         y, mo, d = m.groups()
         try:
             return datetime(int(y), int(mo), int(d), tzinfo=timezone.utc).date().isoformat()
         except ValueError:
-            return ""
+            pass
+    m = re.search(r"/(20\d{2})/(\d{1,2})/", u)  # только год/месяц
+    if m:
+        y, mo = m.groups()
+        try:
+            return datetime(int(y), int(mo), 1, tzinfo=timezone.utc).date().isoformat()
+        except ValueError:
+            pass
     return ""
+
+
+_JUNK_URL_RE = re.compile(
+    r"/(legal|terms|privacy|cookie|cookies|authors?|category|categories|tag|tags|seo-tools|tools)(/|$)"
+    r"|[^/]*-hub/?$",
+    re.IGNORECASE,
+)
+
+
+def _is_junk_url(url: str) -> bool:
+    """True для не-статей: legal/terms/privacy, author/category/tag листинги,
+    product/tool страницы, *-hub, и корень домена. Консервативно (не блокирует /blog/)."""
+    from urllib.parse import urlparse
+    try:
+        path = urlparse(url or "").path or ""
+    except Exception:
+        return False
+    if not path.rstrip("/"):
+        return True  # корень домена — не статья
+    return bool(_JUNK_URL_RE.search(path))
 
 
 def parse_html_source(source: dict) -> int:
@@ -112,7 +134,7 @@ def parse_html_source(source: dict) -> int:
                 continue
             seen_urls.add(link)
 
-            if news_exists(link):
+            if news_exists(link) or _is_junk_url(link):
                 continue
 
             time.sleep(1)
@@ -195,7 +217,7 @@ def _parse_homepage(source: dict) -> int:
         logger.info("%s: found %d article links on homepage", name, len(links_to_process))
 
         for link, title in links_to_process[:30]:
-            if news_exists(link):
+            if news_exists(link) or _is_junk_url(link):
                 continue
             time.sleep(1)
             h1, description, plain_text, published_at, image_count = _fetch_article(link)
@@ -287,7 +309,7 @@ def _parse_gamesradar(source: dict) -> int:
                      sum(1 for _, _, t in links_to_process if t == "trending"))
 
         for link, title, section in links_to_process[:30]:
-            if news_exists(link):
+            if news_exists(link) or _is_junk_url(link):
                 continue
             time.sleep(1)
             h1, description, plain_text, published_at, image_count = _fetch_article(link)
@@ -396,7 +418,7 @@ def _parse_dtf(source: dict) -> int:
             if not entry_url:
                 continue
 
-            if news_exists(entry_url):
+            if news_exists(entry_url) or _is_junk_url(entry_url):
                 continue
 
             # Дата: unix timestamp → ISO string
@@ -465,7 +487,7 @@ def _parse_dtf_html_fallback(source: dict, html: str) -> int:
         if not href or not re.search(r'/games/\d+', href):
             continue
         link = urljoin("https://dtf.ru", href)
-        if link in seen or news_exists(link):
+        if link in seen or news_exists(link) or _is_junk_url(link):
             continue
         seen.add(link)
         h_tag = item.find(["h2", "h3", "h4"])
@@ -565,7 +587,7 @@ def _parse_single_sitemap_from_root(name: str, root, ns: dict, url_filter: str, 
     fresh_urls.sort(key=lambda x: x[1], reverse=True)
 
     for link, published_at in fresh_urls[:20]:
-        if news_exists(link):
+        if news_exists(link) or _is_junk_url(link):
             continue
 
         time.sleep(1)
@@ -591,40 +613,96 @@ def _parse_single_sitemap_from_root(name: str, root, ns: dict, url_filter: str, 
     return count
 
 
+_VISIBLE_DATE_SELECTORS = [
+    ".published-date", ".post-published", ".post__date", ".post-date",
+    ".entry-date", ".article-date", ".wp-block-post-date",
+    "div.blog__post__item__date", "p.text-body-small",
+    "[class*='publish']", "[class*='posted']", "article.post .ath.du p",
+]
+_VISIBLE_DATE_RE = re.compile(
+    r"\d{1,2}\s+[A-Za-zА-Яа-яёЁ]{3,}\.?\s+20\d{2}"        # D Month YYYY
+    r"|[A-Za-zА-Яа-яёЁ]{3,}\.?\s+\d{1,2},?\s+20\d{2}"     # Month D, YYYY
+    r"|\d{1,2}\.\d{1,2}\.20\d{2}"                          # DD.MM.YYYY
+    r"|20\d{2}-\d{1,2}-\d{1,2}",                           # YYYY-MM-DD
+)
+
+
+def _jsonld_date(node):
+    """Рекурсивно ищет дату публикации в JSON-LD. Возвращает datePublished
+    (приоритет, у Article-узлов), иначе dateModified. Игнорирует _updatedAt и пр."""
+    published = [None]
+    modified = [None]
+
+    def walk(n):
+        if isinstance(n, dict):
+            for k in ("datePublished", "dateCreated", "datePosted"):
+                v = n.get(k)
+                if isinstance(v, str) and v.strip() and not published[0]:
+                    published[0] = v.strip()
+            v = n.get("dateModified")
+            if isinstance(v, str) and v.strip() and not modified[0]:
+                modified[0] = v.strip()
+            for val in n.values():
+                walk(val)
+        elif isinstance(n, list):
+            for it in n:
+                walk(it)
+
+    walk(node)
+    return published[0] or modified[0]
+
+
 def _extract_publish_date(soup) -> str:
-    """Извлекает дату публикации из HTML разными способами."""
-    # 1. JSON-LD (schema.org) — самый надёжный
+    """Дата публикации из HTML. Приоритет: JSON-LD datePublished → meta →
+    <time datetime> → видимые date-селекторы → regex видимой даты. '' если нет."""
+    from storage.database import _parse_date_loose
+
+    # 1. JSON-LD (рекурсивно, без захвата произвольных ISO/_updatedAt)
     for script in soup.find_all("script", type="application/ld+json"):
         try:
-            data = json.loads(script.string or "")
-            if isinstance(data, list) and data:
-                data = data[0]
-            if not isinstance(data, dict):
-                continue
-            for key in ("datePublished", "dateCreated", "uploadDate"):
-                if key in data:
-                    return data[key]
+            d = _jsonld_date(json.loads(script.string or ""))
+            if d:
+                return d
         except Exception:
             pass
 
-    # 2. Meta теги
+    # 2. Meta — только реальные «опубликовано» (modified как последний шанс)
     for meta_name in ("article:published_time", "og:article:published_time",
-                      "date", "pubdate", "DC.date.issued", "sailthru.date",
-                      "parsely-pub-date", "article:modified_time", "og:updated_time"):
+                      "parsely-pub-date", "datePublished", "date", "pubdate",
+                      "DC.date.issued", "sailthru.date"):
         tag = soup.find("meta", attrs={"property": meta_name}) or \
               soup.find("meta", attrs={"name": meta_name})
-        if tag and tag.get("content"):
-            return tag["content"]
+        if tag and tag.get("content", "").strip():
+            return tag["content"].strip()
 
-    # 3. <time> тег с datetime
+    # 3. <time datetime>
     time_tag = soup.find("time", attrs={"datetime": True})
-    if time_tag:
-        return time_tag["datetime"]
+    if time_tag and time_tag.get("datetime", "").strip():
+        return time_tag["datetime"].strip()
 
-    # 4. <time> тег с текстом
-    time_tag = soup.find("time")
-    if time_tag and time_tag.get_text(strip=True):
-        return time_tag.get_text(strip=True)
+    # 4. Видимые date-селекторы (если парсятся)
+    for sel in _VISIBLE_DATE_SELECTORS:
+        try:
+            for el in soup.select(sel)[:3]:
+                txt = el.get_text(" ", strip=True)
+                if txt and _parse_date_loose(txt):
+                    return txt
+        except Exception:
+            pass
+
+    # 5. Regex видимой даты в шапке статьи (ограниченно, чтобы не ловить «© 2020»)
+    container = soup.find("article") or soup.find("main") or soup.body
+    if container:
+        txt = container.get_text(" ", strip=True)[:800]
+        m = _VISIBLE_DATE_RE.search(txt)
+        if m and _parse_date_loose(m.group(0)):
+            return m.group(0)
+
+    # 6. fallback на modified из meta (если совсем ничего)
+    tag = soup.find("meta", attrs={"property": "article:modified_time"}) or \
+          soup.find("meta", attrs={"name": "og:updated_time"})
+    if tag and tag.get("content", "").strip():
+        return tag["content"].strip()
 
     return ""
 

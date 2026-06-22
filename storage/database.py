@@ -477,20 +477,80 @@ def news_exists(url: str) -> bool:
         cur.close()
 
 
-def normalize_ts(date_str, fallback_iso: str) -> str:
-    """Любую дату (ISO/RFC822/пусто) → ISO UTC. Пусто/непарсибельно → fallback_iso.
-    ЕДИНАЯ нормализация даты публикации для колонки published_ts (по ней все фильтры)."""
-    if date_str:
-        from email.utils import parsedate_to_datetime
-        s = str(date_str).strip()
-        d = None
+# Месяце-карта (первые 3 буквы), EN + RU (именительный/родительный) — без locale-strptime.
+_MONTH3 = {
+    "jan": 1, "feb": 2, "mar": 3, "apr": 4, "may": 5, "jun": 6, "jul": 7,
+    "aug": 8, "sep": 9, "oct": 10, "nov": 11, "dec": 12,
+    "янв": 1, "фев": 2, "мар": 3, "апр": 4, "май": 5, "мая": 5, "июн": 6,
+    "июл": 7, "авг": 8, "сен": 9, "окт": 10, "ноя": 11, "дек": 12,
+}
+
+
+def _parse_date_loose(s: str):
+    """Парсит дату из множества форматов → aware datetime (UTC) или None.
+    ISO / RFC822 / «27 September 2013» / «Jan 26, 2026» / «22 июня 2026» /
+    «DD.MM.YYYY» / «MM/DD/YYYY» / «YYYY-MM-DD». Без зависимости от locale."""
+    import re
+    from email.utils import parsedate_to_datetime
+    s = str(s).strip()
+    if not s:
+        return None
+    # 1) ISO 8601 (с Z/мс/offset)
+    try:
+        iso = s.replace("Z", "+00:00")
+        iso = re.sub(r"(\.\d{3})\d+", r"\1", iso)  # обрезать микросекунды >3 знаков
+        return datetime.fromisoformat(iso)
+    except Exception:
+        pass
+    # 2) RFC822 (Wed, 17 Jun 2026 ...)
+    try:
+        d = parsedate_to_datetime(s)
+        if d:
+            return d
+    except Exception:
+        pass
+    low = s.lower()
+
+    def _mon(tok):
+        return _MONTH3.get(tok.strip(".,").lower()[:3])
+
+    # 3) «D Month YYYY» / «D Month, YYYY»
+    m = re.search(r"\b(\d{1,2})\s+([A-Za-zА-Яа-яёЁ]{3,})\.?\,?\s+(20\d{2})", s)
+    if m and _mon(m.group(2)):
+        return datetime(int(m.group(3)), _mon(m.group(2)), int(m.group(1)), tzinfo=timezone.utc)
+    # 4) «Month D, YYYY» / «Month D YYYY»
+    m = re.search(r"\b([A-Za-zА-Яа-яёЁ]{3,})\.?\s+(\d{1,2})\,?\s+(20\d{2})", s)
+    if m and _mon(m.group(1)):
+        return datetime(int(m.group(3)), _mon(m.group(1)), int(m.group(2)), tzinfo=timezone.utc)
+    # 5) DD.MM.YYYY
+    m = re.search(r"\b(\d{1,2})\.(\d{1,2})\.(20\d{2})\b", s)
+    if m:
         try:
-            d = datetime.fromisoformat(s.replace("Z", "+00:00"))
-        except Exception:
-            try:
-                d = parsedate_to_datetime(s)
-            except Exception:
-                d = None
+            return datetime(int(m.group(3)), int(m.group(2)), int(m.group(1)), tzinfo=timezone.utc)
+        except ValueError:
+            pass
+    # 6) YYYY-MM-DD / YYYY/MM/DD
+    m = re.search(r"\b(20\d{2})[-/](\d{1,2})[-/](\d{1,2})\b", s)
+    if m:
+        try:
+            return datetime(int(m.group(1)), int(m.group(2)), int(m.group(3)), tzinfo=timezone.utc)
+        except ValueError:
+            pass
+    # 7) MM/DD/YYYY (US)
+    m = re.search(r"\b(\d{1,2})/(\d{1,2})/(20\d{2})\b", s)
+    if m:
+        try:
+            return datetime(int(m.group(3)), int(m.group(1)), int(m.group(2)), tzinfo=timezone.utc)
+        except ValueError:
+            pass
+    return None
+
+
+def normalize_ts(date_str, fallback_iso: str) -> str:
+    """Любую дату (ISO/RFC822/именованные месяцы/числовые форматы/пусто) → ISO UTC.
+    Пусто/непарсибельно → fallback_iso. ЕДИНАЯ нормализация для колонки published_ts."""
+    if date_str:
+        d = _parse_date_loose(date_str)
         if d is not None:
             if d.tzinfo is None:
                 d = d.replace(tzinfo=timezone.utc)

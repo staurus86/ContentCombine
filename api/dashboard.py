@@ -230,6 +230,7 @@ def get_storylines(days: int = 3):
         cutoff = (dt_mod.now(timezone.utc) - timedelta(days=days)).isoformat()
         cur.execute(f"""
             SELECT n.id, n.source, n.title, n.url, n.published_at, n.status,
+                   COALESCE(n.published_ts, n.parsed_at) as published_ts,
                    COALESCE(a.total_score, 0) as total_score,
                    COALESCE(a.viral_score, 0) as viral_score,
                    COALESCE(a.entity_names, '[]') as entity_names,
@@ -324,6 +325,7 @@ def get_storylines(days: int = 3):
                     "source": m.get("source", ""),
                     "url": m.get("url", ""),
                     "published_at": m.get("published_at", ""),
+                    "published_ts": m.get("published_ts", ""),
                     "status": m.get("status", ""),
                     "total_score": m.get("total_score", 0),
                 } for m in members[:10]],

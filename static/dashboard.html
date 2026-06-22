@@ -4784,7 +4784,7 @@ function renderEdTable() {
       <td style="text-align:center;font-size:0.72em;white-space:nowrap" title="${n.word_count||0} слов · ${n.image_count||0} картинок"><span style="color:${(n.word_count||0)>=300?'#17bf63':(n.word_count||0)>=120?'#ffad1f':'#e0245e'}">&#128221;${n.word_count||0}</span>${(n.image_count||0)?` <span style="color:#8899a6">&#128247;${n.image_count}</span>`:''}</td>
       <td style="text-align:center"><span style="color:${slColor}" title="${sl}">${sEmoji}</span></td>
       <td>${tagsHtml}</td>
-      <td style="font-size:0.72em;color:#8899a6;white-space:nowrap">${fmtDate(n.published_at)}</td>
+      <td style="font-size:0.72em;color:#8899a6;white-space:nowrap">${fmtDate(n.published_ts || n.published_at)}</td>
       <td style="white-space:nowrap">${caseBtn} ${tgBtn} ${textBtn} ${hideBtn}</td>
     </tr>
     <tr class="ed-detail" id="ed-detail-${n.id}" style="display:none">
@@ -5177,7 +5177,7 @@ async function loadCases() {
     return `<div style="display:flex;gap:10px;align-items:flex-start;padding:10px 4px;border-bottom:1px solid #22303c">
       <div style="flex:1;min-width:0">
         <a href="${n.url}" target="_blank" style="color:#e1e8ed;text-decoration:none;font-size:0.95em">${esc(n.title)}</a>
-        <div style="font-size:0.74em;color:#8899a6;margin-top:3px">${esc(n.source)} · ${fmtDate(n.published_at)} · &#128221;${n.word_count || 0} ${tg}</div>
+        <div style="font-size:0.74em;color:#8899a6;margin-top:3px">${esc(n.source)} · ${fmtDate(n.published_ts || n.published_at)} · &#128221;${n.word_count || 0} ${tg}</div>
       </div>
       <button class="btn btn-sm btn-secondary" title="В Telegram" onclick="openTgModal('${n.id}')" style="padding:2px 7px">&#128228;</button>
       <button class="btn btn-sm btn-secondary" title="Убрать из Кейсов" onclick="setCase('${n.id}',false,true)" style="padding:2px 7px">&#128204;&#10007;</button>
@@ -6014,7 +6014,7 @@ async function loadStorylines() {
           '<span class="sm-source">' + esc(m.source) + '</span>' +
           titleEl +
           '<span class="sm-score">' + (m.total_score||0) + '</span>' +
-          '<span style="color:#8899a6;font-size:0.75em">' + fmtDate(m.published_at) + '</span>' +
+          '<span style="color:#8899a6;font-size:0.75em">' + fmtDate(m.published_ts || m.published_at) + '</span>' +
         '</div>';
       }).join('');
       const gamesHtml = (s.top_games||[]).length
