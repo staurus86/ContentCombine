@@ -149,7 +149,7 @@ def get_viral(query_params):
         items.sort(key=lambda x: x["viral_score"], reverse=True)
 
         # Top triggers sorted
-        top_triggers = sorted(trigger_counts.items(), key=lambda x: x[1], reverse=True)[:20]
+        top_triggers = sorted(trigger_counts.items(), key=lambda x: x[1], reverse=True)
 
         # Top categories sorted
         top_categories = sorted(category_counts.items(), key=lambda x: x[1], reverse=True)

@@ -307,7 +307,7 @@ input:focus, textarea:focus, select:focus { outline:none; border-color:#1da1f2; 
 .sl-action.tg:hover { background:#229ED9; border-color:#229ED9; }
 /* topic cloud */
 .topic-cloud-box { background:#16212c; border:1px solid #22303c; border-radius:12px; padding:12px 14px; }
-.topic-chip { display:inline-flex; align-items:center; gap:6px; border-radius:14px; padding:4px 12px; line-height:1.5; background:#1e2a36; border:1px solid #2c3a47; cursor:default; transition:filter .15s, border-color .15s; }
+.topic-chip { display:inline-flex; align-items:center; gap:6px; border-radius:14px; padding:4px 12px; font-size:0.82em; line-height:1.5; background:#1e2a36; border:1px solid #2c3a47; cursor:default; transition:filter .15s, border-color .15s; }
 .topic-chip:hover { filter:brightness(1.18); border-color:#3a4b59; }
 .storyline-stats { display:flex; gap:12px; font-size:0.82em; color:#8899a6; }
 .storyline-tags { display:flex; flex-wrap:wrap; gap:6px; align-items:center; margin-bottom:8px; }
@@ -4119,7 +4119,7 @@ async function loadViral() {
   // Top triggers bar chart
   const tt = r.top_triggers || [];
   const maxTrig = tt.length ? tt[0][1] : 1;
-  document.getElementById('viral-top-triggers').innerHTML = tt.slice(0,12).map(([label, count]) =>
+  document.getElementById('viral-top-triggers').innerHTML = tt.map(([label, count]) =>
     `<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
       <span style="min-width:140px;font-size:0.82em;color:#8899a6;text-align:right">${esc(label)}</span>
       <div style="flex:1;background:#192734;border-radius:4px;height:18px;overflow:hidden">
@@ -5150,9 +5150,12 @@ async function loadTopicCloud() {
       '<div style="display:flex;flex-wrap:wrap;gap:8px">' +
       topics.map(t => {
         const w = t.sources / max;
-        const fs = (0.82 + w * 0.6).toFixed(2);
-        const col = w > 0.66 ? '#5cb8f7' : w > 0.33 ? '#2ee08a' : '#aab4c0';
-        return `<span class="topic-chip" title="${t.sources} источников · ${t.count} статей" style="font-size:${fs}em;color:${col}">${esc(t.label)} <b style="opacity:.6;font-weight:700">${t.sources}</b></span>`;
+        // Размер чипов одинаковый; вес темы — насыщенностью единого акцента
+        let bg, bd, col;
+        if (w > 0.66)      { bg = 'rgba(29,161,242,.22)'; bd = 'rgba(29,161,242,.55)'; col = '#d2e9ff'; }
+        else if (w > 0.33) { bg = 'rgba(29,161,242,.12)'; bd = 'rgba(29,161,242,.32)'; col = '#a9c9e6'; }
+        else               { bg = '#1e2a36';              bd = '#2c3a47';             col = '#8a99a8'; }
+        return `<span class="topic-chip" title="${t.sources} источников · ${t.count} статей" style="background:${bg};border-color:${bd};color:${col}">${esc(t.label)} <b style="opacity:.65;font-weight:700">${t.sources}</b></span>`;
       }).join('') + '</div></div>';
   } catch (e) { el.innerHTML = ''; }
 }

@@ -1085,6 +1085,10 @@ def is_case_content(title, text=None, source="") -> bool:
     Телеграм-источники (TG:*) исключены — там кейсы не пишут (только анонсы)."""
     if source and str(source).startswith("TG:"):
         return False
+    # 0-словные статьи (мёртвая ссылка/404 или не извлёкся текст) — не кейсы:
+    # «кейс» без тела бесполезен и ведёт на битую страницу.
+    if text is not None and len((text or "").strip()) < 200:
+        return False
     return bool(_CASE_CONTENT_RE.search((title or "").lower()))
 
 
