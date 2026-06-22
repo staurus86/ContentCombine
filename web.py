@@ -60,7 +60,7 @@ def _user_has_perm(username: str, perm: str) -> bool:
 
 def _sign_cookie(username: str) -> str:
     """Создаёт подписанную куку: username.expiry.signature"""
-    expiry = int(_time.time()) + 86400  # 24 часа
+    expiry = int(_time.time()) + 2592000  # 30 дней
     payload = f"{username}:{expiry}"
     sig = hmac.new(_COOKIE_SECRET.encode(), payload.encode(), hashlib.sha256).hexdigest()
     return f"{payload}:{sig}"
@@ -400,7 +400,7 @@ class AdminHandler(BaseHTTPRequestHandler):
             signed = _sign_cookie(username)
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
-            self.send_header("Set-Cookie", f"session={signed}; Path=/; HttpOnly; SameSite=Lax; Secure; Max-Age=86400")
+            self.send_header("Set-Cookie", f"session={signed}; Path=/; HttpOnly; SameSite=Lax; Secure; Max-Age=2592000")
             self.end_headers()
             self.wfile.write(json.dumps({"status": "ok", "role": _user_role(username)}).encode())
         else:

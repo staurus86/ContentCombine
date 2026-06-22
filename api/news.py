@@ -94,10 +94,10 @@ def get_news_unified(query_params):
             conditions.append(f"n.source = {_ph}")
             params.append(source_filter)
         if date_from:
-            conditions.append(f"n.parsed_at >= {_ph}")
+            conditions.append(f"COALESCE(n.published_ts, n.parsed_at) >= {_ph}")
             params.append(date_from)
         if date_to:
-            conditions.append(f"n.parsed_at <= {_ph}")
+            conditions.append(f"COALESCE(n.published_ts, n.parsed_at) <= {_ph}")
             params.append(date_to + "T23:59:59")
         if min_score > 0:
             conditions.append(f"COALESCE(a.total_score, 0) >= {_ph}")
@@ -147,7 +147,7 @@ def get_news_unified(query_params):
             "viral_score": "COALESCE(a.viral_score, 0)",
             "freshness_hours": "COALESCE(a.freshness_hours, -1)",
             "source": "n.source",
-            "parsed_at": "n.parsed_at",
+            "parsed_at": "COALESCE(n.published_ts, n.parsed_at)",
         }
         order_col = allowed_sorts.get(sort_field, "n.parsed_at")
         order_dir = "ASC" if sort_dir == "asc" else "DESC"
@@ -344,10 +344,10 @@ def get_news(query_params):
             conditions.append(f"n.source = {_ph}")
             params.append(source_filter)
         if date_from:
-            conditions.append(f"n.parsed_at >= {_ph}")
+            conditions.append(f"COALESCE(n.published_ts, n.parsed_at) >= {_ph}")
             params.append(date_from)
         if date_to:
-            conditions.append(f"n.parsed_at <= {_ph}")
+            conditions.append(f"COALESCE(n.published_ts, n.parsed_at) <= {_ph}")
             params.append(date_to + "T23:59:59")
         if llm_filter:
             if llm_filter == "has_rec":

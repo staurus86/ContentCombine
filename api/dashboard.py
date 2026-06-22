@@ -23,7 +23,7 @@ def topic_cloud(hours: int = 48, top_n: int = 20):
         cur.execute(f"""
             SELECT n.source, a.tags_data
             FROM news n JOIN news_analysis a ON a.news_id = n.id
-            WHERE COALESCE(n.is_deleted, 0) = 0 AND n.parsed_at > {_ph}
+            WHERE COALESCE(n.is_deleted, 0) = 0 AND COALESCE(n.published_ts, n.parsed_at) > {_ph}
               AND a.tags_data IS NOT NULL
         """, (cutoff,))
         sources_by_tag = defaultdict(set)
@@ -68,11 +68,11 @@ def kpi(hours: int = 24):
     cutoff = (dt_mod.now(timezone.utc) - timedelta(hours=hours)).isoformat()
     out = {"fresh_24h": 0, "cases": 0, "active_sources": 0}
     try:
-        cur.execute(f"SELECT COUNT(*) FROM news WHERE COALESCE(is_deleted,0)=0 AND parsed_at > {_ph}", (cutoff,))
+        cur.execute(f"SELECT COUNT(*) FROM news WHERE COALESCE(is_deleted,0)=0 AND COALESCE(published_ts, parsed_at) > {_ph}", (cutoff,))
         out["fresh_24h"] = cur.fetchone()[0]
         cur.execute("SELECT COUNT(*) FROM news WHERE is_case=1")
         out["cases"] = cur.fetchone()[0]
-        cur.execute(f"SELECT COUNT(DISTINCT source) FROM news WHERE COALESCE(is_deleted,0)=0 AND parsed_at > {_ph}", (cutoff,))
+        cur.execute(f"SELECT COUNT(DISTINCT source) FROM news WHERE COALESCE(is_deleted,0)=0 AND COALESCE(published_ts, parsed_at) > {_ph}", (cutoff,))
         out["active_sources"] = cur.fetchone()[0]
         return out
     except Exception as e:
@@ -236,8 +236,8 @@ def get_storylines(days: int = 3):
                    COALESCE(a.viral_data, '{{}}') as viral_data
             FROM news n
             LEFT JOIN news_analysis a ON n.id = a.news_id
-            WHERE n.parsed_at > {ph}
-            ORDER BY n.published_at DESC
+            WHERE COALESCE(n.published_ts, n.parsed_at) > {ph}
+            ORDER BY COALESCE(n.published_ts, n.parsed_at) DESC
             LIMIT 2000
         """, (cutoff,))
         if _is_postgres():

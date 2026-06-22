@@ -328,6 +328,13 @@ def _init_db_impl(conn, cur):
     _add_column_if_missing(cur, "news", "image_count", "INTEGER DEFAULT 0")
     # Cases: manual bookmark / auto by research tag. Exempt from freshness purge.
     _add_column_if_missing(cur, "news", "is_case", "INTEGER DEFAULT 0")
+    # Normalized article date (ISO UTC) — ЕДИНЫЙ источник истины для ВСЕХ фильтров по дате
+    # (published_at бывает ISO/RFC822 → нельзя сравнивать в SQL; published_ts всегда ISO).
+    _add_column_if_missing(cur, "news", "published_ts", "TEXT")
+    try:
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_news_published_ts ON news(published_ts)")
+    except Exception:
+        pass
     try:
         cur.execute("CREATE INDEX IF NOT EXISTS idx_news_case ON news(is_case)")
     except Exception:
@@ -470,6 +477,27 @@ def news_exists(url: str) -> bool:
         cur.close()
 
 
+def normalize_ts(date_str, fallback_iso: str) -> str:
+    """Любую дату (ISO/RFC822/пусто) → ISO UTC. Пусто/непарсибельно → fallback_iso.
+    ЕДИНАЯ нормализация даты публикации для колонки published_ts (по ней все фильтры)."""
+    if date_str:
+        from email.utils import parsedate_to_datetime
+        s = str(date_str).strip()
+        d = None
+        try:
+            d = datetime.fromisoformat(s.replace("Z", "+00:00"))
+        except Exception:
+            try:
+                d = parsedate_to_datetime(s)
+            except Exception:
+                d = None
+        if d is not None:
+            if d.tzinfo is None:
+                d = d.replace(tzinfo=timezone.utc)
+            return d.astimezone(timezone.utc).isoformat()
+    return fallback_iso
+
+
 def insert_news(source: str, url: str, title: str, h1: str = "",
                 description: str = "", plain_text: str = "", published_at: str = "",
                 image_count: int = 0):
@@ -481,20 +509,21 @@ def insert_news(source: str, url: str, title: str, h1: str = "",
     cur = conn.cursor()
     now = datetime.now(timezone.utc).isoformat()
     word_count = len((plain_text or "").split())
+    published_ts = normalize_ts(published_at, now)  # ISO — по этому полю фильтруем даты
 
     try:
         if _is_postgres():
             cur.execute(
-                """INSERT INTO news (id, source, url, title, h1, description, plain_text, published_at, parsed_at, word_count, image_count)
-                   VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                """INSERT INTO news (id, source, url, title, h1, description, plain_text, published_at, parsed_at, word_count, image_count, published_ts)
+                   VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                    ON CONFLICT (id) DO NOTHING""",
-                (news_id, source, url, title, h1, description, plain_text, published_at, now, word_count, image_count)
+                (news_id, source, url, title, h1, description, plain_text, published_at, now, word_count, image_count, published_ts)
             )
         else:
             cur.execute(
-                """INSERT OR IGNORE INTO news (id, source, url, title, h1, description, plain_text, published_at, parsed_at, word_count, image_count)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-                (news_id, source, url, title, h1, description, plain_text, published_at, now, word_count, image_count)
+                """INSERT OR IGNORE INTO news (id, source, url, title, h1, description, plain_text, published_at, parsed_at, word_count, image_count, published_ts)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (news_id, source, url, title, h1, description, plain_text, published_at, now, word_count, image_count, published_ts)
             )
             conn.commit()
     finally:
