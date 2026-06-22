@@ -381,7 +381,6 @@ def viral_score(news: dict, precomputed_entities: list = None) -> dict:
         else:
             decay = 0.3
         score = round(score * decay)
-        if decay < 1.0:
-            triggered.append({"id": "time_decay", "label": f"Time decay ({age_hours:.0f}h, x{decay})", "weight": round(score * (decay - 1))})
+        # decay влияет на score, но в списке триггеров его не показываем (скрытый)
 
     return {"score": score, "level": level, "triggers": triggered, "pass": score >= config.VIRAL_LOW_THRESHOLD}

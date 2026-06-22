@@ -805,17 +805,22 @@ input:focus, textarea:focus, select:focus { outline:none; border-color:#1da1f2; 
       <span class="filter-label">Категория:</span>
       <select id="viral-category" onchange="loadViral()">
         <option value="">Все</option>
-        <option value="Скандалы">Скандалы</option>
-        <option value="Утечки">Утечки</option>
-        <option value="Shadow Drops">Shadow Drops</option>
-        <option value="Плохие релизы">Плохие релизы</option>
-        <option value="AI">AI</option>
-        <option value="Ивенты">Ивенты</option>
-        <option value="Деньги">Деньги</option>
-        <option value="Культура">Культура</option>
-        <option value="Персоны">Персоны</option>
-        <option value="Скорость">Скорость</option>
-        <option value="Базовые">Базовые</option>
+        <option value="AI-поиск">AI-поиск</option>
+        <option value="AI-агенты">AI-агенты</option>
+        <option value="AI-краулеры">AI-краулеры</option>
+        <option value="Релизы моделей">Релизы моделей</option>
+        <option value="Протоколы">Протоколы</option>
+        <option value="Zero-click">Zero-click</option>
+        <option value="Регуляции">Регуляции</option>
+        <option value="Апдейты">Апдейты</option>
+        <option value="Санкции">Санкции</option>
+        <option value="Волатильность">Волатильность</option>
+        <option value="Ранжирование">Ранжирование</option>
+        <option value="Техничка">Техничка</option>
+        <option value="Ссылки">Ссылки</option>
+        <option value="Контент">Контент</option>
+        <option value="Метрики">Метрики</option>
+        <option value="Срочное">Срочное</option>
       </select>
       <span class="filter-sep"></span>
       <span class="filter-label">Тональность:</span>
@@ -4134,7 +4139,7 @@ async function loadViral() {
   // Categories chart
   const cats = r.top_categories || [];
   const maxCat = cats.length ? cats[0][1] : 1;
-  const catColors = {'Скандалы':'#e0245e','Утечки':'#794bc4','Shadow Drops':'#17bf63','Плохие релизы':'#ff6300','AI':'#1da1f2','Ивенты':'#ffad1f','Деньги':'#00bcd4','Культура':'#e8598b','Персоны':'#8bc34a','Скорость':'#ff9800','Базовые':'#38444d','Прочее':'#455a64'};
+  const catColors = {'AI-поиск':'#1da1f2','AI-агенты':'#794bc4','AI-краулеры':'#00bcd4','Релизы моделей':'#8bc34a','Протоколы':'#607d8b','Zero-click':'#ff9800','Регуляции':'#e0245e','Апдейты':'#ffad1f','Санкции':'#c81e52','Волатильность':'#ff6300','Ранжирование':'#17bf63','Техничка':'#00897b','Ссылки':'#9b59b6','Контент':'#e8598b','Метрики':'#26a69a','Срочное':'#f5a623','Прочее':'#455a64'};
   document.getElementById('viral-categories').innerHTML = cats.map(([cat, count]) =>
     `<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
       <span style="min-width:120px;font-size:0.82em;color:${catColors[cat]||'var(--c-muted)'};text-align:right;font-weight:500">${esc(cat)}</span>
@@ -4218,7 +4223,7 @@ function renderViralTable() {
       <td style="text-align:center"><span style="color:${sentColors[n.sentiment]||'var(--c-muted)'};font-size:1.1em" title="${n.sentiment} (${n.sentiment_score})">${sentIcons[n.sentiment]||''}</span></td>
       <td style="font-size:0.85em">${esc(n.source)}</td>
       <td class="td-title"><a href="${n.url}" target="_blank">${esc(n.title||'')}</a>${isPick ? '<span class="viral-pick-badge">VIRAL</span>' : ''}</td>
-      <td style="max-width:250px">${triggers || '<span style="color:#38444d">-</span>'}</td>
+      <td style="white-space:normal;overflow:visible;min-width:200px;max-width:360px">${triggers || '<span style="color:var(--c-muted)">-</span>'}</td>
       <td>${tags || '-'}</td>
       <td style="font-size:0.82em;white-space:nowrap">${fmtDate(n.parsed_at)}</td>
       <td><span class="badge badge-${n.status}">${statusLabel}</span></td>

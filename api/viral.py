@@ -66,16 +66,13 @@ def get_viral(query_params):
         sentiment_counts = {"positive": 0, "negative": 0, "neutral": 0}
         source_scores = {}
 
-        # Category mapping from trigger_id prefix
+        # Category mapping from trigger_id prefix (SEO/GEO)
         CATEGORY_MAP = {
-            "scandal": "Скандалы", "leak": "Утечки", "shadow": "Shadow Drops",
-            "bad": "Плохие релизы", "ai": "AI", "major_event": "Ивенты",
-            "event": "Ивенты", "money": "Деньги", "culture": "Культура",
-            "person": "Персоны", "speed": "Скорость",
-            "sequel": "Базовые", "free_content": "Базовые", "delay": "Базовые",
-            "canceled": "Базовые", "award": "Базовые", "next_gen": "Базовые",
-            "big_update": "Базовые", "release_date": "Базовые",
-            "trailer": "Базовые", "record": "Базовые", "digest": "Базовые",
+            "aisearch": "AI-поиск", "agentic": "AI-агенты", "crawler": "AI-краулеры",
+            "modelrelease": "Релизы моделей", "protocol": "Протоколы", "zeroclick": "Zero-click",
+            "regulation": "Регуляции", "algoupd": "Апдейты", "penalty": "Санкции",
+            "volatility": "Волатильность", "ranking": "Ранжирование", "technical": "Техничка",
+            "link": "Ссылки", "content": "Контент", "measure": "Метрики", "urgency": "Срочное",
         }
 
         for row in rows:
