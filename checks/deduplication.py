@@ -31,10 +31,13 @@ def entity_overlap(text1: str, text2: str) -> float:
 #   1) лексический порог: заголовки должны реально делить слова (TF-IDF) — сигнал
 #      сущности лишь *усиливает* уже похожую пару, но не создаёт её сам;
 #   2) гипер-частые сущности (в >COMMON_ENTITY_FRAC батча) выкидываются из overlap.
-TFIDF_FLOOR = 0.14
-ENTITY_WEIGHT = 0.34
-PAIR_THRESHOLD = 0.36
-COMMON_ENTITY_FRAC = 0.10
+# TF-IDF (реальные слова заголовка) доминирует; вес сущностей низкий, иначе
+# вездесущая сущность («claude», «google») склеивает разные истории в блоб
+# через транзитивность. Низкий ENTITY_WEIGHT + лексический пол убивают блобы.
+TFIDF_FLOOR = 0.24
+ENTITY_WEIGHT = 0.18
+PAIR_THRESHOLD = 0.40
+COMMON_ENTITY_FRAC = 0.07
 
 
 def tfidf_similarity(titles: list[str], texts: list[str] | None = None) -> list[tuple]:
