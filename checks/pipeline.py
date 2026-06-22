@@ -65,10 +65,11 @@ def _check_single(news: dict) -> dict:
 
     # Дополнительные анализы
     result["tags"] = auto_tag(news)
-    # Авто-кейс: новости-исследования копятся в «Кейсы» и исключаются из фрешнесс-чистки
+    # Авто-кейс: только реальные кейсы/руководства (слова-индикаторы в тексте),
+    # НЕ телеграм-анонсы. Копятся в «Кейсы» и исключаются из фрешнесс-чистки.
     try:
-        from api.news import tags_contain_case
-        if news.get("id") and tags_contain_case(result["tags"]):
+        from api.news import is_case_content
+        if news.get("id") and is_case_content(news.get("title"), news.get("plain_text") or news.get("description"), news.get("source")):
             _c = get_connection(); _cur = _c.cursor()
             _ph = "%s" if _is_postgres() else "?"
             _cur.execute(f"UPDATE news SET is_case=1 WHERE id={_ph}", (news["id"],))

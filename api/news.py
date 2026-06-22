@@ -1068,6 +1068,54 @@ def tags_contain_case(tags_data) -> bool:
     return any(is_case_tag(t) for t in tags_data)
 
 
+# «Настоящий кейс» = статья-кейс/руководство/разбор (а не любой research-тег и не анонс).
+# Обязательные слова-индикаторы в заголовке/тексте (RU+EN). Телеграм-анонсы исключаются.
+_CASE_CONTENT_RE = __import__("re").compile(
+    r"кейс|case stud|как мы |как я |как мне |как нам |руководств|пошагов|"
+    r"чек-?лист|разбор|инструкц|гайд|how (i|we) |how to |step[ -]by[ -]step|"
+    r"walkthrough|tutorial|playbook|checklist|case study|\bguide\b",
+    __import__("re").IGNORECASE,
+)
+
+
+def is_case_content(title, text=None, source="") -> bool:
+    """True только если это реальный кейс/руководство — по словам-индикаторам
+    в ЗАГОЛОВКЕ (кейс обычно заявлен в тайтле; так точнее, без ложных по телу).
+    Телеграм-источники (TG:*) исключены — там кейсы не пишут (только анонсы)."""
+    if source and str(source).startswith("TG:"):
+        return False
+    return bool(_CASE_CONTENT_RE.search((title or "").lower()))
+
+
+def reclassify_cases():
+    """Разовая переразметка is_case по контент-правилу (исправляет старую широкую
+    разметку по тегу). Ставит 1, где статья — кейс/руководство и НЕ из Telegram;
+    снимает 1 там, где не подходит. Возвращает (помечено, снято)."""
+    conn = get_connection()
+    cur = conn.cursor()
+    _ph = "%s" if _is_postgres() else "?"
+    to_set, to_unset = [], []
+    try:
+        cur.execute("SELECT id, title, COALESCE(plain_text, description, ''), source, COALESCE(is_case,0) FROM news")
+        for nid, title, body, source, cur_flag in cur.fetchall():
+            want = 1 if is_case_content(title, body, source) else 0
+            if want == 1 and not cur_flag:
+                to_set.append(nid)
+            elif want == 0 and cur_flag:
+                to_unset.append(nid)
+        for flag, ids in ((1, to_set), (0, to_unset)):
+            for i in range(0, len(ids), 200):
+                chunk = ids[i:i + 200]
+                ph = ",".join([_ph] * len(chunk))
+                cur.execute(f"UPDATE news SET is_case={_ph} WHERE id IN ({ph})", (flag, *chunk))
+        if not _is_postgres():
+            conn.commit()
+        logger.info("reclassify_cases: +%d set, -%d unset", len(to_set), len(to_unset))
+        return len(to_set), len(to_unset)
+    finally:
+        cur.close()
+
+
 def set_case(body):
     """Поставить/снять закладку «Кейс» (is_case) на список новостей."""
     news_ids = body.get("news_ids") or ([body["news_id"]] if body.get("news_id") else [])
