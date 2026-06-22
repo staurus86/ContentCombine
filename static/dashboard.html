@@ -14,7 +14,7 @@ h2 { color:#1da1f2; font-size:1.1em; margin-bottom:10px; }
 header { background:linear-gradient(135deg,#192734 0%,#1a3a4a 100%); padding:10px 20px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid #22303c; box-shadow:0 2px 8px rgba(0,0,0,0.3); }
 
 /* Tabs */
-.tabs { display:flex; gap:0; background:#192734; border-radius:8px; margin:15px 0; overflow:hidden; box-shadow:0 1px 4px rgba(0,0,0,0.2); }
+.tabs { display:flex; align-items:center; gap:0; background:#192734; border-radius:8px; margin:15px 0; overflow:hidden; box-shadow:0 1px 4px rgba(0,0,0,0.2); }
 .tab { padding:10px 20px; cursor:pointer; color:#8899a6; border:none; background:none; font-size:0.9em; transition:all .2s; position:relative; }
 .tab:hover { color:#e1e8ed; background:#22303c; }
 .tab.active { color:#1da1f2; background:#22303c; border-bottom:2px solid #1da1f2; }
@@ -1093,9 +1093,9 @@ input:focus, textarea:focus, select:focus { outline:none; border-color:#1da1f2; 
     <div id="topic-cloud" style="margin-bottom:14px"></div>
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
       <h2>&#128293; Тренды <span id="sl-days-label" style="font-size:0.72em;color:#aab4be;font-weight:normal">кросс-источниковые сюжеты за 3 дня</span></h2>
-      <div style="display:flex;align-items:center;gap:8px">
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end">
         <span id="storylines-count" style="color:#8899a6;font-size:0.85em"></span>
-        <select id="sl-days" onchange="loadStorylines()" style="background:#253341;color:#e1e8ed;border:1px solid #38444d;border-radius:6px;padding:3px 8px;font-size:0.85em">
+        <select id="sl-days" onchange="loadStorylines()" style="width:auto;flex:0 0 auto;background:#253341;color:#e1e8ed;border:1px solid #38444d;border-radius:6px;padding:3px 8px;font-size:0.85em">
           <option value="1">1 день</option>
           <option value="2">2 дня</option>
           <option value="3" selected>3 дня</option>
@@ -6061,7 +6061,7 @@ async function renderKpi(storyCount) {
   let k = {};
   try { k = await api('/api/kpi'); } catch(e) {}
   const card = (v, l, c) =>
-    '<div style="background:#192734;border:1px solid #22303c;border-radius:10px;padding:12px 14px">' +
+    '<div style="background:#192734;border:1px solid #22303c;border-radius:10px;padding:12px 14px;text-align:center">' +
       '<div style="font-size:1.6em;font-weight:700;color:' + c + '">' + (v==null?'—':v) + '</div>' +
       '<div style="font-size:0.78em;color:#aab4be">' + l + '</div>' +
     '</div>';

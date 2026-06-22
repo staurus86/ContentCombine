@@ -308,7 +308,7 @@ def get_storylines(days: int = 3):
                 label = t.get("label") or t.get("trigger") or t.get("name") or (t if isinstance(t, str) else "")
                 if label:
                     trig_counts[label] += 1
-            top_triggers = [name for name, _ in trig_counts.most_common(5)]
+            top_triggers = [name for name, _ in trig_counts.most_common()]
 
             storylines.append({
                 "count": count,
