@@ -158,6 +158,14 @@ def start_scheduler():
     from api.news import cleanup_short_news
     scheduler.add_job(lambda: cleanup_short_news(100), "interval", hours=6, id="cleanup_short_news")
 
+    # Freshness: soft-delete news older than NEWS_MAX_AGE_DAYS (by article date) to trash
+    from api.news import soft_delete_stale_news
+    scheduler.add_job(soft_delete_stale_news, "interval", hours=6, id="soft_delete_stale_news")
+    try:
+        soft_delete_stale_news()  # run once on startup
+    except Exception as e:
+        logger.warning("Initial stale-news sweep skipped: %s", e)
+
     # Cache cleanup every 3 hours
     from apis.cache import cache_cleanup
     scheduler.add_job(cache_cleanup, "interval", hours=3, id="cache_cleanup")

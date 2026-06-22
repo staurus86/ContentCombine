@@ -60,6 +60,10 @@ VIRAL_HIGH_THRESHOLD = _int_env("VIRAL_HIGH_THRESHOLD", 70)
 VIRAL_MEDIUM_THRESHOLD = _int_env("VIRAL_MEDIUM_THRESHOLD", 40)
 VIRAL_LOW_THRESHOLD = _int_env("VIRAL_LOW_THRESHOLD", 20)
 
+# Freshness: новости старше N дней (по дате статьи) уезжают в «Удалённые»
+# (soft-delete, не физически). Применяется и при сборе, и в фоновой джобе.
+NEWS_MAX_AGE_DAYS = _int_env("NEWS_MAX_AGE_DAYS", 14)
+
 # Retention periods
 DELETED_NEWS_RETENTION_DAYS = _int_env("DELETED_NEWS_RETENTION_DAYS", 30)
 PLAINTEXT_RETENTION_DAYS = _int_env("PLAINTEXT_RETENTION_DAYS", 7)

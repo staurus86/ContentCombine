@@ -967,6 +967,71 @@ def cleanup_old_news(days=7):
         cur.close()
 
 
+def _parse_any_date(s):
+    """Парсит дату из ISO или RFC822; возвращает aware datetime или None."""
+    if not s:
+        return None
+    from datetime import datetime, timezone
+    from email.utils import parsedate_to_datetime
+    s = str(s).strip()
+    d = None
+    try:
+        d = datetime.fromisoformat(s.replace("Z", "+00:00"))
+    except Exception:
+        try:
+            d = parsedate_to_datetime(s)
+        except Exception:
+            return None
+    if d is not None and d.tzinfo is None:
+        d = d.replace(tzinfo=timezone.utc)
+    return d
+
+
+def soft_delete_stale_news(max_age_days=None):
+    """Свежесть: новости старше max_age_days уезжают в «Удалённые» (soft-delete).
+
+    Возраст берётся по ДАТЕ СТАТЬИ (published_at), при её отсутствии — по parsed_at
+    (когда собрали). Не трогает approved/ready и уже удалённые. Это soft-delete
+    (is_deleted=1 + deleted_at), не физическое удаление — восстановимо из корзины.
+    """
+    import config
+    if max_age_days is None:
+        max_age_days = getattr(config, "NEWS_MAX_AGE_DAYS", 14)
+    from datetime import datetime, timezone, timedelta
+    now = datetime.now(timezone.utc)
+    cutoff = now - timedelta(days=max_age_days)
+    conn = get_connection()
+    cur = conn.cursor()
+    _ph = "%s" if _is_postgres() else "?"
+    try:
+        cur.execute("""
+            SELECT id, published_at, parsed_at FROM news
+            WHERE COALESCE(is_deleted, 0) = 0
+              AND status NOT IN ('approved', 'ready')
+        """)
+        stale = []
+        for r in cur.fetchall():
+            nid, pub, parsed = r[0], r[1], r[2]
+            eff = _parse_any_date(pub) or _parse_any_date(parsed)
+            if eff is not None and eff < cutoff:
+                stale.append(nid)
+        now_iso = now.isoformat()
+        for i in range(0, len(stale), 200):
+            chunk = stale[i:i + 200]
+            placeholders = ",".join([_ph] * len(chunk))
+            cur.execute(
+                f"UPDATE news SET is_deleted=1, deleted_at={_ph} WHERE id IN ({placeholders})",
+                (now_iso, *chunk),
+            )
+        if not _is_postgres():
+            conn.commit()
+        if stale:
+            logger.info("Freshness: soft-deleted %d stale news (>%dd) to trash", len(stale), max_age_days)
+        return len(stale)
+    finally:
+        cur.close()
+
+
 def news_detail(body):
     """Get full news + analysis detail."""
     news_id = body.get("news_id")

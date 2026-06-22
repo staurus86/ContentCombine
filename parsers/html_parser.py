@@ -14,6 +14,39 @@ from parsers.proxy import fetch_with_retry
 logger = logging.getLogger(__name__)
 
 
+def _is_too_old(date_str: str) -> bool:
+    """True, если дата старше config.NEWS_MAX_AGE_DAYS. Пустая дата → False
+    (не блокируем — возраст неизвестен; фоновая джоба разберётся по parsed_at)."""
+    if not date_str:
+        return False
+    from email.utils import parsedate_to_datetime
+    try:
+        d = datetime.fromisoformat(str(date_str).replace("Z", "+00:00"))
+    except Exception:
+        try:
+            d = parsedate_to_datetime(str(date_str))
+        except Exception:
+            return False
+    if d is None:
+        return False
+    if d.tzinfo is None:
+        d = d.replace(tzinfo=timezone.utc)
+    max_days = getattr(__import__("config"), "NEWS_MAX_AGE_DAYS", 14)
+    return d < datetime.now(timezone.utc) - timedelta(days=max_days)
+
+
+def _date_from_url(url: str) -> str:
+    """Достаёт дату из URL вида /2026/06/15/ или /2026-06-15- — последний фолбэк."""
+    m = re.search(r"/(20\d{2})[/-](\d{1,2})[/-](\d{1,2})", url or "")
+    if m:
+        y, mo, d = m.groups()
+        try:
+            return datetime(int(y), int(mo), int(d), tzinfo=timezone.utc).date().isoformat()
+        except ValueError:
+            return ""
+    return ""
+
+
 def parse_html_source(source: dict) -> int:
     """Парсит HTML-страницу с новостями, возвращает количество новых."""
     if source.get("type") == "dtf":
@@ -84,6 +117,9 @@ def parse_html_source(source: dict) -> int:
 
             time.sleep(1)
             h1, description, plain_text, published_at = _fetch_article(link)
+
+            if _is_too_old(published_at):  # свежесть: не тащим старьё в базу
+                continue
 
             news_id = insert_news(
                 source=name,
@@ -162,6 +198,8 @@ def _parse_homepage(source: dict) -> int:
                 continue
             time.sleep(1)
             h1, description, plain_text, published_at = _fetch_article(link)
+            if _is_too_old(published_at):  # свежесть: не тащим старьё в базу
+                continue
             final_title = h1 if h1 and len(h1) > 15 else title
             news_id = insert_news(
                 source=name, url=link, title=final_title,
@@ -536,6 +574,8 @@ def _parse_single_sitemap_from_root(name: str, root, ns: dict, url_filter: str, 
 
         # Приоритет: дата из sitemap, иначе из HTML страницы
         final_date = published_at or page_date
+        if _is_too_old(final_date):  # свежесть: не тащим старьё в базу
+            continue
 
         nid = insert_news(
             source=name, url=link, title=h1,
@@ -566,7 +606,8 @@ def _extract_publish_date(soup) -> str:
 
     # 2. Meta теги
     for meta_name in ("article:published_time", "og:article:published_time",
-                      "date", "pubdate", "DC.date.issued", "sailthru.date"):
+                      "date", "pubdate", "DC.date.issued", "sailthru.date",
+                      "parsely-pub-date", "article:modified_time", "og:updated_time"):
         tag = soup.find("meta", attrs={"property": meta_name}) or \
               soup.find("meta", attrs={"name": meta_name})
         if tag and tag.get("content"):
@@ -655,6 +696,8 @@ def _fetch_article(url: str) -> tuple[str, str, str, str]:
             description = meta_desc.get("content", "")
 
         published_at = _extract_publish_date(soup)
+        if not published_at:
+            published_at = _date_from_url(url)  # последний фолбэк — дата из URL
 
         # Умный поиск текста по множеству селекторов
         plain_text = _extract_body_text(soup)
