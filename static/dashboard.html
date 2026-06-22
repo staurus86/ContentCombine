@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>IgroNews Admin</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%23192734'/><text x='50' y='38' text-anchor='middle' font-size='28' font-family='sans-serif' font-weight='bold' fill='%231da1f2'>IGR</text><text x='50' y='70' text-anchor='middle' font-size='20' font-family='sans-serif' fill='%2317bf63'>NEWS</text><circle cx='82' cy='20' r='8' fill='%23e0245e'/></svg>">
+<title>ContentCombine</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%232563eb'/><path d='M26 30 L50 54 M50 30 L50 54 M74 30 L50 54' stroke='%23fff' stroke-width='8' stroke-linecap='round' fill='none'/><rect x='44' y='54' width='12' height='22' rx='6' fill='%23fff'/></svg>">
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
 body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; background:#0f1923; color:#e1e8ed; font-size:15px; }
@@ -354,12 +354,11 @@ input:focus, textarea:focus, select:focus { outline:none; border-color:#1da1f2; 
 <header>
   <div style="display:flex;align-items:center;gap:12px">
     <svg width="36" height="36" viewBox="0 0 100 100" style="flex-shrink:0">
-      <rect width="100" height="100" rx="20" fill="#1da1f2"/>
-      <text x="50" y="40" text-anchor="middle" font-size="30" font-family="sans-serif" font-weight="bold" fill="#fff">IGR</text>
-      <text x="50" y="72" text-anchor="middle" font-size="22" font-family="sans-serif" fill="#fff" opacity="0.8">NEWS</text>
-      <circle cx="85" cy="18" r="9" fill="#e0245e"/>
+      <rect width="100" height="100" rx="22" fill="#2563eb"/>
+      <path d="M26 30 L50 54 M50 30 L50 54 M74 30 L50 54" stroke="#fff" stroke-width="8" stroke-linecap="round" fill="none"/>
+      <rect x="44" y="54" width="12" height="22" rx="6" fill="#fff"/>
     </svg>
-    <h1>IgroNews <span style="font-weight:300;font-size:0.7em;color:#8899a6">Admin</span></h1>
+    <h1>Content<span style="color:#2563eb">Combine</span></h1>
   </div>
   <span style="color:#8899a6;font-size:0.85em" id="clock"></span>
   <label style="display:inline-flex;align-items:center;gap:4px;margin-left:12px;cursor:pointer;font-size:0.82em;color:#8899a6" title="Браузерные уведомления">
@@ -388,15 +387,17 @@ input:focus, textarea:focus, select:focus { outline:none; border-color:#1da1f2; 
 <div class="container">
   <div class="tabs">
     <div class="tab" data-tab="ops" id="tab-ops" style="display:none">&#9889; Обзор</div>
-    <div class="tab active" data-tab="editorial">Редакция</div>
-    <div class="tab" data-tab="news">Обогащённые</div>
-    <div class="tab" data-tab="final">Финал</div>
-    <div class="tab" data-tab="editor">Контент</div>
-    <div class="tab" data-tab="viral">Виральность</div>
-    <div class="tab" data-tab="analytics">Аналитика</div>
-    <div class="tab" data-tab="queue">Очередь</div>
-    <div class="tab" data-tab="health">Здоровье</div>
-    <div class="tab" data-tab="storylines" id="tab-storylines" style="display:none">Сюжеты</div>
+    <div class="tab active" data-tab="storylines" id="tab-storylines">&#128293; Тренды</div>
+    <div class="tab" data-tab="editorial">&#128240; Лента</div>
+    <div class="tab" data-tab="cases" id="tab-cases">&#128204; Кейсы</div>
+    <!-- Платные/LLM-вкладки скрыты в бесплатном режиме -->
+    <div class="tab" data-tab="news" style="display:none">Обогащённые</div>
+    <div class="tab" data-tab="final" style="display:none">Финал</div>
+    <div class="tab" data-tab="editor" style="display:none">Контент</div>
+    <div class="tab" data-tab="viral" style="display:none">Виральность</div>
+    <div class="tab" data-tab="queue" style="display:none">Очередь</div>
+    <div class="tab" data-tab="analytics">&#128202; Аналитика</div>
+    <div class="tab" data-tab="health">&#129657; Здоровье</div>
     <div class="tab" data-tab="trash" id="tab-trash">&#128465; Удалённые</div>
     <div class="tab" data-tab="settings">&#9881;</div>
     <div style="margin-left:auto"><a href="/logout" class="btn btn-secondary btn-sm">Выйти</a></div>
@@ -435,7 +436,7 @@ input:focus, textarea:focus, select:focus { outline:none; border-color:#1da1f2; 
   </div>
 
   <!-- EDITORIAL — единая рабочая вкладка -->
-  <div class="panel active" id="panel-editorial">
+  <div class="panel" id="panel-editorial">
     <!-- Triage Mode Switcher (Phase 1, behind newsroom_triage_v1 flag) -->
     <div class="triage-modes" id="triage-modes" style="display:none">
       <div class="triage-mode active" data-mode="table" onclick="setTriageMode('table')">&#9776; Таблица</div>
@@ -460,12 +461,12 @@ input:focus, textarea:focus, select:focus { outline:none; border-color:#1da1f2; 
       </div>
     </div>
 
-    <!-- Stat cards -->
-    <div class="stats" id="ed-stats"></div>
+    <!-- Stat cards (status-based; hidden in free-tier mode) -->
+    <div class="stats" id="ed-stats" style="display:none"></div>
 
     <!-- Filters -->
     <div class="dash-filters" style="margin-bottom:12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-      <select id="ed-status" onchange="loadEditorial()" style="padding:4px 8px;background:#192734;color:#e1e8ed;border:1px solid #38444d;border-radius:6px">
+      <select id="ed-status" onchange="loadEditorial()" style="display:none;padding:4px 8px;background:#192734;color:#e1e8ed;border:1px solid #38444d;border-radius:6px">
         <option value="" selected>Активные</option>
         <option value="new">Новые</option>
         <option value="in_review">На проверке</option>
@@ -516,17 +517,16 @@ input:focus, textarea:focus, select:focus { outline:none; border-color:#1da1f2; 
       <button class="btn btn-sm btn-secondary" onclick="edSelectZeroScore()" title="Выделить все новости с внутренним скором 0">&#9744; Score=0</button>
       <button class="btn btn-sm btn-secondary" onclick="edRescore()" title="Пересчитать скор для выбранных новостей (или всех in_review с score=0)">&#128260; Пересчитать скор</button>
       <span style="color:#38444d">|</span>
-      <button class="btn btn-sm btn-primary" onclick="edApproveSelected()">&#10003; Одобрить</button>
-      <button class="btn btn-sm btn-danger" onclick="edRejectSelected()">&#10007; Отклонить</button>
-      <button class="btn btn-sm btn-warning" onclick="edAutoApprove()">&#9889; Авто-одобрение (&gt;70)</button>
-      <span style="color:#38444d">|</span>
+      <button class="btn btn-sm btn-primary" onclick="edApproveSelected()" style="display:none">&#10003; Одобрить</button>
+      <button class="btn btn-sm btn-danger" onclick="edRejectSelected()" style="display:none">&#10007; Отклонить</button>
+      <button class="btn btn-sm btn-warning" onclick="edAutoApprove()" style="display:none">&#9889; Авто-одобрение (&gt;70)</button>
       <button class="btn btn-sm btn-secondary" onclick="edExportSheets()">&#9776; Sheets</button>
       <button class="btn btn-sm btn-secondary" onclick="edExportXlsx()" title="Скачать текущий вид как XLSX">&#128202; XLSX</button>
-      <button class="btn btn-sm btn-secondary" onclick="edBatchRewrite()">&#9998; Рерайт</button>
+      <button class="btn btn-sm btn-secondary" onclick="edBatchRewrite()" style="display:none">&#9998; Рерайт</button>
       <span style="color:#38444d">|</span>
       <span id="pipeline-controls">
-        <button id="btn-full-auto" class="btn btn-sm" style="background:#1da1f2;color:#fff" onclick="runFullAuto()" title="6 этапов: Скор → LLM-обогащение → Рерайт → Sheets/Ready. Платно (расходует API).">&#128640; Полный автомат</button>
-        <button id="btn-no-llm" class="btn btn-sm" style="background:#794bc4;color:#fff" onclick="runNoLLM()" title="Только локальный скоринг → Sheets/NotReady для ручной модерации. Бесплатно.">&#128203; Без LLM</button>
+        <button id="btn-full-auto" class="btn btn-sm" style="display:none;background:#1da1f2;color:#fff" onclick="runFullAuto()" title="LLM, платно">&#128640; Полный автомат</button>
+        <button id="btn-no-llm" class="btn btn-sm" style="background:#794bc4;color:#fff" onclick="runNoLLM()" title="Только локальный скоринг → Sheets. Бесплатно.">&#128203; Без LLM</button>
         <button id="btn-pipeline-stop" class="btn btn-sm btn-danger" style="display:none" onclick="stopPipeline()">&#9724; Стоп</button>
         <span id="pipeline-status" style="display:none;margin-left:8px;padding:4px 12px;border-radius:8px;background:#253341;font-size:0.85em;color:#ffad1f;border:1px solid #38444d"></span>
       </span>
@@ -540,8 +540,7 @@ input:focus, textarea:focus, select:focus { outline:none; border-color:#1da1f2; 
           <th style="width:30px"><input type="checkbox" onchange="edToggleAll(this)" style="width:16px;height:16px"></th>
           <th class="sortable" onclick="edSort('source')" style="width:90px">Источник</th>
           <th class="sortable" onclick="edSort('title')">Заголовок</th>
-          <th class="sortable" onclick="edSort('status')" style="width:85px">Статус</th>
-          <th class="sortable" onclick="edSort('total_score')" style="width:50px">Скор <span class="score-info" title="Формула: внутренний×40% + вирал×20% + Keys.so×15% + Trends×10% + заголовок×15%&#10;&#10;0-29: низкий (красный)&#10;30-59: средний (жёлтый)&#10;60-100: высокий (зелёный)">ⓘ</span></th>
+          <th class="sortable" onclick="edSort('total_score')" style="width:50px">Скор<span class="score-info" title="Формула: внутренний×40% + вирал×20% + Keys.so×15% + Trends×10% + заголовок×15%&#10;&#10;0-29: низкий (красный)&#10;30-59: средний (жёлтый)&#10;60-100: высокий (зелёный)">ⓘ</span></th>
           <th style="width:60px">Кач/Рел</th>
           <th class="sortable" onclick="edSort('viral_score')" style="width:75px">Вирал.</th>
           <th style="width:65px">Свежесть</th>
@@ -1068,9 +1067,23 @@ input:focus, textarea:focus, select:focus { outline:none; border-color:#1da1f2; 
   </div>
 
   <!-- STORYLINES -->
-  <div class="panel" id="panel-storylines" style="display:none">
+  <!-- CASES -->
+  <div class="panel" id="panel-cases">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-      <h2>Сюжетные линии <span id="sl-days-label" style="font-size:0.65em;color:#8899a6;font-weight:normal">кластеры похожих новостей за 3 дня</span></h2>
+      <h2>&#128204; Кейсы <span style="font-size:0.65em;color:#8899a6;font-weight:normal">закладки для чтения — не удаляются автоматически</span></h2>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span id="cases-count" style="color:#8899a6;font-size:0.85em"></span>
+        <button class="btn btn-sm btn-secondary" onclick="loadCases()">Обновить</button>
+      </div>
+    </div>
+    <div id="cases-list" style="font-size:0.9em"></div>
+  </div>
+
+  <!-- TRENDS (storylines) -->
+  <div class="panel active" id="panel-storylines">
+    <div id="topic-cloud" style="margin-bottom:14px"></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <h2>&#128293; Тренды <span id="sl-days-label" style="font-size:0.65em;color:#8899a6;font-weight:normal">кросс-источниковые сюжеты за 3 дня</span></h2>
       <div style="display:flex;align-items:center;gap:8px">
         <span id="storylines-count" style="color:#8899a6;font-size:0.85em"></span>
         <select id="sl-days" onchange="loadStorylines()" style="background:#253341;color:#e1e8ed;border:1px solid #38444d;border-radius:6px;padding:3px 8px;font-size:0.85em">
@@ -1767,7 +1780,8 @@ document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () =>
   if (t.dataset.tab === 'analytics') { loadAnalytics(); loadSavedDigests(); loadFunnelAnalytics(); loadPromptInsights(); }
   if (t.dataset.tab === 'queue') { loadQueueStandalone(); }
   if (t.dataset.tab === 'health') { loadHealth(); }
-  if (t.dataset.tab === 'storylines') { loadStorylines(); loadSlSettings(); }
+  if (t.dataset.tab === 'storylines') { loadStorylines(); loadSlSettings(); loadTopicCloud(); }
+  if (t.dataset.tab === 'cases') { loadCases(); }
   if (t.dataset.tab === 'trash') { loadTrash(); }
   if (t.dataset.tab === 'settings') { loadSettings(); loadLogs(); loadQueue(); loadViralTriggers(); }
 }));
@@ -4740,6 +4754,11 @@ function renderEdTable() {
     const editorBtn = `<button class="btn btn-sm btn-secondary" onclick="edToEditor('${n.id}')" title="В редактор" style="padding:2px 6px">&#9998;</button>`;
     const explainBtn = `<button class="btn btn-sm btn-secondary" onclick="openExplainDrawer('${n.id}','${esc(n.title).replace(/'/g,"\\'")}') " title="Почему?" style="padding:2px 6px;font-size:0.75em">?</button>`;
     const textBtn = `<button class="btn btn-sm btn-secondary" onclick="openTextDrawer('${n.id}')" title="Текст новости" style="padding:2px 6px;font-size:0.75em">&#128196;</button>`;
+    const caseBtn = n.is_case
+      ? `<button class="btn btn-sm" style="padding:2px 6px;background:#3a2f1a;color:#f5d650" onclick="setCase('${n.id}',false)" title="Убрать из Кейсов">&#128204;</button>`
+      : `<button class="btn btn-sm btn-secondary" onclick="setCase('${n.id}',true)" title="В Кейсы" style="padding:2px 6px">&#128204;</button>`;
+    const tgBtn = `<button class="btn btn-sm btn-secondary" onclick="openTgModal('${n.id}')" title="В Telegram" style="padding:2px 6px">&#128228;</button>`;
+    const hideBtn = `<button class="btn btn-sm btn-danger" onclick="edHide('${n.id}')" title="Скрыть (в Удалённые)" style="padding:2px 6px">&#128465;</button>`;
 
     return `<tr class="ed-row" data-id="${n.id}">
       <td><input type="checkbox" class="ed-cb" value="${n.id}" style="width:15px;height:15px"></td>
@@ -4749,7 +4768,6 @@ function renderEdTable() {
           <div style="font-size:0.9em;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${n.title}</div>
         </div>
       </td>
-      <td><span style="color:${stColor};font-size:0.75em;font-weight:500">${stLabel}</span></td>
       <td style="text-align:center"><span style="color:${scColor};font-weight:bold;font-size:1.1em">${sc}</span></td>
       <td style="text-align:center;font-size:0.8em;color:#8899a6">${qs}/${rs}</td>
       <td style="text-align:center;cursor:help" title="${vTriggersTooltip}"><span style="color:${vlColor};font-weight:bold">${vs}</span><br><span style="font-size:0.7em;color:${vlColor}">${vl}</span></td>
@@ -4758,7 +4776,7 @@ function renderEdTable() {
       <td style="text-align:center"><span style="color:${slColor}" title="${sl}">${sEmoji}</span></td>
       <td>${tagsHtml}</td>
       <td style="font-size:0.72em;color:#8899a6;white-space:nowrap">${fmtDate(n.published_at)}</td>
-      <td style="white-space:nowrap">${approveBtn} ${rejectBtn} ${editorBtn} ${textBtn} ${explainBtn}</td>
+      <td style="white-space:nowrap">${caseBtn} ${tgBtn} ${textBtn} ${hideBtn}</td>
     </tr>
     <tr class="ed-detail" id="ed-detail-${n.id}" style="display:none">
       <td colspan="12" style="padding:12px 20px;background:#15202b;border-left:3px solid #1da1f2">
@@ -5100,13 +5118,98 @@ smartInterval(() => {
   }
 }, 30000);
 
-// Initial editorial load + auto-review if empty
-loadEditorial().then(() => {
-  const stats = document.getElementById('ed-stats');
-  if (_edData.length === 0 && stats && stats.textContent.match(/Новые.*[1-9]/)) {
-    edRunAutoReview();
+// ===== Free-tier redesign: Cases · Topic cloud · Telegram =====
+async function setCase(id, on, fromCases) {
+  const r = await api('/api/news/case', {news_ids:[id], on: !!on});
+  if (r && r.status === 'ok') {
+    toast(on ? 'Добавлено в Кейсы 📌' : 'Убрано из Кейсов');
+    if (fromCases) loadCases(); else if (typeof loadEditorial==='function') loadEditorial();
+  } else { toast((r && r.message) || 'Ошибка', true); }
+}
+
+async function loadTopicCloud() {
+  const el = document.getElementById('topic-cloud');
+  if (!el) return;
+  try {
+    const r = await api('/api/topic_cloud?hours=48');
+    const topics = (r && r.topics) || [];
+    if (!topics.length) { el.innerHTML = ''; return; }
+    const max = Math.max.apply(null, topics.map(t => t.sources)) || 1;
+    el.innerHTML =
+      '<div style="font-size:0.68em;color:#8899a6;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">Облако тем дня · кто о чём пишет</div>' +
+      '<div style="display:flex;flex-wrap:wrap;gap:6px">' +
+      topics.map(t => {
+        const w = t.sources / max;
+        const fs = (0.82 + w * 0.7).toFixed(2);
+        const col = w > 0.66 ? '#5cb8f7' : w > 0.33 ? '#2ee08a' : '#8899a6';
+        return `<span title="${t.sources} источников · ${t.count} статей" style="font-size:${fs}em;color:${col};background:#1e2a36;border:1px solid #2c3a47;border-radius:14px;padding:3px 11px;line-height:1.6">${esc(t.label)} <b style="opacity:.65">${t.sources}</b></span>`;
+      }).join('') + '</div>';
+  } catch (e) { el.innerHTML = ''; }
+}
+
+async function loadCases() {
+  const el = document.getElementById('cases-list');
+  if (!el) return;
+  el.innerHTML = '<div style="color:#8899a6;padding:20px;text-align:center">Загрузка…</div>';
+  const r = await api('/api/news/list?cases=1&limit=200');
+  const items = (r && r.news) || [];
+  const cnt = document.getElementById('cases-count');
+  if (cnt) cnt.textContent = items.length + ' кейсов';
+  if (!items.length) {
+    el.innerHTML = '<div style="color:#8899a6;padding:30px;text-align:center">Пока пусто. Жми 📌 на новости в Ленте или Трендах — кейсы копятся здесь и не удаляются автоматически.</div>';
+    return;
   }
-});
+  el.innerHTML = items.map(n => {
+    let tags = [];
+    try { tags = typeof n.tags_data === 'string' ? JSON.parse(n.tags_data || '[]') : (n.tags_data || []); } catch (e) {}
+    const tg = (Array.isArray(tags) ? tags : []).slice(0, 3).map(t =>
+      `<span class="tag tag-${t.id || ''}" style="font-size:0.7em;padding:1px 5px">${esc(t.label || t.id || '')}</span>`).join(' ');
+    return `<div style="display:flex;gap:10px;align-items:flex-start;padding:10px 4px;border-bottom:1px solid #22303c">
+      <div style="flex:1;min-width:0">
+        <a href="${n.url}" target="_blank" style="color:#e1e8ed;text-decoration:none;font-size:0.95em">${esc(n.title)}</a>
+        <div style="font-size:0.74em;color:#8899a6;margin-top:3px">${esc(n.source)} · ${fmtDate(n.published_at)} · &#128221;${n.word_count || 0} ${tg}</div>
+      </div>
+      <button class="btn btn-sm btn-secondary" title="В Telegram" onclick="openTgModal('${n.id}')" style="padding:2px 7px">&#128228;</button>
+      <button class="btn btn-sm btn-secondary" title="Убрать из Кейсов" onclick="setCase('${n.id}',false,true)" style="padding:2px 7px">&#128204;&#10007;</button>
+    </div>`;
+  }).join('');
+}
+
+async function edHide(id) {
+  const r = await api('/api/news/delete', {news_ids: [id]});
+  if (r && (r.status === 'ok' || r.deleted !== undefined)) { toast('Скрыто — в Удалённые'); if (typeof loadEditorial==='function') loadEditorial(); }
+  else toast((r && r.message) || 'Ошибка', true);
+}
+
+// Telegram preview/publish modal
+async function openTgModal(id) {
+  const modal = document.getElementById('tg-modal');
+  const ta = document.getElementById('tg-text');
+  modal.style.display = 'flex';
+  ta.value = 'Загрузка…';
+  const r = await api('/api/telegram/publish', {news_id: id, preview: true});
+  ta.value = (r && r.text) || '';
+}
+function closeTgModal() { document.getElementById('tg-modal').style.display = 'none'; }
+async function tgCopy() {
+  const ta = document.getElementById('tg-text');
+  try { await navigator.clipboard.writeText(ta.value); toast('Скопировано в буфер'); }
+  catch (e) { ta.select(); document.execCommand('copy'); toast('Скопировано'); }
+}
+async function tgSend() {
+  const ta = document.getElementById('tg-text');
+  const r = await api('/api/telegram/publish', {text: ta.value});
+  if (r && r.status === 'ok') { toast('Опубликовано в Telegram ✓'); closeTgModal(); }
+  else if (r && r.status === 'no_token') {
+    try { await navigator.clipboard.writeText(ta.value); } catch (e) {}
+    toast('Канал не подключён — текст скопирован в буфер');
+  } else { toast((r && r.message) || 'Ошибка отправки', true); }
+}
+
+// Initial load: Тренды — стартовая вкладка (+ облако тем); ленту прогреваем в фоне
+loadStorylines();
+loadTopicCloud();
+loadEditorial();
 
 // Check if pipeline is already running on page load
 (async () => {
@@ -6216,6 +6319,22 @@ async function purgeAllTrash() {
   <div id="pipeline-overlay-text" style="color:#e1e8ed;font-size:1.1em">Обработка...</div>
   <div id="pipeline-overlay-detail" style="color:#8899a6;font-size:0.9em;margin-top:8px"></div>
   <button class="btn btn-danger btn-sm" onclick="stopPipeline()" style="margin-top:20px">Остановить</button>
+</div>
+
+<!-- Telegram publish modal -->
+<div id="tg-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:10001;align-items:center;justify-content:center" onclick="if(event.target===this)closeTgModal()">
+  <div style="background:#192734;border:1px solid #2c3a47;border-radius:12px;padding:20px;width:min(560px,92vw)">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <h3 style="margin:0;color:#e1e8ed">&#128228; Пост в Telegram</h3>
+      <button class="btn btn-sm btn-secondary" onclick="closeTgModal()" style="padding:2px 9px">&#10007;</button>
+    </div>
+    <textarea id="tg-text" style="width:100%;height:220px;background:#22303c;border:1px solid #38444d;color:#e1e8ed;border-radius:8px;padding:10px;font-size:0.9em;line-height:1.45;resize:vertical"></textarea>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
+      <button class="btn btn-sm btn-secondary" onclick="tgCopy()">&#128203; Скопировать</button>
+      <button class="btn btn-sm btn-primary" onclick="tgSend()">&#128228; Отправить</button>
+    </div>
+    <div style="font-size:0.72em;color:#8899a6;margin-top:8px">Без токена канала пост копируется в буфер. Канал задаётся в &#9881; Настройки.</div>
+  </div>
 </div>
 
 </body>

@@ -193,6 +193,7 @@ class AdminHandler(BaseHTTPRequestHandler):
             "/api/source_health_plus": lambda: self._json(self._get_source_health_plus()),
             "/api/storylines/settings": lambda: self._json(self._get_storylines_settings()),
             "/api/storylines/history": lambda: self._json(self._get_storylines_history()),
+            "/api/topic_cloud": lambda: self._json(self._get_topic_cloud()),
         }
 
         # CMS-ready XLSX export of articles
@@ -284,6 +285,8 @@ class AdminHandler(BaseHTTPRequestHandler):
             "/api/news/delete": lambda: self._delete_news(body),
             "/api/news/restore": lambda: self._restore_news(body),
             "/api/news/purge": lambda: self._purge_news(body),
+            "/api/news/case": lambda: self._set_case(body),
+            "/api/telegram/publish": lambda: self._tg_publish(body),
             "/api/articles/restore": lambda: self._restore_article(body),
             "/api/test_parse": lambda: self._test_parse(body),
             "/api/setup_headers": lambda: self._setup_headers(body),
@@ -597,8 +600,8 @@ class AdminHandler(BaseHTTPRequestHandler):
     def _serve_login(self):
         html = """<!DOCTYPE html>
 <html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>IgroNews Login</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%23192734'/><text x='50' y='38' text-anchor='middle' font-size='28' font-family='sans-serif' font-weight='bold' fill='%231da1f2'>IGR</text><text x='50' y='70' text-anchor='middle' font-size='20' font-family='sans-serif' fill='%2317bf63'>NEWS</text><circle cx='82' cy='20' r='8' fill='%23e0245e'/></svg>">
+<title>ContentCombine — Login</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%232563eb'/><path d='M26 30 L50 54 M50 30 L50 54 M74 30 L50 54' stroke='%23fff' stroke-width='8' stroke-linecap='round' fill='none'/><rect x='44' y='54' width='12' height='22' rx='6' fill='%23fff'/></svg>">
 <style>
 * { margin:0;padding:0;box-sizing:border-box; }
 body { font-family:-apple-system,sans-serif; background:#0f1923; color:#e1e8ed; display:flex; justify-content:center; align-items:center; height:100vh; }
@@ -613,13 +616,12 @@ body { font-family:-apple-system,sans-serif; background:#0f1923; color:#e1e8ed; 
 <div class="login">
   <div style="text-align:center;margin-bottom:10px">
     <svg width="48" height="48" viewBox="0 0 100 100">
-      <rect width="100" height="100" rx="20" fill="#1da1f2"/>
-      <text x="50" y="40" text-anchor="middle" font-size="30" font-family="sans-serif" font-weight="bold" fill="#fff">IGR</text>
-      <text x="50" y="72" text-anchor="middle" font-size="22" font-family="sans-serif" fill="#fff" opacity="0.8">NEWS</text>
-      <circle cx="85" cy="18" r="9" fill="#e0245e"/>
+      <rect width="100" height="100" rx="22" fill="#2563eb"/>
+      <path d="M26 30 L50 54 M50 30 L50 54 M74 30 L50 54" stroke="#fff" stroke-width="8" stroke-linecap="round" fill="none"/>
+      <rect x="44" y="54" width="12" height="22" rx="6" fill="#fff"/>
     </svg>
   </div>
-  <h2>IgroNews</h2>
+  <h2>ContentCombine</h2>
   <div class="error" id="err">Invalid credentials</div>
   <input id="username" placeholder="Username" autofocus>
   <input id="password" type="password" placeholder="Password">
@@ -1082,6 +1084,14 @@ async function login() {
         from api.news import purge_news
         self._json(purge_news(body))
 
+    def _set_case(self, body):
+        from api.news import set_case
+        self._json(set_case(body))
+
+    def _tg_publish(self, body):
+        from apis.tg_publish import publish
+        self._json(publish(body))
+
     def _restore_article(self, body):
         if not self._require_perm("delete"):
             return
@@ -1331,7 +1341,7 @@ async function login() {
             qs = parse_qs(urlparse(self.path).query)
             xlsx_bytes = export_news_xlsx(qs)
             from datetime import datetime
-            fname = f"igronews_{datetime.now().strftime('%Y%m%d_%H%M')}.xlsx"
+            fname = f"contentcombine_{datetime.now().strftime('%Y%m%d_%H%M')}.xlsx"
             self.send_response(200)
             self.send_header("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
             self.send_header("Content-Disposition", f'attachment; filename="{fname}"')
@@ -1350,7 +1360,7 @@ async function login() {
             qs = parse_qs(urlparse(self.path).query)
             xlsx_bytes = export_articles_xlsx(qs)
             from datetime import datetime
-            fname = f"igronews_cms_{datetime.now().strftime('%Y%m%d_%H%M')}.xlsx"
+            fname = f"contentcombine_cms_{datetime.now().strftime('%Y%m%d_%H%M')}.xlsx"
             self.send_response(200)
             self.send_header("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
             self.send_header("Content-Disposition", f'attachment; filename="{fname}"')
@@ -1573,6 +1583,12 @@ async function login() {
         qs = parse_qs(urlparse(self.path).query)
         days = int(qs.get("days", ["3"])[0])
         return get_storylines(days=days)
+
+    def _get_topic_cloud(self):
+        from api.dashboard import topic_cloud
+        qs = parse_qs(urlparse(self.path).query)
+        hours = int(qs.get("hours", ["48"])[0])
+        return topic_cloud(hours=hours)
 
     def _get_source_health_plus(self):
         from api.dashboard import get_source_health_plus

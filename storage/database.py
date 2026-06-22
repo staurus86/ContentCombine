@@ -326,6 +326,12 @@ def _init_db_impl(conn, cur):
     # Content metrics: word count (from plain_text) and image count (from article body)
     _add_column_if_missing(cur, "news", "word_count", "INTEGER DEFAULT 0")
     _add_column_if_missing(cur, "news", "image_count", "INTEGER DEFAULT 0")
+    # Cases: manual bookmark / auto by research tag. Exempt from freshness purge.
+    _add_column_if_missing(cur, "news", "is_case", "INTEGER DEFAULT 0")
+    try:
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_news_case ON news(is_case)")
+    except Exception:
+        pass
     _add_column_if_missing(cur, "articles", "is_deleted", "INTEGER DEFAULT 0")
     _add_column_if_missing(cur, "articles", "deleted_at", "TEXT")
     _add_column_if_missing(cur, "articles", "feed_description", "TEXT DEFAULT ''")

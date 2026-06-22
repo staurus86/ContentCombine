@@ -114,6 +114,9 @@ REGIONS = ["RU", "US", "GB", "DE"]
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_CHAT_IDS = os.getenv("TELEGRAM_CHAT_IDS", "")  # comma-separated authorized chat IDs
 TELEGRAM_NOTIFY_THRESHOLD = _int_env("TELEGRAM_NOTIFY_THRESHOLD", 70)
+# Channel for one-click publishing of a news post (e.g. "@my_seo_channel" or "-100...").
+# Empty => publish endpoint returns no_token and UI copies the post to clipboard.
+TELEGRAM_PUBLISH_CHANNEL = os.getenv("TELEGRAM_PUBLISH_CHANNEL", "")
 
 # VK API
 VK_API_TOKEN = os.getenv("VK_API_TOKEN", "")
@@ -382,6 +385,7 @@ def load_persistent_settings():
             "VK_API_TOKEN": "VK_API_TOKEN",
             "TELEGRAM_BOT_TOKEN": "TELEGRAM_BOT_TOKEN",
             "LLM_MODEL": "LLM_MODEL",
+            "TELEGRAM_PUBLISH_CHANNEL": "TELEGRAM_PUBLISH_CHANNEL",
             "KEYSO_REGION": "KEYSO_REGION",
             "AUTO_REWRITE_STYLE": "AUTO_REWRITE_STYLE",
             "OPENAI_API_KEY": "OPENAI_API_KEY",

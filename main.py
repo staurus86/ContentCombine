@@ -37,7 +37,7 @@ def _handle_shutdown(signum, frame):
 
 
 def main():
-    logging.info("IgroNews starting...")
+    logging.info("ContentCombine starting...")
 
     # Graceful shutdown on SIGTERM (Docker/Railway) and SIGINT (Ctrl+C)
     signal.signal(signal.SIGTERM, _handle_shutdown)

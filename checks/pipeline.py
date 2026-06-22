@@ -65,6 +65,18 @@ def _check_single(news: dict) -> dict:
 
     # Дополнительные анализы
     result["tags"] = auto_tag(news)
+    # Авто-кейс: новости-исследования копятся в «Кейсы» и исключаются из фрешнесс-чистки
+    try:
+        from api.news import tags_contain_case
+        if news.get("id") and tags_contain_case(result["tags"]):
+            _c = get_connection(); _cur = _c.cursor()
+            _ph = "%s" if _is_postgres() else "?"
+            _cur.execute(f"UPDATE news SET is_case=1 WHERE id={_ph}", (news["id"],))
+            if not _is_postgres():
+                _c.commit()
+            _cur.close()
+    except Exception as _e:
+        logger.debug("auto is_case skip: %s", _e)
     result["sentiment"] = analyze_sentiment(news)
     result["momentum"] = get_momentum(news)
     result["entities"] = extract_entities(news)

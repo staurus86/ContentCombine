@@ -55,6 +55,7 @@ def get_news_unified(query_params):
         sort_field = qs.get("sort", ["parsed_at"])[0]
         sort_dir = qs.get("dir", ["desc"])[0]
         include_deleted = qs.get("deleted", ["0"])[0] == "1"
+        cases_only = qs.get("cases", ["0"])[0] == "1"
 
         _ph = "%s" if _is_postgres() else "?"
         conditions = []
@@ -64,6 +65,10 @@ def get_news_unified(query_params):
         # Soft-delete filter
         if not include_deleted:
             conditions.append("COALESCE(n.is_deleted, 0) = 0")
+
+        # Cases tab: only bookmarked / research items
+        if cases_only:
+            conditions.append("COALESCE(n.is_case, 0) = 1")
 
         # View-specific default status filters
         if view == "final":
@@ -152,6 +157,7 @@ def get_news_unified(query_params):
                    n.published_at, n.parsed_at, n.status,
                    COALESCE(n.word_count, 0) as word_count,
                    COALESCE(n.image_count, 0) as image_count,
+                   COALESCE(n.is_case, 0) as is_case,
                    COALESCE(a.total_score, 0) as total_score,
                    COALESCE(a.quality_score, 0) as quality_score,
                    COALESCE(a.relevance_score, 0) as relevance_score,
@@ -210,14 +216,14 @@ def export_news_xlsx(query_params) -> bytes:
 
     wb = Workbook()
     ws = wb.active
-    ws.title = "IgroNews Export"
+    ws.title = "ContentCombine Export"
 
-    # Headers
+    # Headers (free-tier: no status / no LLM columns)
     headers = [
         "ID", "Источник", "Заголовок", "Скор", "Качество", "Релевантность",
         "Вирал", "Вирал уровень", "Свежесть (ч)", "Тон", "Тир",
-        "Headline", "Momentum", "Статус", "Дата парсинга", "Дата публикации",
-        "Теги", "Entities", "LLM рекомендация", "URL"
+        "Headline", "Momentum", "Дата парсинга", "Дата публикации",
+        "Теги", "Entities", "URL"
     ]
 
     header_font = Font(bold=True, color="FFFFFF", size=11)
@@ -267,12 +273,10 @@ def export_news_xlsx(query_params) -> bytes:
             n.get("entity_best_tier", ""),
             n.get("headline_score", 0),
             n.get("momentum_score", 0),
-            n.get("status", ""),
             (n.get("parsed_at") or "")[:16].replace("T", " "),
             (n.get("published_at") or "")[:16].replace("T", " "),
             tags_str,
             ent_str,
-            n.get("llm_recommendation", ""),
             n.get("url", ""),
         ]
 
@@ -291,7 +295,7 @@ def export_news_xlsx(query_params) -> bytes:
             score_cell.fill = PatternFill(start_color="FFC7CE", end_color="FFC7CE", fill_type="solid")
 
     # Column widths
-    col_widths = [6, 15, 50, 8, 8, 8, 8, 10, 10, 10, 6, 8, 8, 10, 16, 16, 30, 25, 15, 40]
+    col_widths = [6, 15, 50, 8, 8, 8, 8, 10, 10, 10, 6, 8, 8, 16, 16, 30, 25, 40]
     for i, w in enumerate(col_widths, 1):
         ws.column_dimensions[ws.cell(row=1, column=i).column_letter].width = w
 
@@ -931,6 +935,7 @@ def cleanup_short_news(min_chars=100):
         cur.execute(f"""
             UPDATE news SET is_deleted=1, deleted_at={_ph}
             WHERE COALESCE(is_deleted, 0) = 0
+              AND COALESCE(is_case, 0) = 0
               AND LENGTH(title) < {_ph}
               AND status NOT IN ('approved', 'ready')
         """, (now, min_chars))
@@ -956,6 +961,7 @@ def cleanup_old_news(days=7):
         cur.execute(f"""
             UPDATE news SET is_deleted=1, deleted_at={_ph}
             WHERE COALESCE(is_deleted, 0) = 0
+              AND COALESCE(is_case, 0) = 0
               AND parsed_at < {_ph}
               AND status NOT IN ('approved', 'ready')
         """, (now, cutoff))
@@ -1009,6 +1015,7 @@ def soft_delete_stale_news(max_age_days=None):
         cur.execute("""
             SELECT id, published_at, parsed_at FROM news
             WHERE COALESCE(is_deleted, 0) = 0
+              AND COALESCE(is_case, 0) = 0
               AND status NOT IN ('approved', 'ready')
         """)
         stale = []
@@ -1030,6 +1037,78 @@ def soft_delete_stale_news(max_age_days=None):
         if stale:
             logger.info("Freshness: soft-deleted %d stale news (>%dd) to trash", len(stale), max_age_days)
         return len(stale)
+    finally:
+        cur.close()
+
+
+_CASE_RE = __import__("re").compile(r"research|исследовани|кейс", __import__("re").IGNORECASE)
+
+
+def is_case_tag(tag) -> bool:
+    """True, если тег — «кейс»: id=='research' или label/slug ~ research|исследование|кейс."""
+    if isinstance(tag, dict):
+        tid = str(tag.get("id", ""))
+        label = str(tag.get("label", "")) + " " + str(tag.get("slug", ""))
+    else:
+        tid = label = str(tag)
+    if tid.lower() == "research":
+        return True
+    return bool(_CASE_RE.search(label) or _CASE_RE.search(tid))
+
+
+def tags_contain_case(tags_data) -> bool:
+    """tags_data (JSON-строка или список) содержит тег-кейс?"""
+    if isinstance(tags_data, str):
+        try:
+            tags_data = json.loads(tags_data or "[]")
+        except Exception:
+            return False
+    if not isinstance(tags_data, list):
+        return False
+    return any(is_case_tag(t) for t in tags_data)
+
+
+def set_case(body):
+    """Поставить/снять закладку «Кейс» (is_case) на список новостей."""
+    news_ids = body.get("news_ids") or ([body["news_id"]] if body.get("news_id") else [])
+    if not news_ids:
+        return {"status": "error", "message": "news_ids required"}
+    on = 1 if body.get("on", True) else 0
+    conn = get_connection()
+    cur = conn.cursor()
+    _ph = "%s" if _is_postgres() else "?"
+    try:
+        placeholders = ",".join([_ph] * len(news_ids))
+        cur.execute(f"UPDATE news SET is_case={_ph} WHERE id IN ({placeholders})",
+                    (on, *news_ids))
+        if not _is_postgres():
+            conn.commit()
+        return {"status": "ok", "is_case": on, "count": len(news_ids)}
+    finally:
+        cur.close()
+
+
+def backfill_cases():
+    """Проставить is_case=1 всем новостям с тегом-кейсом (Python-проход по tags_data)."""
+    conn = get_connection()
+    cur = conn.cursor()
+    _ph = "%s" if _is_postgres() else "?"
+    try:
+        cur.execute("""
+            SELECT n.id, a.tags_data FROM news n
+            JOIN news_analysis a ON a.news_id = n.id
+            WHERE COALESCE(n.is_case, 0) = 0 AND a.tags_data IS NOT NULL
+        """)
+        hit = [r[0] for r in cur.fetchall() if tags_contain_case(r[1])]
+        for i in range(0, len(hit), 200):
+            chunk = hit[i:i + 200]
+            placeholders = ",".join([_ph] * len(chunk))
+            cur.execute(f"UPDATE news SET is_case=1 WHERE id IN ({placeholders})", tuple(chunk))
+        if not _is_postgres():
+            conn.commit()
+        if hit:
+            logger.info("Cases backfill: marked %d news with research tag", len(hit))
+        return len(hit)
     finally:
         cur.close()
 

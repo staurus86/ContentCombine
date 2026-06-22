@@ -154,9 +154,11 @@ def start_scheduler():
     from api.news import auto_purge_old_deleted
     scheduler.add_job(lambda: auto_purge_old_deleted(days=30), "interval", hours=24, id="auto_purge_deleted")
 
-    # Auto-delete short news (< 100 chars title)
+    # Auto-delete near-empty titles only (nav/junk like "News"/"Tags").
+    # Порог низкий (12), чтобы НЕ терять реальные короткие SEO-заголовки
+    # (напр. «Google confirms core update» = 27 симв.). Кейсы защищены отдельно.
     from api.news import cleanup_short_news
-    scheduler.add_job(lambda: cleanup_short_news(100), "interval", hours=6, id="cleanup_short_news")
+    scheduler.add_job(lambda: cleanup_short_news(12), "interval", hours=6, id="cleanup_short_news")
 
     # Freshness: soft-delete news older than NEWS_MAX_AGE_DAYS (by article date) to trash
     from api.news import soft_delete_stale_news

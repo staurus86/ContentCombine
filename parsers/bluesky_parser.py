@@ -71,7 +71,7 @@ def parse_bluesky_source(source: dict) -> int:
             f"{BLUESKY_API}/app.bsky.feed.getAuthorFeed",
             params={"actor": handle, "limit": 20, "filter": "posts_no_replies"},
             timeout=15,
-            headers={"User-Agent": "IgroNews/1.0"},
+            headers={"User-Agent": "ContentCombine/1.0"},
         )
 
         if resp.status_code != 200:

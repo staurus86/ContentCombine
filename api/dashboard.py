@@ -9,6 +9,56 @@ from storage.database import get_connection, _is_postgres
 logger = logging.getLogger(__name__)
 
 
+def topic_cloud(hours: int = 48, top_n: int = 20):
+    """«Облако тем дня»: топ-теги активных (не удалённых) новостей за N часов.
+
+    Размер темы = число РАЗНЫХ источников (кто о чём пишет). Фильтрует мусорные теги
+    (пустые / короче 2 символов / односимвольные), берёт человекочитаемый label.
+    """
+    conn = get_connection()
+    cur = conn.cursor()
+    _ph = "%s" if _is_postgres() else "?"
+    try:
+        cutoff = (dt_mod.now(timezone.utc) - timedelta(hours=hours)).isoformat()
+        cur.execute(f"""
+            SELECT n.source, a.tags_data
+            FROM news n JOIN news_analysis a ON a.news_id = n.id
+            WHERE COALESCE(n.is_deleted, 0) = 0 AND n.parsed_at > {_ph}
+              AND a.tags_data IS NOT NULL
+        """, (cutoff,))
+        sources_by_tag = defaultdict(set)
+        count_by_tag = Counter()
+        for source, td in cur.fetchall():
+            try:
+                tags = json.loads(td) if isinstance(td, str) else (td or [])
+            except Exception:
+                continue
+            if not isinstance(tags, list):
+                continue
+            seen = set()
+            for t in tags:
+                label = (t.get("label") or t.get("id") or "") if isinstance(t, dict) else str(t)
+                label = label.strip()
+                if len(label) < 2:        # выкидываем пустые/односимвольные/мусор
+                    continue
+                if label in seen:
+                    continue
+                seen.add(label)
+                sources_by_tag[label].add(source or "")
+                count_by_tag[label] += 1
+        cloud = [
+            {"label": lbl, "sources": len(srcs), "count": count_by_tag[lbl]}
+            for lbl, srcs in sources_by_tag.items()
+        ]
+        cloud.sort(key=lambda x: (-x["sources"], -x["count"]))
+        return {"topics": cloud[:top_n], "hours": hours}
+    except Exception as e:
+        logger.error("topic_cloud error: %s", e)
+        return {"topics": [], "error": str(e)}
+    finally:
+        cur.close()
+
+
 def get_ops_dashboard():
     """Operational dashboard: action items, counts, health summary."""
     conn = get_connection()

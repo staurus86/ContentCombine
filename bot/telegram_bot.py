@@ -72,7 +72,7 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Register chat for notifications and show welcome message."""
     chat_id = update.effective_chat.id
     await update.message.reply_text(
-        f"IgroNews Bot\n"
+        f"ContentCombine Bot\n"
         f"Your chat_id: {chat_id}\n\n"
         f"Add this ID to TELEGRAM_CHAT_IDS env var to receive notifications.\n\n"
         f"Commands:\n"
