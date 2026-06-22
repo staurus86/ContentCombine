@@ -190,13 +190,20 @@ def get_storylines(days: int = 3):
             members = [m for m in g["members"] if m.get("id") not in used_ids]
             if len(members) < 2:
                 continue
+            sources = list(set(m.get("source", "") for m in members))
+            # Сюжет = тренд → должен освещаться ≥2 РАЗНЫМИ источниками.
+            # Несколько похожих заголовков от одного источника (серии, секционные
+            # страницы, перепечатки) — это внутри-источниковый дубль, не тренд.
+            if len(sources) < 2:
+                continue
             for m in members:
                 used_ids.add(m.get("id"))
-            sources = list(set(m.get("source", "") for m in members))
             avg_score = round(sum(m.get("total_score", 0) for m in members) / len(members)) if members else 0
             max_viral = max((m.get("viral_score", 0) for m in members), default=0)
             count = len(members)
-            phase = "trending" if count >= 5 else "developing" if count >= 3 else "emerging"
+            n_sources = len(sources)
+            # Сила тренда = число независимых источников, а не количество статей
+            phase = "trending" if n_sources >= 4 else "developing" if n_sources >= 3 else "emerging"
 
             # Aggregate game entities across cluster
             all_entities = []
