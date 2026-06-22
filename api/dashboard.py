@@ -165,7 +165,7 @@ def get_storylines(days: int = 3):
             LEFT JOIN news_analysis a ON n.id = a.news_id
             WHERE n.parsed_at > {ph}
             ORDER BY n.published_at DESC
-            LIMIT 500
+            LIMIT 2000
         """, (cutoff,))
         if _is_postgres():
             columns = [desc[0] for desc in cur.description]

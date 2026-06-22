@@ -31,9 +31,9 @@ def entity_overlap(text1: str, text2: str) -> float:
 #   1) лексический порог: заголовки должны реально делить слова (TF-IDF) — сигнал
 #      сущности лишь *усиливает* уже похожую пару, но не создаёт её сам;
 #   2) гипер-частые сущности (в >COMMON_ENTITY_FRAC батча) выкидываются из overlap.
-TFIDF_FLOOR = 0.18
-ENTITY_WEIGHT = 0.30
-PAIR_THRESHOLD = 0.40
+TFIDF_FLOOR = 0.14
+ENTITY_WEIGHT = 0.34
+PAIR_THRESHOLD = 0.36
 COMMON_ENTITY_FRAC = 0.10
 
 
