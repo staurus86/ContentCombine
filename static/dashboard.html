@@ -6003,7 +6003,7 @@ async function loadStorylines() {
         '</div>'
       ).join('');
       const gamesHtml = (s.top_games||[]).length
-        ? '<div class="storyline-tags"><span class="stl-label">\uD83C\uDFAE Игры:</span>' +
+        ? '<div class="storyline-tags"><span class="stl-label">Сущности:</span>' +
           s.top_games.map(g => '<span class="stl-tag game">' + esc(g) + '</span>').join('') + '</div>'
         : '';
       const triggersHtml = (s.top_triggers||[]).length
@@ -6163,11 +6163,11 @@ async function runSimulation() {
 }
 
 function applyFeatureFlags() {
-  // Ops dashboard
+  // Ops dashboard — скрыт в бесплатном режиме (завязан на статусы/платные вкладки)
   const opsTab = document.getElementById('tab-ops');
-  if (opsTab) opsTab.style.display = ffEnabled('dashboard_v2') ? '' : 'none';
+  if (opsTab) opsTab.style.display = 'none';
   const opsPanel = document.getElementById('panel-ops');
-  if (opsPanel) opsPanel.style.display = ffEnabled('dashboard_v2') ? '' : 'none';
+  if (opsPanel) opsPanel.style.display = 'none';
 
   // Triage modes
   const triageModes = document.getElementById('triage-modes');
