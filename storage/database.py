@@ -323,6 +323,9 @@ def _init_db_impl(conn, cur):
     # Soft-delete support
     _add_column_if_missing(cur, "news", "is_deleted", "INTEGER DEFAULT 0")
     _add_column_if_missing(cur, "news", "deleted_at", "TEXT")
+    # Content metrics: word count (from plain_text) and image count (from article body)
+    _add_column_if_missing(cur, "news", "word_count", "INTEGER DEFAULT 0")
+    _add_column_if_missing(cur, "news", "image_count", "INTEGER DEFAULT 0")
     _add_column_if_missing(cur, "articles", "is_deleted", "INTEGER DEFAULT 0")
     _add_column_if_missing(cur, "articles", "deleted_at", "TEXT")
     _add_column_if_missing(cur, "articles", "feed_description", "TEXT DEFAULT ''")
@@ -462,7 +465,8 @@ def news_exists(url: str) -> bool:
 
 
 def insert_news(source: str, url: str, title: str, h1: str = "",
-                description: str = "", plain_text: str = "", published_at: str = ""):
+                description: str = "", plain_text: str = "", published_at: str = "",
+                image_count: int = 0):
     news_id = hashlib.md5(url.encode()).hexdigest()
     if news_exists(url):
         return None
@@ -470,20 +474,21 @@ def insert_news(source: str, url: str, title: str, h1: str = "",
     conn = get_connection()
     cur = conn.cursor()
     now = datetime.now(timezone.utc).isoformat()
+    word_count = len((plain_text or "").split())
 
     try:
         if _is_postgres():
             cur.execute(
-                """INSERT INTO news (id, source, url, title, h1, description, plain_text, published_at, parsed_at)
-                   VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                """INSERT INTO news (id, source, url, title, h1, description, plain_text, published_at, parsed_at, word_count, image_count)
+                   VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                    ON CONFLICT (id) DO NOTHING""",
-                (news_id, source, url, title, h1, description, plain_text, published_at, now)
+                (news_id, source, url, title, h1, description, plain_text, published_at, now, word_count, image_count)
             )
         else:
             cur.execute(
-                """INSERT OR IGNORE INTO news (id, source, url, title, h1, description, plain_text, published_at, parsed_at)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-                (news_id, source, url, title, h1, description, plain_text, published_at, now)
+                """INSERT OR IGNORE INTO news (id, source, url, title, h1, description, plain_text, published_at, parsed_at, word_count, image_count)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (news_id, source, url, title, h1, description, plain_text, published_at, now, word_count, image_count)
             )
             conn.commit()
     finally:

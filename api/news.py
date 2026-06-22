@@ -150,6 +150,8 @@ def get_news_unified(query_params):
         query = f"""
             SELECT n.id, n.source, n.title, n.description, n.url, n.h1,
                    n.published_at, n.parsed_at, n.status,
+                   COALESCE(n.word_count, 0) as word_count,
+                   COALESCE(n.image_count, 0) as image_count,
                    COALESCE(a.total_score, 0) as total_score,
                    COALESCE(a.quality_score, 0) as quality_score,
                    COALESCE(a.relevance_score, 0) as relevance_score,

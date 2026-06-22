@@ -116,7 +116,7 @@ def parse_html_source(source: dict) -> int:
                 continue
 
             time.sleep(1)
-            h1, description, plain_text, published_at = _fetch_article(link)
+            h1, description, plain_text, published_at, image_count = _fetch_article(link)
 
             if _is_too_old(published_at):  # свежесть: не тащим старьё в базу
                 continue
@@ -129,6 +129,7 @@ def parse_html_source(source: dict) -> int:
                 description=description,
                 plain_text=plain_text,
                 published_at=published_at,
+                image_count=image_count,
             )
             if news_id:
                 count += 1
@@ -197,7 +198,7 @@ def _parse_homepage(source: dict) -> int:
             if news_exists(link):
                 continue
             time.sleep(1)
-            h1, description, plain_text, published_at = _fetch_article(link)
+            h1, description, plain_text, published_at, image_count = _fetch_article(link)
             if _is_too_old(published_at):  # свежесть: не тащим старьё в базу
                 continue
             final_title = h1 if h1 and len(h1) > 15 else title
@@ -205,6 +206,7 @@ def _parse_homepage(source: dict) -> int:
                 source=name, url=link, title=final_title,
                 h1=h1, description=description,
                 plain_text=plain_text, published_at=published_at,
+                image_count=image_count,
             )
             if news_id:
                 count += 1
@@ -288,13 +290,13 @@ def _parse_gamesradar(source: dict) -> int:
             if news_exists(link):
                 continue
             time.sleep(1)
-            h1, description, plain_text, published_at = _fetch_article(link)
+            h1, description, plain_text, published_at, image_count = _fetch_article(link)
             # Prefer page h1 over scraped title
             final_title = h1 if h1 and len(h1) > 15 else title
             news_id = insert_news(
                 source=name, url=link, title=final_title,
                 h1=h1, description=description,
-                plain_text=plain_text, published_at=published_at,
+                plain_text=plain_text, published_at=published_at, image_count=image_count,
             )
             if news_id:
                 count += 1
@@ -471,10 +473,10 @@ def _parse_dtf_html_fallback(source: dict, html: str) -> int:
         if not title or len(title) < 10:
             continue
         time.sleep(1)
-        h1, description, plain_text, published_at = _fetch_article(link)
+        h1, description, plain_text, published_at, image_count = _fetch_article(link)
         nid = insert_news(source=name, url=link, title=h1 or title, h1=h1,
                           description=description, plain_text=plain_text,
-                          published_at=published_at)
+                          published_at=published_at, image_count=image_count)
         if nid:
             count += 1
     logger.info("Parsed %s (DTF HTML fallback): %d new articles", name, count)
@@ -567,7 +569,7 @@ def _parse_single_sitemap_from_root(name: str, root, ns: dict, url_filter: str, 
             continue
 
         time.sleep(1)
-        h1, description, plain_text, page_date = _fetch_article(link)
+        h1, description, plain_text, page_date, image_count = _fetch_article(link)
 
         if not h1 or len(h1) < 10:
             continue
@@ -581,6 +583,7 @@ def _parse_single_sitemap_from_root(name: str, root, ns: dict, url_filter: str, 
             source=name, url=link, title=h1,
             h1=h1, description=description,
             plain_text=plain_text, published_at=final_date,
+            image_count=image_count,
         )
         if nid:
             count += 1
@@ -645,8 +648,26 @@ def _clean_element(el) -> str:
     return text
 
 
-def _extract_body_text(soup) -> str:
-    """Извлекает основной текст статьи, пробуя несколько селекторов."""
+def _count_content_images(el) -> int:
+    """Считает значимые <img> в теле статьи (без трекинг-пикселей)."""
+    n = 0
+    for img in el.find_all("img"):
+        src = (img.get("src") or img.get("data-src") or "").lower()
+        if not src or src.startswith("data:"):
+            continue
+        try:
+            w = int(img.get("width", "0") or 0)
+            h = int(img.get("height", "0") or 0)
+        except ValueError:
+            w = h = 0
+        if 0 < w <= 2 or 0 < h <= 2:  # трекинг-пиксели 1x1
+            continue
+        n += 1
+    return n
+
+
+def _extract_body_text(soup) -> tuple[str, int]:
+    """Извлекает основной текст статьи + число картинок. Пробует несколько селекторов."""
     selectors = [
         "div#article-body",
         "div[itemprop='articleBody']",
@@ -664,18 +685,18 @@ def _extract_body_text(soup) -> str:
         if el:
             text = _clean_element(el)
             if len(text) >= 100:
-                return text
+                return text, _count_content_images(el)
 
     if soup.body:
         text = _clean_element(soup.body)
         if len(text) >= 100:
-            return text
+            return text, _count_content_images(soup.body)
 
-    return ""
+    return "", 0
 
 
-def _fetch_article(url: str) -> tuple[str, str, str, str]:
-    """Загружает статью и извлекает h1, description, plain_text, published_at."""
+def _fetch_article(url: str) -> tuple[str, str, str, str, int]:
+    """Загружает статью: h1, description, plain_text, published_at, image_count."""
     try:
         resp = fetch_with_retry(url)
         html_text = resp.text[:512_000]  # Limit to 500KB to prevent OOM
@@ -700,7 +721,7 @@ def _fetch_article(url: str) -> tuple[str, str, str, str]:
             published_at = _date_from_url(url)  # последний фолбэк — дата из URL
 
         # Умный поиск текста по множеству селекторов
-        plain_text = _extract_body_text(soup)
+        plain_text, image_count = _extract_body_text(soup)
 
         del soup  # free lxml tree immediately
 
@@ -709,7 +730,7 @@ def _fetch_article(url: str) -> tuple[str, str, str, str]:
             plain_text = description
             logger.debug("Text recovery for %s: using description (%d chars)", url, len(description))
 
-        return h1, description, plain_text, published_at
+        return h1, description, plain_text, published_at, image_count
     except Exception as e:
         logger.warning("Failed to fetch article %s: %s", url, e)
-        return "", "", "", ""
+        return "", "", "", "", 0

@@ -545,6 +545,7 @@ input:focus, textarea:focus, select:focus { outline:none; border-color:#1da1f2; 
           <th style="width:60px">Кач/Рел</th>
           <th class="sortable" onclick="edSort('viral_score')" style="width:75px">Вирал.</th>
           <th style="width:65px">Свежесть</th>
+          <th style="width:70px" title="Слов в тексте · картинок в статье">Объём</th>
           <th style="width:40px">Тон</th>
           <th style="width:120px">Теги</th>
           <th class="sortable" onclick="edSort('published_at')" style="width:75px">Дата</th>
@@ -4753,6 +4754,7 @@ function renderEdTable() {
       <td style="text-align:center;font-size:0.8em;color:#8899a6">${qs}/${rs}</td>
       <td style="text-align:center;cursor:help" title="${vTriggersTooltip}"><span style="color:${vlColor};font-weight:bold">${vs}</span><br><span style="font-size:0.7em;color:${vlColor}">${vl}</span></td>
       <td style="text-align:center"><span style="color:${fColor};font-size:0.85em">${fLabel}</span></td>
+      <td style="text-align:center;font-size:0.72em;white-space:nowrap" title="${n.word_count||0} слов · ${n.image_count||0} картинок"><span style="color:${(n.word_count||0)>=300?'#17bf63':(n.word_count||0)>=120?'#ffad1f':'#e0245e'}">&#128221;${n.word_count||0}</span>${(n.image_count||0)?` <span style="color:#8899a6">&#128247;${n.image_count}</span>`:''}</td>
       <td style="text-align:center"><span style="color:${slColor}" title="${sl}">${sEmoji}</span></td>
       <td>${tagsHtml}</td>
       <td style="font-size:0.72em;color:#8899a6;white-space:nowrap">${fmtDate(n.published_at)}</td>

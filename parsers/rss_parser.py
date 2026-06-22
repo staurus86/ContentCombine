@@ -33,8 +33,9 @@ def _clean_element(el) -> str:
     return text
 
 
-def _extract_body_text(soup) -> str:
-    """Извлекает основной текст статьи, пробуя несколько селекторов."""
+def _extract_body_text(soup) -> tuple[str, int]:
+    """Извлекает основной текст статьи + число картинок."""
+    from parsers.html_parser import _count_content_images
     selectors = [
         "div#article-body",
         "div[itemprop='articleBody']",
@@ -52,18 +53,18 @@ def _extract_body_text(soup) -> str:
         if el:
             text = _clean_element(el)
             if len(text) >= 100:
-                return text
+                return text, _count_content_images(el)
 
     if soup.body:
         text = _clean_element(soup.body)
         if len(text) >= 100:
-            return text
+            return text, _count_content_images(soup.body)
 
-    return ""
+    return "", 0
 
 
-def fetch_full_text(url: str) -> tuple[str, str, str, str]:
-    """Загружает страницу и извлекает h1, description, plain_text, published_at."""
+def fetch_full_text(url: str) -> tuple[str, str, str, str, int]:
+    """Загружает страницу: h1, description, plain_text, published_at, image_count."""
     try:
         resp = fetch_with_retry(url)
         # Limit HTML to 500KB to prevent OOM on huge pages
@@ -88,14 +89,14 @@ def fetch_full_text(url: str) -> tuple[str, str, str, str]:
         from parsers.html_parser import _extract_publish_date
         published_at = _extract_publish_date(soup)
 
-        # Извлекаем основной текст — умный поиск по множеству селекторов
-        plain_text = _extract_body_text(soup)
+        # Извлекаем основной текст + картинки — умный поиск по множеству селекторов
+        plain_text, image_count = _extract_body_text(soup)
 
         del soup  # free lxml tree immediately
-        return h1, description, plain_text, published_at
+        return h1, description, plain_text, published_at, image_count
     except Exception as e:
         logger.warning("Failed to fetch full text from %s: %s", url, e)
-        return "", "", "", ""
+        return "", "", "", "", 0
 
 
 def parse_rss_source(source: dict) -> int:
@@ -142,7 +143,7 @@ def parse_rss_source(source: dict) -> int:
 
             # Загружаем полный текст страницы (с задержкой чтобы не перегружать)
             time.sleep(1)
-            h1, description, plain_text, page_date = fetch_full_text(link)
+            h1, description, plain_text, page_date, image_count = fetch_full_text(link)
 
             if not description:
                 description = summary
@@ -163,6 +164,7 @@ def parse_rss_source(source: dict) -> int:
                 description=description,
                 plain_text=plain_text,
                 published_at=final_date,
+                image_count=image_count,
             )
             if news_id:
                 count += 1
