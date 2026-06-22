@@ -1162,6 +1162,44 @@ def backfill_cases():
         cur.close()
 
 
+def redate_missing_dates(limit: int = 2000):
+    """Re-fetch articles без реальной даты и проставить published_at/published_ts.
+    Запускается ВНУТРИ контейнера (рабочие прокси/IP) — для бэкфилла исторических дат."""
+    from parsers.html_parser import _fetch_article, _is_junk_url
+    from storage.database import normalize_ts
+    from datetime import datetime, timezone
+    conn = get_connection()
+    cur = conn.cursor()
+    _ph = "%s" if _is_postgres() else "?"
+    cur.execute(f"""SELECT id, url FROM news
+                    WHERE (published_at IS NULL OR published_at='')
+                      AND COALESCE(is_deleted,0)=0 AND url LIKE 'http%'
+                    LIMIT {_ph}""", (limit,))
+    rows = cur.fetchall()
+    fixed = junk = 0
+    now = datetime.now(timezone.utc).isoformat()
+    for r in rows:
+        nid, url = r[0], r[1]
+        if _is_junk_url(url):
+            cur.execute(f"UPDATE news SET is_deleted=1, deleted_at={_ph} WHERE id={_ph} AND COALESCE(is_case,0)=0", (now, nid))
+            junk += 1
+            continue
+        pub = ""
+        try:
+            _, _, _, pub, _ = _fetch_article(url)
+        except Exception:
+            pub = ""
+        ts = normalize_ts(pub, "") if pub else ""
+        if ts:
+            cur.execute(f"UPDATE news SET published_at={_ph}, published_ts={_ph} WHERE id={_ph}", (pub, ts, nid))
+            fixed += 1
+    if not _is_postgres():
+        conn.commit()
+    cur.close()
+    logger.info("redate_missing_dates: scanned=%d fixed=%d junk=%d", len(rows), fixed, junk)
+    return {"scanned": len(rows), "fixed": fixed, "junk": junk}
+
+
 def news_detail(body):
     """Get full news + analysis detail."""
     news_id = body.get("news_id")

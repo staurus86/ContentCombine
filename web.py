@@ -287,6 +287,7 @@ class AdminHandler(BaseHTTPRequestHandler):
             "/api/news/restore": lambda: self._restore_news(body),
             "/api/news/purge": lambda: self._purge_news(body),
             "/api/news/case": lambda: self._set_case(body),
+            "/api/maintenance/redate": lambda: self._maintenance_redate(body),
             "/api/telegram/publish": lambda: self._tg_publish(body),
             "/api/articles/restore": lambda: self._restore_article(body),
             "/api/test_parse": lambda: self._test_parse(body),
@@ -1088,6 +1089,14 @@ async function login() {
     def _set_case(self, body):
         from api.news import set_case
         self._json(set_case(body))
+
+    def _maintenance_redate(self, body):
+        # Запускает re-fetch дат ВНУТРИ контейнера в фоне (рабочие прокси/IP)
+        import threading
+        from api.news import redate_missing_dates
+        limit = int(body.get("limit", 2000))
+        threading.Thread(target=lambda: redate_missing_dates(limit), daemon=True).start()
+        self._json({"status": "started", "limit": limit})
 
     def _tg_publish(self, body):
         from apis.tg_publish import publish
