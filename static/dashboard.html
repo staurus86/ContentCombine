@@ -302,14 +302,14 @@ input:focus, textarea:focus, select:focus { outline:none; border-color:#1da1f2; 
 .storyline-member .sm-source { color:#8899a6; min-width:80px; font-size:0.8em; }
 .storyline-member .sm-score { color:#1da1f2; font-weight:600; min-width:35px; text-align:right; }
 .storyline-member .sm-title-link:hover { color:#1da1f2 !important; text-decoration:underline; }
-.sl-action { display:inline-flex; align-items:center; gap:5px; padding:5px 12px; border-radius:8px; font-size:0.8em; font-weight:500; background:#22303c; color:#cfe3f5; border:1px solid #2c3a47; cursor:pointer; transition:background .15s, color .15s, border-color .15s; }
+.sl-action { display:inline-flex; align-items:center; gap:6px; padding:6px 14px; border-radius:6px; font-size:0.82em; font-weight:500; background:#38444d; color:#e1e8ed; border:none; cursor:pointer; transition:background .15s, color .15s, border-color .15s; }
 .sl-action:hover { background:#1da1f2; color:#fff; border-color:#1da1f2; }
 .sl-action.tg:hover { background:#229ED9; border-color:#229ED9; }
 /* topic cloud */
 .topic-cloud-box { background:#16212c; border:1px solid #22303c; border-radius:12px; padding:12px 14px; }
 .topic-chip { display:inline-flex; align-items:center; gap:6px; border-radius:14px; padding:4px 12px; font-size:0.82em; line-height:1.5; background:#1e2a36; border:1px solid #2c3a47; cursor:default; transition:filter .15s, border-color .15s; }
 .topic-chip:hover { filter:brightness(1.18); border-color:#3a4b59; }
-.storyline-stats { display:flex; gap:12px; font-size:0.82em; color:#8899a6; }
+.storyline-stats { display:flex; gap:12px; font-size:0.82em; color:#aab4be; }
 .storyline-tags { display:flex; flex-wrap:wrap; gap:6px; align-items:center; margin-bottom:8px; }
 .stl-label { font-size:0.8em; color:#8899a6; margin-right:2px; }
 .stl-tag { display:inline-block; padding:2px 10px; border-radius:12px; font-size:0.78em; font-weight:500; }
@@ -1078,7 +1078,7 @@ input:focus, textarea:focus, select:focus { outline:none; border-color:#1da1f2; 
   <!-- CASES -->
   <div class="panel" id="panel-cases">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-      <h2>&#128204; Кейсы <span style="font-size:0.65em;color:#8899a6;font-weight:normal">закладки для чтения — не удаляются автоматически</span></h2>
+      <h2>&#128204; Кейсы <span style="font-size:0.72em;color:#aab4be;font-weight:normal">закладки для чтения · не удаляются автоматически</span></h2>
       <div style="display:flex;align-items:center;gap:8px">
         <span id="cases-count" style="color:#8899a6;font-size:0.85em"></span>
         <button class="btn btn-sm btn-secondary" onclick="loadCases()">Обновить</button>
@@ -1092,7 +1092,7 @@ input:focus, textarea:focus, select:focus { outline:none; border-color:#1da1f2; 
     <div id="kpi-strip" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px"></div>
     <div id="topic-cloud" style="margin-bottom:14px"></div>
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-      <h2>&#128293; Тренды <span id="sl-days-label" style="font-size:0.65em;color:#8899a6;font-weight:normal">кросс-источниковые сюжеты за 3 дня</span></h2>
+      <h2>&#128293; Тренды <span id="sl-days-label" style="font-size:0.72em;color:#aab4be;font-weight:normal">кросс-источниковые сюжеты за 3 дня</span></h2>
       <div style="display:flex;align-items:center;gap:8px">
         <span id="storylines-count" style="color:#8899a6;font-size:0.85em"></span>
         <select id="sl-days" onchange="loadStorylines()" style="background:#253341;color:#e1e8ed;border:1px solid #38444d;border-radius:6px;padding:3px 8px;font-size:0.85em">
@@ -1104,8 +1104,8 @@ input:focus, textarea:focus, select:focus { outline:none; border-color:#1da1f2; 
           <option value="14">14 дней</option>
         </select>
         <button class="btn btn-sm btn-secondary" onclick="loadStorylines()">Обновить</button>
-        <button class="btn btn-sm btn-success" onclick="exportStorylinesToSheets()" title="Экспорт сюжетов в Google Sheets (вкладка Сюжеты)" style="white-space:nowrap;flex-shrink:0">&#9776; В Sheets</button>
-        <button class="btn btn-sm" style="background:#253341;color:#8899a6;border:1px solid #38444d" onclick="toggleSlSettings()" title="Настройки авто-экспорта">&#9881;</button>
+        <button class="btn btn-sm btn-success" onclick="exportStorylinesToSheets()" title="Экспорт сюжетов в Google Sheets (вкладка Сюжеты)" style="white-space:nowrap;flex-shrink:0">В Sheets</button>
+        <button class="btn btn-sm btn-secondary" onclick="toggleSlSettings()" title="Настройки авто-экспорта">&#9881;</button>
         <span id="sl-auto-badge" style="font-size:0.82em;color:#8899a6;margin-left:4px"></span>
       </div>
     </div>
@@ -5183,8 +5183,8 @@ async function loadCases() {
         <a href="${n.url}" target="_blank" style="color:#e1e8ed;text-decoration:none;font-size:0.95em">${esc(n.title)}</a>
         <div style="font-size:0.74em;color:#8899a6;margin-top:3px">${esc(n.source)} · ${fmtDate(n.published_ts || n.published_at)} · &#128221;${n.word_count || 0} ${tg}</div>
       </div>
-      <button class="btn btn-sm btn-secondary" title="В Telegram" onclick="openTgModal('${n.id}')" style="padding:2px 7px">&#128228;</button>
-      <button class="btn btn-sm btn-secondary" title="Убрать из Кейсов" onclick="setCase('${n.id}',false,true)" style="padding:2px 7px">&#128204;&#10007;</button>
+      <button class="btn btn-sm btn-secondary" title="В Telegram" onclick="openTgModal('${n.id}')">&#128228;</button>
+      <button class="btn btn-sm btn-secondary" title="Убрать из Кейсов" onclick="setCase('${n.id}',false,true)">&#128204;&#10007;</button>
     </div>`;
   }).join('');
 }
@@ -6063,7 +6063,7 @@ async function renderKpi(storyCount) {
   const card = (v, l, c) =>
     '<div style="background:#192734;border:1px solid #22303c;border-radius:10px;padding:12px 14px">' +
       '<div style="font-size:1.6em;font-weight:700;color:' + c + '">' + (v==null?'—':v) + '</div>' +
-      '<div style="font-size:0.78em;color:#8899a6">' + l + '</div>' +
+      '<div style="font-size:0.78em;color:#aab4be">' + l + '</div>' +
     '</div>';
   el.innerHTML =
     card(k.fresh_24h, 'Новых за 24ч', '#1da1f2') +
@@ -6377,14 +6377,14 @@ async function purgeAllTrash() {
   <div style="background:#192734;border:1px solid #2c3a47;border-radius:12px;padding:20px;width:min(560px,92vw)">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
       <h3 style="margin:0;color:#e1e8ed">&#128228; Пост в Telegram</h3>
-      <button class="btn btn-sm btn-secondary" onclick="closeTgModal()" style="padding:2px 9px">&#10007;</button>
+      <button class="btn btn-sm btn-secondary" onclick="closeTgModal()" title="Закрыть">&#10007;</button>
     </div>
     <textarea id="tg-text" style="width:100%;height:220px;background:#22303c;border:1px solid #38444d;color:#e1e8ed;border-radius:8px;padding:10px;font-size:0.9em;line-height:1.45;resize:vertical"></textarea>
     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
       <button class="btn btn-sm btn-secondary" onclick="tgCopy()">&#128203; Скопировать</button>
       <button class="btn btn-sm btn-primary" onclick="tgSend()">&#128228; Отправить</button>
     </div>
-    <div style="font-size:0.72em;color:#8899a6;margin-top:8px">Без токена канала пост копируется в буфер. Канал задаётся в &#9881; Настройки.</div>
+    <div style="font-size:0.72em;color:#aab4be;margin-top:8px">Без токена канала пост копируется в буфер. Канал задаётся в &#9881; Настройки.</div>
   </div>
 </div>
 
