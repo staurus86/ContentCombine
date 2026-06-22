@@ -1,0 +1,182 @@
+# SEO niche virality keywords (generated from research/keywords_raw/*)
+# Two surfaces: entities (tier S/A/B/C -> boost) + triggers (weighted events).
+entities:
+  search_surfaces:
+    - {term: "baidu", tier: C}
+    - {term: "bing", tier: B}
+    - {term: "chatgpt", tier: S}
+    - {term: "chatgpt search", tier: A}
+    - {term: "claude", tier: B}
+    - {term: "claudebot", tier: B}
+    - {term: "copilot", tier: B}
+    - {term: "duckduckgo", tier: C}
+    - {term: "gemini", tier: S}
+    - {term: "google", tier: S}
+    - {term: "google-extended", tier: A}
+    - {term: "gptbot", tier: A}
+    - {term: "grok", tier: B}
+    - {term: "llama", tier: C}
+    - {term: "mistral", tier: C}
+    - {term: "naver", tier: C}
+    - {term: "openai", tier: S}
+    - {term: "perplexity", tier: S}
+    - {term: "perplexitybot", tier: B}
+    - {term: "yandex", tier: S}
+    - {term: "yandexgpt", tier: A}
+    - {term: "алиса ai", tier: A}
+    - {term: "нейро", tier: A}
+    - {term: "поиск с алисой", tier: A}
+  brands_tools_people:
+    - {term: "danny sullivan", tier: A}
+    - {term: "gary illyes", tier: A}
+    - {term: "google core update", tier: A}
+    - {term: "john mueller", tier: A}
+    - {term: "judge mehta", tier: A}
+    - {term: "martin splitt", tier: B}
+    - {term: "search central", tier: B}
+    - {term: "search console", tier: B}
+    - {term: "search liaison", tier: A}
+    - {term: "андромеда", tier: B}
+    - {term: "быстрые ответы", tier: B}
+    - {term: "гэри илльес", tier: B}
+    - {term: "джон мюллер", tier: B}
+    - {term: "икс", tier: B}
+    - {term: "илльес", tier: B}
+    - {term: "колдунщик", tier: B}
+    - {term: "мюллер", tier: B}
+    - {term: "обновление икс", tier: B}
+    - {term: "турбо-страницы", tier: B}
+    - {term: "эпос", tier: B}
+    - {term: "яндекс бизнес", tier: B}
+    - {term: "яндекс вебмастер", tier: B}
+    - {term: "яндекс справочник", tier: B}
+  topics_algos:
+    - {term: "aeo", tier: A}
+    - {term: "ai citation", tier: A}
+    - {term: "ai crawler", tier: A}
+    - {term: "ai mode", tier: A}
+    - {term: "ai overviews", tier: S}
+    - {term: "ai-overzichten", tier: A}
+    - {term: "ai-краулер", tier: B}
+    - {term: "aiによる概要", tier: A}
+    - {term: "ai検索", tier: B}
+    - {term: "answer engine", tier: A}
+    - {term: "aperçus ia", tier: A}
+    - {term: "bert", tier: B}
+    - {term: "búsqueda con ia", tier: B}
+    - {term: "core web vitals", tier: B}
+    - {term: "e-e-a-t", tier: A}
+    - {term: "generative engine optimization", tier: A}
+    - {term: "generative search", tier: A}
+    - {term: "geo", tier: A}
+    - {term: "hummingbird", tier: C}
+    - {term: "json-ld", tier: B}
+    - {term: "ki-suche", tier: B}
+    - {term: "ki-übersichten", tier: A}
+    - {term: "llms.txt", tier: A}
+    - {term: "medic update", tier: C}
+    - {term: "mum", tier: B}
+    - {term: "panda", tier: B}
+    - {term: "panoramiche ai", tier: A}
+    - {term: "penguin", tier: B}
+    - {term: "pesquisa com ia", tier: B}
+    - {term: "pigeon", tier: C}
+    - {term: "przeglądy ai", tier: A}
+    - {term: "rankbrain", tier: B}
+    - {term: "recherche ia", tier: B}
+    - {term: "resúmenes de ia", tier: A}
+    - {term: "ricerca con ia", tier: B}
+    - {term: "rich results", tier: B}
+    - {term: "rich snippets", tier: B}
+    - {term: "robots.txt", tier: B}
+    - {term: "schema markup", tier: B}
+    - {term: "schema.org", tier: B}
+    - {term: "sge", tier: B}
+    - {term: "share of voice в вебмастере", tier: A}
+    - {term: "structured data", tier: B}
+    - {term: "visões gerais com ia", tier: A}
+    - {term: "yapay zeka genel bakışları", tier: A}
+    - {term: "yati", tier: A}
+    - {term: "агс", tier: A}
+    - {term: "баден-баден", tier: A}
+    - {term: "вега", tier: A}
+    - {term: "видимость в алисе", tier: A}
+    - {term: "генеративный поиск", tier: A}
+    - {term: "ии-поиск", tier: A}
+    - {term: "королёв", tier: B}
+    - {term: "минусинск", tier: A}
+    - {term: "нейроответы", tier: A}
+    - {term: "нейроответы яндекса", tier: A}
+    - {term: "нейросеть", tier: B}
+    - {term: "оригами", tier: A}
+    - {term: "палех", tier: B}
+    - {term: "тайфун", tier: A}
+    - {term: "цитирование в ии", tier: A}
+    - {term: "цитируемость в ии", tier: A}
+triggers:
+  - id: aisearch_high
+    weight: 30
+    keywords: ["ai citation", "ai crawler", "ai mode", "ai overviews", "ai-overzichten", "aiによる概要", "answer engine", "aperçus ia", "chatgpt", "chatgpt search", "gemini", "generative engine optimization", "generative search", "google-extended", "gptbot", "ki-übersichten", "panoramiche ai", "perplexity", "przeglądy ai", "resúmenes de ia", "share of voice в вебмастере", "visões gerais com ia", "yandexgpt", "yapay zeka genel bakışları", "алиса ai", "видимость в алисе", "генеративный поиск", "ии-поиск", "нейро", "нейроответы", "нейроответы яндекса", "поиск с алисой", "цитирование в ии", "цитируемость в ии"]
+  - id: aisearch_med
+    weight: 15
+    keywords: ["ai-краулер", "ai検索", "búsqueda con ia", "claudebot", "copilot", "ki-suche", "llms.txt", "perplexitybot", "pesquisa com ia", "recherche ia", "ricerca con ia", "нейросеть"]
+  - id: algoupd_high
+    weight: 40
+    keywords: ["actualización del algoritmo", "actualización principal", "aggiornamento dell'algoritmo", "aggiornamento principale", "aktualizacja algorytmu", "aktualizacja podstawowa", "algorithmus-update", "algoritma güncellemesi", "algoritme-update", "atualização do algoritmo", "atualização principal", "august 2025 spam update", "broad core update", "core update", "december 2025 core update", "helpful content system", "helpful content update", "june 2025 core update", "kern-update", "march 2025 core update", "march 2026 core update", "march 2026 spam update", "may 2026 core update", "mise à jour de l'algorithme", "mise à jour principale", "product reviews update", "site reputation abuse", "site reputation abuse update", "spam update", "yati", "çekirdek güncellemesi", "алгоритм качества контента", "апдейт", "апдейт алгоритма", "базовый апдейт", "вега", "выкатили апдейт", "завершилась раскатка", "обновление алгоритма", "оригами", "прокатился апдейт", "раскатка алгоритма", "спам-апдейт", "тайфун", "アルゴリズムアップデート", "コアアップデート"]
+  - id: algoupd_low
+    weight: 8
+    keywords: ["hummingbird", "medic update", "pigeon"]
+  - id: algoupd_med
+    weight: 20
+    keywords: ["algorithm update", "algorithmus-änderung", "bert", "discover core update", "done rolling out", "fully rolled out", "google update", "panda", "penguin", "rankbrain", "rollout", "unconfirmed update", "королёв", "палех", "アルゴリズム変動"]
+  - id: content_low
+    weight: 3
+    keywords: ["авторитетность"]
+  - id: content_med
+    weight: 8
+    keywords: ["ai content", "ai-generated content", "ai-тексты", "content pruning", "e-e-a-t", "helpful content", "mass-produced content", "thin content", "topical authority", "некачественный контент", "сгенерированный контент", "экспертность контента"]
+  - id: link_high
+    weight: 18
+    keywords: ["обесценивание ссылок", "ссылочные сетки", "фильтрация ссылок"]
+  - id: link_low
+    weight: 4
+    keywords: ["anchor text", "guest post", "link exchange", "link velocity", "nofollow", "крауд-ссылки"]
+  - id: link_med
+    weight: 9
+    keywords: ["backlink", "backlinks", "disavow", "link building", "toxic links", "обратные ссылки", "покупные ссылки", "ссылочный профиль", "токсичные ссылки"]
+  - id: measure_low
+    weight: 3
+    keywords: ["click-through rate", "impressions", "organic traffic", "share of voice"]
+  - id: measure_med
+    weight: 6
+    keywords: ["google search console", "search console"]
+  - id: penalty_high
+    weight: 45
+    keywords: ["abstrafung", "acción manual", "action manuelle", "azione manuale", "ação manual", "ceza", "deindeksacja", "deindexed", "deindexiert", "deindexing", "deindicizzato", "demotion", "deranked", "desindexado", "dizinden çıkarma", "désindexé", "expired domain abuse", "filtr", "gedeïndexeerd", "google penalty", "handmatige actie", "kara ręczna", "manual action", "manual penalty", "manuel işlem", "manuelle maßnahme", "parasite seo", "penalización", "penalização", "penalizzazione", "penalty", "pure spam", "pénalité", "scaled content abuse", "spam policies", "spam policy", "антиспам яндекса", "антифрод", "аффилиат-фильтр", "баден-баден", "выпал из индекса", "выпал из поиска", "забанили", "исключён из поиска", "минусинск", "наказание за спам", "накрутка пф", "наложили фильтр", "пессимизация", "попал под фильтр", "ручные меры", "ручные санкции", "санкции", "снят фильтр", "спам-фильтр", "фильтр за накрутку пф", "インデックス削除", "ペナルティ", "手動による対策"]
+  - id: penalty_med
+    weight: 22
+    keywords: ["cloaking", "disavow", "link spam", "reconsideration request", "unnatural links"]
+  - id: ranking_med
+    weight: 6
+    keywords: ["featured snippet", "ranking factor", "коммерческие факторы", "поведенческие факторы", "факторы ранжирования"]
+  - id: technical_high
+    weight: 20
+    keywords: ["indexing bug", "баг индексации", "деиндексация", "проблемы с индексацией", "страницы не индексируются"]
+  - id: technical_low
+    weight: 4
+    keywords: ["301 редирект", "soft 404"]
+  - id: technical_med
+    weight: 10
+    keywords: ["canonical", "core web vitals", "crawl budget", "googlebot", "indexing", "javascript seo", "mobile-first indexing", "noindex", "page experience", "rendering", "robots.txt", "дубли", "индексация", "краулинг", "краулинговый бюджет", "микроразметка", "переиндексация", "переобход", "структурированные данные"]
+  - id: urgency_high
+    weight: 20
+    keywords: ["antitrust", "api leak", "breaking", "confirmed", "content warehouse", "google announces", "google api leak", "google bestätigt", "google bevestigt", "google conferma", "google confirma", "google confirma pt", "google confirme", "google confirms", "google doğruladı", "google potwierdza", "google warns", "google подтвердил", "leak", "monopoly", "shutting down", "выкатили", "закрывают", "отключают", "официально", "подтвердил google", "прекращает поддержку", "сбой в поиске", "яндекс подтвердил"]
+  - id: urgency_med
+    weight: 10
+    keywords: ["deadline", "deprecated", "déploiement", "google says", "now live", "rolling out", "sunset", "urgent", "warning", "впервые", "дедлайн", "запустили", "массово", "срочно", "ロールアウト"]
+  - id: volatility_high
+    weight: 38
+    keywords: ["calo di posizioni", "caída de posiciones", "chute de positions", "lost rankings", "lost traffic", "perda de tráfego", "perdita di traffico", "perte de trafic", "pérdida de tráfico", "queda de posições", "ranking drop", "ranking volatility", "rankingdaling", "rankingverlust", "recovery", "serp shake-up", "spadek pozycji", "spadek ruchu", "sıralama düşüşü", "traffic crash", "traffic drop", "traffic loss", "traffic recovery", "traffic-einbruch", "trafik kaybı", "verkeersdaling", "visibility drop", "volatility", "zero-click", "zero-click search", "восстановление после апдейта", "восстановление трафика", "вылет из топ-10", "вылет из топа", "глюк выдачи", "обвал позиций", "обвал трафика", "обрушение трафика", "падение позиций", "падение трафика", "переранжирование", "перетряска выдачи", "потеря трафика", "просадка позиций", "просадка трафика", "сильная волатильность", "схлопнулся трафик", "турбулентность выдачи", "шторм выдачи", "штормит выдача", "トラフィック減少", "順位下落"]
+  - id: volatility_med
+    weight: 18
+    keywords: ["erholung", "odzyskiwanie pozycji", "plummeted", "ranking fluctuations", "ranking surge", "recuperación", "recuperação", "recupero", "récupération", "sichtbarkeitsverlust", "tanked", "взлёт трафика", "восстановление позиций"]

@@ -4,763 +4,115 @@ from typing import Optional
 import config
 
 VIRAL_TRIGGERS = {
-    # === СКАНДАЛЫ И ДРАМА ===
-    "scandal_layoffs": {
-        "label": "Layoffs",
-        "weight": 50,
-        "keywords": [
-            "уволили", "увольнения", "сокращения", "layoff", "layoffs",
-            "закрыли студию", "студия закрыта", "распустили команду",
-            "массовые увольнения", "fired", "studio closed", "studio shutdown",
-            "job cuts", "redundancies", "team disbanded",
-            "hundreds laid off", "сотни уволены",
-        ],
-    },
-    "scandal_devs_vs_players": {
-        "label": "Dev vs Players",
-        "weight": 55,
-        "keywords": [
-            "игроки против", "бойкот", "игроки недовольны", "возмущение",
-            "петиция", "скандал", "backlash", "outrage", "community angry",
-            "boycott", "petition", "controversy", "players furious",
-            "разгневанные фанаты", "массовое недовольство", "community backlash",
-        ],
-    },
-    "scandal_publisher": {
-        "label": "Publisher drama",
-        "weight": 35,
-        "keywords": [
-            "монетизация", "микротранзакции", "pay-to-win",
-            "microtransactions", "monetization", "drm", "always online",
-            "убрали из продажи", "цензура", "removed from sale",
-        ],
-    },
-    "scandal_ceo_toxic": {
-        "label": "Toxic CEO",
-        "weight": 65,
-        "keywords": [
-            "ceo заявил", "глава компании раскритиковал", "bobby kotick",
-            "бобби котик", "neil druckmann", "нил дракманн", "ceo criticized",
-            "ceo slams", "глава студии обвинил", "founder controversy",
-            "руководитель против игроков", "ceo backlash",
-            "сатанист", "сатанизм", "культист", "секта", "скандальное заявление",
-            "controversial statement", "шокирующее признание",
-        ],
-    },
-    "scandal_lawsuit": {
-        "label": "Lawsuit",
-        "weight": 45,
-        "keywords": [
-            "судебный иск", "подали в суд", "class action", "антимонопольный",
-            "lawsuit", "sued", "legal action", "court ruling", "settlement",
-            "иск против", "суд обязал", "судебное разбирательство",
-            "epic vs apple", "ftc", "иск игроков",
-        ],
-    },
-    "scandal_crunch": {
-        "label": "Crunch / Labor",
-        "weight": 45,
-        "keywords": [
-            "кранч", "переработки", "crunch", "overtime", "toxic workplace",
-            "токсичная атмосфера", "дискриминация", "harassment", "домогательства",
-            "условия труда", "labor abuse", "whistleblower", "инсайдер рассказал",
-            "бывший сотрудник", "former employee", "работников заставляли",
-        ],
-    },
-    "scandal_regulatory": {
-        "label": "Regulatory pressure",
-        "weight": 35,
-        "keywords": [
-            "антимонопольное расследование", "регулятор заблокировал", "antitrust",
-            "регуляторное давление", "cma blocked", "ftc blocked", "eu investigation",
-            "запрет сделки", "блокировка слияния", "regulatory review",
-        ],
-    },
-    "scandal_policy_reversal": {
-        "label": "Policy reversal",
-        "weight": 40,
-        "keywords": [
-            "отменили обещание", "убрали функцию", "убрали из библиотеки",
-            "removed from library", "always-online добавили", "broken promise",
-            "обещали но не сделали", "reversal", "u-turn", "backtrack",
-            "delisted", "отзыв лицензий", "revoked access",
-        ],
-    },
-
-    # === УТЕЧКИ ===
-    "leak_major": {
-        "label": "Leak",
-        "weight": 50,
-        "keywords": [
-            "утечка", "слив", "слитый трейлер", "инсайдер",
-            "leak", "leaked", "insider", "rumor", "rumour",
-            "anonymous source", "источник сообщает",
-        ],
-    },
-    "leak_datamine": {
-        "label": "Datamine",
-        "weight": 40,
-        "keywords": [
-            "datamine", "datamined", "нашли в файлах", "обнаружили в коде",
-            "файлы игры содержат", "data mining", "strings found",
-            "hidden content", "скрытый контент", "неанонсированный контент",
-        ],
-    },
-    "leak_store": {
-        "label": "Store leak",
-        "weight": 50,
-        "keywords": [
-            "появилась в steam", "утечка через магазин", "store listing",
-            "playstation store leak", "xbox store leak", "steam page appeared",
-            "рейтинг до анонса", "esrb rating", "pegi rating",
-            "accidentally listed", "случайно опубликовали",
-        ],
-    },
-    "leak_trademark": {
-        "label": "Trademark leak",
+    "aisearch_high": {
+        "label": "aisearch/high",
         "weight": 30,
-        "keywords": [
-            "торговая марка", "trademark", "patent filed", "патент",
-            "зарегистрировали название", "domain registration",
-            "registered trademark", "товарный знак",
-        ],
+        "keywords": ["ai citation", "ai crawler", "ai mode", "ai overviews", "ai-overzichten", "aiによる概要", "answer engine", "aperçus ia", "chatgpt", "chatgpt search", "gemini", "generative engine optimization", "generative search", "google-extended", "gptbot", "ki-übersichten", "panoramiche ai", "perplexity", "przeglądy ai", "resúmenes de ia", "share of voice в вебмастере", "visões gerais com ia", "yandexgpt", "yapay zeka genel bakışları", "алиса ai", "видимость в алисе", "генеративный поиск", "ии-поиск", "нейро", "нейроответы", "нейроответы яндекса", "поиск с алисой", "цитирование в ии", "цитируемость в ии"],
     },
-    "leak_playtest": {
-        "label": "Playtest leak",
-        "weight": 55,
-        "keywords": [
-            "утечка с плейтеста", "nda нарушение", "закрытый тест",
-            "playtest leak", "nda breach", "closed beta leak",
-            "alpha footage", "слитый геймплей с теста",
-            "скриншоты с закрытого теста", "leaked playtest",
-        ],
-    },
-    "leak_insider_trusted": {
-        "label": "Trusted insider",
-        "weight": 45,
-        "keywords": [
-            "jeff grubb", "tom henderson", "jason schreier", "jez corden",
-            "nick baker", "известный инсайдер", "reliable leaker",
-            "trusted source", "проверенный источник",
-        ],
-    },
-
-    # === SHADOW DROPS ===
-    "shadow_drop": {
-        "label": "Shadow Drop",
-        "weight": 55,
-        "keywords": [
-            "вышла неожиданно", "внезапный релиз", "доступна прямо сейчас",
-            "shadow drop", "shadow dropped", "available now", "out now",
-            "surprise release", "stealth release",
-        ],
-    },
-    "shadow_announce_date": {
-        "label": "Announce + Date",
-        "weight": 40,
-        "keywords": [
-            "анонс и дата", "выходит через неделю", "выходит через месяц",
-            "releases next week", "launches next month", "выходит завтра",
-            "announced and releasing", "date revealed",
-        ],
-    },
-    "shadow_free_giveaway": {
-        "label": "Free AAA Giveaway",
-        "weight": 35,
-        "keywords": [
-            "бесплатно раздают", "epic бесплатно", "ps plus добавил",
-            "game pass добавил", "free on epic", "free on ps plus",
-            "xbox game pass added", "бесплатная раздача aaa",
-            "крупная игра бесплатно", "free to keep",
-        ],
-    },
-    "shadow_dead_franchise": {
-        "label": "Dead franchise returns",
-        "weight": 60,
-        "keywords": [
-            "возвращение серии", "возрождение франшизы", "franchise revival",
-            "series returns", "comeback", "long-awaited sequel",
-            "вернулась после", "первая игра за", "years later",
-            "silent hill", "castlevania", "timesplitters", "dino crisis",
-            "f-zero", "jet set radio", "chrono",
-        ],
-    },
-
-    # === ПЛОХИЕ РЕЛИЗЫ ===
-    "bad_launch_technical": {
-        "label": "Bad launch",
-        "weight": 45,
-        "keywords": [
-            "баги", "вылеты", "неоптимизировано", "критические ошибки",
-            "bugs", "crashes", "unoptimized", "broken", "refund",
-            "performance issues", "disaster launch",
-        ],
-    },
-    "bad_launch_reviews": {
-        "label": "Bad reviews",
-        "weight": 40,
-        "keywords": [
-            "провал", "разочарование", "низкие оценки",
-            "flop", "disappointing", "mixed reviews", "negative reviews",
-            "overwhelmingly negative", "mostly negative",
-        ],
-    },
-    "bad_refund_wave": {
-        "label": "Refund wave",
-        "weight": 50,
-        "keywords": [
-            "массовые возвраты", "возвращают деньги", "refund wave",
-            "mass refunds", "steam refund", "возврат средств",
-            "требуют возврата", "refund policy", "no man's sky launch",
-        ],
-    },
-    "bad_review_bomb": {
-        "label": "Review bombing",
-        "weight": 40,
-        "keywords": [
-            "review bombing", "review bomb", "обвал оценок",
-            "скоординированная атака", "занижение рейтинга",
-            "steam reviews negative", "metacritic bombed",
-            "массовые негативные отзывы",
-        ],
-    },
-    "bad_commercial_flop": {
-        "label": "Commercial flop",
-        "weight": 35,
-        "keywords": [
-            "не окупилась", "провал продаж", "commercial failure",
-            "underperformed", "ниже ожиданий", "missed sales target",
-            "below expectations", "финансовый провал", "продажи разочаровали",
-        ],
-    },
-    "bad_server_crash": {
-        "label": "Server crash",
-        "weight": 30,
-        "keywords": [
-            "серверы легли", "серверы упали", "server down", "servers crashed",
-            "не работают серверы", "server issues at launch",
-            "невозможно подключиться", "login queue", "очередь на вход",
-        ],
-    },
-    "bad_huge_patch": {
-        "label": "Huge day-one patch",
+    "aisearch_med": {
+        "label": "aisearch/med",
         "weight": 15,
-        "keywords": [
-            "патч на день релиза", "day-one patch", "day one patch",
-            "патч 50 гб", "patch size", "гигантский патч",
-            "огромный патч", "100gb patch", "50gb update",
-        ],
+        "keywords": ["ai-краулер", "ai検索", "búsqueda con ia", "claudebot", "copilot", "ki-suche", "llms.txt", "perplexitybot", "pesquisa com ia", "recherche ia", "ricerca con ia", "нейросеть"],
     },
-
-    # === AI CONTROVERSY ===
-    "ai_controversy": {
-        "label": "AI controversy",
+    "algoupd_high": {
+        "label": "algoupd/high",
         "weight": 40,
-        "keywords": [
-            "нейросеть в игре", "ии арт", "ai generated", "ai art",
-            "ai replaced", "ai backlash", "generative ai",
-        ],
+        "keywords": ["actualización del algoritmo", "actualización principal", "aggiornamento dell'algoritmo", "aggiornamento principale", "aktualizacja algorytmu", "aktualizacja podstawowa", "algorithmus-update", "algoritma güncellemesi", "algoritme-update", "atualização do algoritmo", "atualização principal", "august 2025 spam update", "broad core update", "core update", "december 2025 core update", "helpful content system", "helpful content update", "june 2025 core update", "kern-update", "march 2025 core update", "march 2026 core update", "march 2026 spam update", "may 2026 core update", "mise à jour de l'algorithme", "mise à jour principale", "product reviews update", "site reputation abuse", "site reputation abuse update", "spam update", "yati", "çekirdek güncellemesi", "алгоритм качества контента", "апдейт", "апдейт алгоритма", "базовый апдейт", "вега", "выкатили апдейт", "завершилась раскатка", "обновление алгоритма", "оригами", "прокатился апдейт", "раскатка алгоритма", "спам-апдейт", "тайфун", "アルゴリズムアップデート", "コアアップデート"],
     },
-    "ai_fired_artists": {
-        "label": "AI replaced artists",
-        "weight": 55,
-        "keywords": [
-            "уволили художников ради ии", "заменили художников",
-            "ai replaced artists", "fired artists for ai",
-            "replaced by ai", "laid off artists", "ai вместо художников",
-        ],
+    "algoupd_low": {
+        "label": "algoupd/low",
+        "weight": 8,
+        "keywords": ["hummingbird", "medic update", "pigeon"],
     },
-    "ai_voice_no_consent": {
-        "label": "AI voice no consent",
-        "weight": 50,
-        "keywords": [
-            "ai голос без согласия", "синтез речи без разрешения",
-            "ai voice without consent", "voice actor ai", "deepfake voice",
-            "клонировали голос", "voice cloning", "без согласия актёра озвучки",
-        ],
-    },
-    "ai_full_game": {
-        "label": "AI-generated game",
-        "weight": 45,
-        "keywords": [
-            "полностью сгенерировано ии", "ai generated game",
-            "game made by ai", "ai-created game", "игра созданная ии",
-            "нейросеть создала игру",
-        ],
-    },
-    "ai_no_ai_pledge": {
-        "label": "No-AI pledge",
-        "weight": 25,
-        "keywords": [
-            "отказались от ии", "no ai", "no ai used", "без использования ии",
-            "anti-ai", "human-made", "ручная работа без ии",
-        ],
-    },
-    "ai_npc_glitch": {
-        "label": "AI NPC viral",
-        "weight": 30,
-        "keywords": [
-            "ии нпс", "ai npc", "нпс вышел из под контроля",
-            "npc went rogue", "ai companion bug", "нпс сказал",
-            "ai character viral", "ии персонаж стал мемом",
-        ],
-    },
-
-    # === КРУПНЫЕ ИВЕНТЫ ===
-    "major_event": {
-        "label": "Major event",
-        "weight": 35,
-        "keywords": [
-            "the game awards", "nintendo direct", "xbox showcase",
-            "playstation showcase", "state of play", "summer game fest",
-            "gamescom", "tokyo game show", "tgs", "e3", "gdc",
-        ],
-    },
-    "event_livestream": {
-        "label": "Livestream moment",
-        "weight": 40,
-        "keywords": [
-            "прямой эфир", "прямая трансляция", "live stream",
-            "смотрите прямо сейчас", "watch live", "трансляция идёт",
-            "показали на стриме", "during livestream", "live reveal",
-        ],
-    },
-    "event_show_winner": {
-        "label": "Show winner",
-        "weight": 35,
-        "keywords": [
-            "главный анонс шоу", "лучший момент", "show stealer",
-            "stole the show", "highlight of the show", "best reveal",
-            "самый обсуждаемый анонс", "winner of the show",
-        ],
-    },
-    "event_bad_show": {
-        "label": "Bad show",
-        "weight": 40,
-        "keywords": [
-            "разочаровывающее шоу", "слабая презентация",
-            "disappointing showcase", "worst showcase", "ничего не показали",
-            "nothing new", "boring presentation", "провальная презентация",
-        ],
-    },
-    "event_surprise_guest": {
-        "label": "Surprise guest",
-        "weight": 50,
-        "keywords": [
-            "неожиданный анонс", "никто не ожидал", "surprise reveal",
-            "unexpected announcement", "shock reveal", "out of nowhere",
-            "невероятный анонс", "jaw-dropping", "plot twist",
-        ],
-    },
-
-    # === ДЕНЬГИ И СДЕЛКИ ===
-    "money_ma": {
-        "label": "M&A deal",
-        "weight": 60,
-        "keywords": [
-            "купили студию", "покупка студии", "acquisition", "acquired",
-            "merger", "слияние", "поглощение", "купили за",
-            "billion dollar deal", "сделка на миллиард",
-            "microsoft купил", "sony купил", "tencent купил",
-            "embracer", "savvy games", "take-two acquired",
-        ],
-    },
-    "money_studio_closed": {
-        "label": "Studio closed",
-        "weight": 65,
-        "keywords": [
-            "закрытие студии", "студия закрывается", "studio closure",
-            "shut down studio", "developer shut down", "студию закрыли",
-            "последний проект студии", "rip studio", "прощай студия",
-            "конец студии", "studio's final game",
-        ],
-    },
-    "money_ipo": {
-        "label": "IPO / Public",
-        "weight": 30,
-        "keywords": [
-            "ipo", "выход на биржу", "public offering", "went public",
-            "stock market", "акции компании", "shares",
-        ],
-    },
-    "money_financial_fail": {
-        "label": "Financial report fail",
-        "weight": 35,
-        "keywords": [
-            "убытки", "падение выручки", "revenue decline", "quarterly loss",
-            "прибыль упала", "финансовый отчёт", "earnings miss",
-            "акции обвалились", "stock drop", "stock plunge",
-            "провал квартала", "missed expectations",
-        ],
-    },
-
-    # === КУЛЬТУРНЫЕ И СОЦИАЛЬНЫЕ ТРИГГЕРЫ ===
-    "culture_banned": {
-        "label": "Game banned",
-        "weight": 40,
-        "keywords": [
-            "запрещена в", "banned in", "заблокирована в",
-            "регуляторный запрет", "refused classification",
-            "запрет на продажу", "изъяли из магазинов",
-            "banned in china", "banned in australia",
-        ],
-    },
-    "culture_politics": {
-        "label": "Game meets politics",
-        "weight": 45,
-        "keywords": [
-            "политический скандал", "затронула политику", "political controversy",
-            "обвинения в пропаганде", "propaganda", "woke", "anti-woke",
-            "dei controversy", "political statement", "game controversy",
-        ],
-    },
-    "culture_record": {
-        "label": "Historical record",
-        "weight": 40,
-        "keywords": [
-            "рекорд steam", "рекорд twitch", "рекорд продаж",
-            "steam record", "peak concurrent", "пик одновременных",
-            "fastest selling", "самая быстрая", "миллион за день",
-            "million copies in", "record-breaking",
-        ],
-    },
-    "culture_adaptation": {
-        "label": "Game to film/series",
-        "weight": 30,
-        "keywords": [
-            "экранизация", "сериал по", "фильм по игре",
-            "tv series", "movie adaptation", "netflix", "hbo",
-            "amazon adaptation", "live action", "animated series",
-            "the last of us hbo", "fallout series",
-        ],
-    },
-    "culture_meme": {
-        "label": "Viral meme",
-        "weight": 25,
-        "keywords": [
-            "стал мемом", "вирусное видео", "went viral", "tiktok",
-            "мем из игры", "gaming meme", "viral clip", "trending on twitter",
-            "reddit exploded", "стал вирусным",
-        ],
-    },
-
-    # === ПЕРСОНАЛЬНЫЕ ТРИГГЕРЫ ===
-    "person_key_departure": {
-        "label": "Key person leaves",
-        "weight": 55,
-        "keywords": [
-            "ушёл из", "покидает компанию", "уход из студии",
-            "leaves studio", "departing", "steps down", "resignation",
-            "основатель покинул", "creative director leaves",
-            "hideo kojima", "хидео кодзима", "тодд говард", "todd howard",
-            "miyazaki", "миядзаки",
-        ],
-    },
-    "person_legend_returns": {
-        "label": "Legend returns",
-        "weight": 50,
-        "keywords": [
-            "вернулся в индустрию", "новый проект от", "возвращение",
-            "returns to gaming", "new studio by", "legendary developer",
-            "культовый разработчик", "основал новую студию",
-            "new project from",
-        ],
-    },
-    "person_celebrity_clash": {
-        "label": "Celebrity vs Game",
-        "weight": 25,
-        "keywords": [
-            "актёр раскритиковал", "стример против", "celebrity criticized",
-            "streamer backlash", "знаменитость", "celebrity endorsement",
-            "famous gamer", "influencer drama",
-        ],
-    },
-
-    # === СКОРОСТЬ И ЭКСКЛЮЗИВНОСТЬ ===
-    "speed_first_review": {
-        "label": "First review",
-        "weight": 30,
-        "keywords": [
-            "первый обзор", "first review", "review embargo lifted",
-            "эмбарго снято", "оценки раскрыты", "scores revealed",
-            "review roundup", "первые оценки",
-        ],
-    },
-    "speed_exclusive_content": {
-        "label": "Exclusive content",
-        "weight": 40,
-        "keywords": [
-            "эксклюзивный геймплей", "exclusive gameplay", "exclusive reveal",
-            "эксклюзивные скриншоты", "exclusive screenshots",
-            "hands-on preview", "exclusive interview",
-            "first hands-on", "эксклюзивный материал",
-        ],
-    },
-    "speed_day_one_sales": {
-        "label": "Day-one sales",
-        "weight": 35,
-        "keywords": [
-            "продажи за первый день", "first day sales", "day one sales",
-            "миллион копий за день", "first 24 hours",
-            "launch sales figures", "первые продажи",
-        ],
-    },
-
-    # === LIVE SERVICE / SHUT DOWN ===
-    "live_service_shutdown": {
-        "label": "Live service shutdown",
-        "weight": 55,
-        "keywords": [
-            "закрытие серверов", "отключают серверы", "servers shutting down",
-            "end of service", "game shutting down", "final season",
-            "последний сезон", "конец поддержки", "sunsetting",
-            "прекращение поддержки", "servers offline forever",
-        ],
-    },
-    "live_service_revival": {
-        "label": "Dead game revived",
-        "weight": 45,
-        "keywords": [
-            "игру воскресили", "возобновили поддержку", "game revived",
-            "comeback update", "new life", "relaunch", "relaunch 2.0",
-            "игра вернулась", "back from the dead",
-        ],
-    },
-
-    # === HARDWARE / CONSOLE WAR ===
-    "hw_console_reveal": {
-        "label": "Console reveal",
-        "weight": 60,
-        "keywords": [
-            "анонс консоли", "новая консоль", "console reveal",
-            "ps5 pro", "switch 2", "nintendo switch 2", "xbox handheld",
-            "steam deck 2", "next-gen console", "hardware reveal",
-            "portable console", "ps6 specs", "xbox next specs",
-        ],
-    },
-    "hw_price_drop": {
-        "label": "Price drop",
-        "weight": 30,
-        "keywords": [
-            "снижение цены", "цена снижена", "price cut", "price drop",
-            "дешевле", "cheaper", "permanent price reduction",
-            "new lower price", "скидка на консоль",
-        ],
-    },
-    "hw_shortage": {
-        "label": "Hardware shortage",
-        "weight": 30,
-        "keywords": [
-            "дефицит", "нет в продаже", "shortage", "sold out",
-            "scalpers", "перекупщики", "раскупили за минуты",
-            "out of stock", "pre-order sold out",
-        ],
-    },
-
-    # === CROSSOVER / COLLAB ===
-    "crossover_unexpected": {
-        "label": "Unexpected crossover",
-        "weight": 40,
-        "keywords": [
-            "неожиданный кроссовер", "коллаборация", "crossover",
-            "collaboration", "collab event", "x meets y",
-            "guest character", "гостевой персонаж",
-            "fortnite collaboration", "fortnite x",
-        ],
-    },
-
-    # === MODDING / COMMUNITY ===
-    "mod_viral": {
-        "label": "Viral mod",
-        "weight": 30,
-        "keywords": [
-            "вирусный мод", "мод взорвал", "viral mod", "mod goes viral",
-            "mod downloaded millions", "лучший мод", "insane mod",
-            "мод который", "mod of the year", "total conversion",
-        ],
-    },
-    "community_milestone": {
-        "label": "Community milestone",
-        "weight": 25,
-        "keywords": [
-            "100 миллионов игроков", "200 million players",
-            "billion hours", "миллиард часов", "community event record",
-            "community achievement", "player count milestone",
-            "concurrent players record", "steam charts record",
-        ],
-    },
-
-    # === ПЛАТФОРМЫ / ПОДПИСКИ ===
-    "sub_major_addition": {
-        "label": "Major sub addition",
-        "weight": 35,
-        "keywords": [
-            "добавлен в game pass", "game pass day one", "ps plus premium",
-            "day one game pass", "added to game pass",
-            "ps plus essential", "added to ps plus",
-            "day one on subscription", "бесплатно по подписке",
-        ],
-    },
-    "sub_price_hike": {
-        "label": "Sub price increase",
-        "weight": 40,
-        "keywords": [
-            "повышение цены подписки", "подписка подорожала",
-            "game pass price increase", "ps plus price increase",
-            "subscription price hike", "стоимость подписки выросла",
-            "new subscription tier", "подписка стала дороже",
-        ],
-    },
-    "platform_exclusive_lost": {
-        "label": "Exclusive goes multi",
-        "weight": 45,
-        "keywords": [
-            "эксклюзив на другие платформы", "потеря эксклюзива",
-            "exclusive going multiplatform", "no longer exclusive",
-            "coming to pc", "coming to xbox", "coming to playstation",
-            "портирование эксклюзива", "exclusive deal ended",
-        ],
-    },
-
-    # === ESPORTS ===
-    "esports_drama": {
-        "label": "Esports drama",
-        "weight": 35,
-        "keywords": [
-            "дисквалификация", "бан про игрока", "disqualified",
-            "pro player banned", "match fixing", "договорной матч",
-            "esports scandal", "cheating scandal", "допинг",
-            "esports organization collapse", "org shut down",
-        ],
-    },
-    "esports_record_prize": {
-        "label": "Record prize pool",
-        "weight": 30,
-        "keywords": [
-            "рекордный призовой", "record prize pool",
-            "million dollar tournament", "крупнейший турнир",
-            "biggest esports event", "prize pool record",
-        ],
-    },
-
-    # === ЛОКАЛИЗАЦИЯ / ОЗВУЧКА ===
-    "localization_ru": {
-        "label": "Russian localization",
-        "weight": 30,
-        "keywords": [
-            "русская озвучка", "русская локализация", "русский язык",
-            "озвучка на русском", "перевод на русский", "русские субтитры",
-            "russian localization", "russian voice", "дубляж на русском",
-            "локализация на русский", "добавили русский",
-        ],
-    },
-    "port_new_platform": {
-        "label": "Platform port",
+    "algoupd_med": {
+        "label": "algoupd/med",
         "weight": 20,
-        "keywords": [
-            "порт на", "портирование", "выйдет на switch", "выйдет на pc",
-            "now on playstation", "now on xbox", "coming to switch",
-            "coming to mobile", "порт на пк", "мобильная версия",
-            "mobile port", "switch port", "pc port", "console port",
-        ],
+        "keywords": ["algorithm update", "algorithmus-änderung", "bert", "discover core update", "done rolling out", "fully rolled out", "google update", "panda", "penguin", "rankbrain", "rollout", "unconfirmed update", "королёв", "палех", "アルゴリズム変動"],
     },
-    "remake_remaster": {
-        "label": "Remake/Remaster",
-        "weight": 25,
-        "keywords": [
-            "ремейк", "ремастер", "remake", "remaster", "remastered",
-            "переиздание", "enhanced edition", "definitive edition",
-            "hd collection", "обновлённая версия", "remake announced",
-        ],
+    "content_low": {
+        "label": "content/low",
+        "weight": 3,
+        "keywords": ["авторитетность"],
     },
-    "indie_breakout": {
-        "label": "Indie breakout",
-        "weight": 35,
-        "keywords": [
-            "инди-хит", "инди хит", "indie hit", "indie breakout",
-            "инди побила рекорд", "surprise hit", "sleeper hit",
-            "неожиданный хит", "инди продалась миллионом",
-            "indie sold million", "overwhelmingly positive",
-            "indie game of the year", "инди года",
-        ],
+    "content_med": {
+        "label": "content/med",
+        "weight": 8,
+        "keywords": ["ai content", "ai-generated content", "ai-тексты", "content pruning", "e-e-a-t", "helpful content", "mass-produced content", "thin content", "topical authority", "некачественный контент", "сгенерированный контент", "экспертность контента"],
     },
-
-    # === БАЗОВЫЕ КАТЕГОРИИ ===
-    "sequel": {
-        "label": "Sequel",
-        "weight": 15,
-        "keywords": ["продолжение", "сиквел", "sequel", "part 2", "new installment"],
+    "link_high": {
+        "label": "link/high",
+        "weight": 18,
+        "keywords": ["обесценивание ссылок", "ссылочные сетки", "фильтрация ссылок"],
     },
-    "free_content": {
-        "label": "Free/Giveaway",
-        "weight": 15,
-        "keywords": ["бесплатно", "раздача", "free to play", "f2p", "giveaway", "free weekend"],
+    "link_low": {
+        "label": "link/low",
+        "weight": 4,
+        "keywords": ["anchor text", "guest post", "link exchange", "link velocity", "nofollow", "крауд-ссылки"],
     },
-    "delay": {
-        "label": "Delay",
-        "weight": 12,
-        "keywords": ["перенос", "отложили", "delayed", "postponed", "pushed back"],
+    "link_med": {
+        "label": "link/med",
+        "weight": 9,
+        "keywords": ["backlink", "backlinks", "disavow", "link building", "toxic links", "обратные ссылки", "покупные ссылки", "ссылочный профиль", "токсичные ссылки"],
     },
-    "canceled": {
-        "label": "Canceled",
-        "weight": 50,
-        "keywords": ["отменили", "отмена", "canceled", "cancelled", "игра отменена"],
+    "measure_low": {
+        "label": "measure/low",
+        "weight": 3,
+        "keywords": ["click-through rate", "impressions", "organic traffic", "share of voice"],
     },
-    "award": {
-        "label": "Award/GOTY",
+    "measure_med": {
+        "label": "measure/med",
+        "weight": 6,
+        "keywords": ["google search console", "search console"],
+    },
+    "penalty_high": {
+        "label": "penalty/high",
+        "weight": 45,
+        "keywords": ["abstrafung", "acción manual", "action manuelle", "azione manuale", "ação manual", "ceza", "deindeksacja", "deindexed", "deindexiert", "deindexing", "deindicizzato", "demotion", "deranked", "desindexado", "dizinden çıkarma", "désindexé", "expired domain abuse", "filtr", "gedeïndexeerd", "google penalty", "handmatige actie", "kara ręczna", "manual action", "manual penalty", "manuel işlem", "manuelle maßnahme", "parasite seo", "penalización", "penalização", "penalizzazione", "penalty", "pure spam", "pénalité", "scaled content abuse", "spam policies", "spam policy", "антиспам яндекса", "антифрод", "аффилиат-фильтр", "баден-баден", "выпал из индекса", "выпал из поиска", "забанили", "исключён из поиска", "минусинск", "наказание за спам", "накрутка пф", "наложили фильтр", "пессимизация", "попал под фильтр", "ручные меры", "ручные санкции", "санкции", "снят фильтр", "спам-фильтр", "фильтр за накрутку пф", "インデックス削除", "ペナルティ", "手動による対策"],
+    },
+    "penalty_med": {
+        "label": "penalty/med",
+        "weight": 22,
+        "keywords": ["cloaking", "disavow", "link spam", "reconsideration request", "unnatural links"],
+    },
+    "ranking_med": {
+        "label": "ranking/med",
+        "weight": 6,
+        "keywords": ["featured snippet", "ranking factor", "коммерческие факторы", "поведенческие факторы", "факторы ранжирования"],
+    },
+    "technical_high": {
+        "label": "technical/high",
+        "weight": 20,
+        "keywords": ["indexing bug", "баг индексации", "деиндексация", "проблемы с индексацией", "страницы не индексируются"],
+    },
+    "technical_low": {
+        "label": "technical/low",
+        "weight": 4,
+        "keywords": ["301 редирект", "soft 404"],
+    },
+    "technical_med": {
+        "label": "technical/med",
         "weight": 10,
-        "keywords": ["goty", "лучшая игра", "игра года", "game of the year", "award"],
+        "keywords": ["canonical", "core web vitals", "crawl budget", "googlebot", "indexing", "javascript seo", "mobile-first indexing", "noindex", "page experience", "rendering", "robots.txt", "дубли", "индексация", "краулинг", "краулинговый бюджет", "микроразметка", "переиндексация", "переобход", "структурированные данные"],
     },
-    "next_gen": {
-        "label": "Next-gen",
-        "weight": 25,
-        "keywords": [
-            "следующего поколения", "нового поколения", "next-gen", "next gen",
-            "новая консоль", "ps6", "playstation 6", "xbox next",
-        ],
+    "urgency_high": {
+        "label": "urgency/high",
+        "weight": 20,
+        "keywords": ["antitrust", "api leak", "breaking", "confirmed", "content warehouse", "google announces", "google api leak", "google bestätigt", "google bevestigt", "google conferma", "google confirma", "google confirma pt", "google confirme", "google confirms", "google doğruladı", "google potwierdza", "google warns", "google подтвердил", "leak", "monopoly", "shutting down", "выкатили", "закрывают", "отключают", "официально", "подтвердил google", "прекращает поддержку", "сбой в поиске", "яндекс подтвердил"],
     },
-    "big_update": {
-        "label": "Big update",
+    "urgency_med": {
+        "label": "urgency/med",
         "weight": 10,
-        "keywords": [
-            "крупное обновление", "масштабное обновление", "большой патч",
-            "major update", "big update", "massive update", "season pass",
-            "новый сезон", "new season", "expansion", "дополнение",
-            "dlc",
-        ],
+        "keywords": ["deadline", "deprecated", "déploiement", "google says", "now live", "rolling out", "sunset", "urgent", "warning", "впервые", "дедлайн", "запустили", "массово", "срочно", "ロールアウト"],
     },
-    "release_date": {
-        "label": "Release date",
-        "weight": 10,
-        "keywords": [
-            "дата выхода", "release date", "дата релиза",
-            "релиз состоится", "launches",
-        ],
+    "volatility_high": {
+        "label": "volatility/high",
+        "weight": 38,
+        "keywords": ["calo di posizioni", "caída de posiciones", "chute de positions", "lost rankings", "lost traffic", "perda de tráfego", "perdita di traffico", "perte de trafic", "pérdida de tráfico", "queda de posições", "ranking drop", "ranking volatility", "rankingdaling", "rankingverlust", "recovery", "serp shake-up", "spadek pozycji", "spadek ruchu", "sıralama düşüşü", "traffic crash", "traffic drop", "traffic loss", "traffic recovery", "traffic-einbruch", "trafik kaybı", "verkeersdaling", "visibility drop", "volatility", "zero-click", "zero-click search", "восстановление после апдейта", "восстановление трафика", "вылет из топ-10", "вылет из топа", "глюк выдачи", "обвал позиций", "обвал трафика", "обрушение трафика", "падение позиций", "падение трафика", "переранжирование", "перетряска выдачи", "потеря трафика", "просадка позиций", "просадка трафика", "сильная волатильность", "схлопнулся трафик", "турбулентность выдачи", "шторм выдачи", "штормит выдача", "トラフィック減少", "順位下落"],
     },
-    "trailer": {
-        "label": "Trailer",
-        "weight": 10,
-        "keywords": [
-            "трейлер", "trailer", "тизер", "teaser", "геймплей",
-            "gameplay", "первый взгляд", "first look",
-        ],
-    },
-    "record": {
-        "label": "Record",
-        "weight": 30,
-        "keywords": [
-            "рекорд", "record", "побил рекорд", "миллион игроков",
-            "million players", "peak players", "пик онлайна",
-            "best-selling", "самая продаваемая",
-        ],
-    },
-    "digest": {
-        "label": "Digest",
-        "weight": 5,
-        "keywords": [
-            "самое интересное", "дайджест", "итоги дня", "итоги недели",
-            "обзор новостей", "digest", "weekly roundup", "recap",
-        ],
+    "volatility_med": {
+        "label": "volatility/med",
+        "weight": 18,
+        "keywords": ["erholung", "odzyskiwanie pozycji", "plummeted", "ranking fluctuations", "ranking surge", "recuperación", "recuperação", "recupero", "récupération", "sichtbarkeitsverlust", "tanked", "взлёт трафика", "восстановление позиций"],
     },
 }
 
@@ -828,19 +180,7 @@ def reload_viral_triggers():
 # Initial build
 _rebuild_trigger_index()
 
-GAMING_EVENTS_CALENDAR = [
-    (1, 15, 25, "Xbox Developer Direct", 20),
-    (2, 1, 28, "Nintendo Direct (Feb)", 25),
-    (3, 18, 22, "GDC", 20),
-    (5, 20, 30, "PlayStation Showcase", 30),
-    (6, 1, 15, "Summer Game Fest", 30),
-    (6, 10, 12, "Xbox Games Showcase", 30),
-    (6, 15, 18, "Nintendo Direct (June)", 30),
-    (8, 20, 28, "Gamescom", 25),
-    (9, 1, 5, "PlayStation State of Play (Sep)", 20),
-    (9, 20, 30, "Tokyo Game Show", 20),
-    (12, 5, 15, "The Game Awards", 40),
-]
+GAMING_EVENTS_CALENDAR = []
 
 
 def get_calendar_boost(dt: Optional[datetime] = None) -> tuple[int, str]:
@@ -871,7 +211,7 @@ def viral_score(news: dict, precomputed_entities: list = None) -> dict:
                     triggered.append({"id": tid, "label": label, "weight": weight})
 
     # Deduplicate: keep only highest-weight trigger per category
-    _DEDUP_PREFIXES = {"scandal", "leak", "bad", "ai", "person", "speed", "live", "hw", "esports"}
+    _DEDUP_PREFIXES = {"aisearch", "algoupd", "content", "link", "measure", "penalty", "ranking", "technical", "urgency", "volatility"}
     if len(triggered) > 1:
         best_per_cat = {}  # prefix -> best trigger
         non_cat = []  # triggers without dedup prefix
