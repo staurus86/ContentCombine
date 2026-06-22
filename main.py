@@ -56,6 +56,13 @@ def main():
     # Инициализация БД
     init_db()
 
+    # Таблица памяти модерации (feedback_stats) — идемпотентно
+    try:
+        from checks.feedback import init_feedback_table
+        init_feedback_table()
+    except Exception as e:
+        logging.warning("Feedback table init skipped: %s", e)
+
     # Load persistent settings from DB (overrides env defaults)
     from config import load_persistent_settings
     load_persistent_settings()

@@ -752,6 +752,17 @@ def delete_news(body):
                     (now, *news_ids))
         if not _is_postgres():
             conn.commit()
+        # Память модерации: ручное удаление = негативный сигнал по источнику.
+        # Накапливается в feedback_stats; «аудит источников» читает долю удалений.
+        try:
+            from checks.feedback import record_decision
+            for nid in news_ids:
+                try:
+                    record_decision(nid, "rejected")
+                except Exception:
+                    pass
+        except Exception:
+            pass
         return {"status": "ok", "deleted": len(news_ids)}
     finally:
         cur.close()
