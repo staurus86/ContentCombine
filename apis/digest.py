@@ -131,14 +131,15 @@ def _render_links(news_list, sources, md=True):
 
 
 def _source_suffix(news_list, sources) -> str:
-    """Compact «(Источник)» links per item. One source → (Источник); many → numbered."""
+    """Compact «(Источник)» links per item. One source → (Источник); many → numbered.
+    Deduplicates by URL so identical sources don't render twice."""
     urls, seen = [], set()
     for idx in sources or []:
-        if not isinstance(idx, int) or idx < 1 or idx > len(news_list) or idx in seen:
+        if not isinstance(idx, int) or idx < 1 or idx > len(news_list):
             continue
-        seen.add(idx)
         url = (news_list[idx - 1].get("url") or "").strip()
-        if url:
+        if url and url not in seen:
+            seen.add(url)
             urls.append(url)
     if not urls:
         return ""
