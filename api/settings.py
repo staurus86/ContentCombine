@@ -873,11 +873,11 @@ def generate_digest(body):
         else:
             interval = "1 day"
         if _is_postgres():
-            cur.execute(f"SELECT id, title, source, url FROM news WHERE status IN ('approved', 'processed') AND source NOT LIKE 'TG:%' AND parsed_at::timestamptz > (NOW() - INTERVAL '{interval}') ORDER BY parsed_at DESC LIMIT 30")
+            cur.execute(f"SELECT id, title, source, url FROM news WHERE status IN ('approved', 'processed') AND parsed_at::timestamptz > (NOW() - INTERVAL '{interval}') ORDER BY parsed_at DESC LIMIT 30")
             columns = [desc[0] for desc in cur.description]
             news_list = [dict(zip(columns, row)) for row in cur.fetchall()]
         else:
-            cur.execute(f"SELECT id, title, source, url FROM news WHERE status IN ('approved', 'processed') AND source NOT LIKE 'TG:%' AND parsed_at > datetime('now', '-{interval}') ORDER BY parsed_at DESC LIMIT 30")
+            cur.execute(f"SELECT id, title, source, url FROM news WHERE status IN ('approved', 'processed') AND parsed_at > datetime('now', '-{interval}') ORDER BY parsed_at DESC LIMIT 30")
             news_list = [dict(row) for row in cur.fetchall()]
 
         if not news_list:
@@ -928,7 +928,6 @@ def generate_and_save_digest(body):
                 FROM news n
                 LEFT JOIN news_analysis a ON a.news_id = n.id
                 WHERE n.status IN ('approved', 'processed', 'in_review', 'ready')
-                  AND n.source NOT LIKE 'TG:%'
                   AND n.parsed_at::timestamptz > (NOW() - INTERVAL '24 hours')
                 ORDER BY COALESCE(a.total_score, 0) DESC
                 LIMIT 20
@@ -942,7 +941,6 @@ def generate_and_save_digest(body):
                 FROM news n
                 LEFT JOIN news_analysis a ON a.news_id = n.id
                 WHERE n.status IN ('approved', 'processed', 'in_review', 'ready')
-                  AND n.source NOT LIKE 'TG:%'
                   AND n.parsed_at > datetime('now', '-1 day')
                 ORDER BY COALESCE(a.total_score, 0) DESC
                 LIMIT 20

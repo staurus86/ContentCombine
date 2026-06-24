@@ -399,7 +399,6 @@ input:focus, textarea:focus, select:focus { outline:none; border-color:#1da1f2; 
     <div class="tab active" data-tab="storylines" id="tab-storylines">&#128293; Тренды</div>
     <div class="tab" data-tab="editorial">&#128240; Лента</div>
     <div class="tab" data-tab="cases" id="tab-cases">&#128204; Кейсы</div>
-    <div class="tab" data-tab="telegram" id="tab-telegram">&#9993; Телеграм</div>
     <!-- Платные/LLM-вкладки скрыты в бесплатном режиме -->
     <div class="tab" data-tab="news" style="display:none">Обогащённые</div>
     <div class="tab" data-tab="final" style="display:none">Финал</div>
@@ -1092,18 +1091,6 @@ input:focus, textarea:focus, select:focus { outline:none; border-color:#1da1f2; 
       </div>
     </div>
     <div id="cases-list" style="font-size:0.9em"></div>
-  </div>
-
-  <!-- TELEGRAM (изолированная вкладка: только TG-источники) -->
-  <div class="panel" id="panel-telegram">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-      <h2>&#9993; Телеграм <span style="font-size:0.72em;color:#aab4be;font-weight:normal">только Telegram-источники · отдельно от ленты, кейсов, дайджестов и сюжетов</span></h2>
-      <div style="display:flex;align-items:center;gap:8px">
-        <span id="tg-count" style="color:var(--c-muted);font-size:0.85em"></span>
-        <button class="btn btn-sm btn-secondary" onclick="loadTelegram()">Обновить</button>
-      </div>
-    </div>
-    <div id="tg-list" style="font-size:0.9em"></div>
   </div>
 
   <!-- TRENDS (storylines) -->
@@ -1810,7 +1797,6 @@ document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () =>
   if (t.dataset.tab === 'health') { loadHealth(); }
   if (t.dataset.tab === 'storylines') { loadStorylines(); loadSlSettings(); loadTopicCloud(); }
   if (t.dataset.tab === 'cases') { loadCases(); }
-  if (t.dataset.tab === 'telegram') { loadTelegram(); }
   if (t.dataset.tab === 'trash') { loadTrash(); }
   if (t.dataset.tab === 'settings') { loadSettings(); loadLogs(); loadQueue(); loadViralTriggers(); }
 }));
@@ -5207,35 +5193,6 @@ async function loadCases() {
       <button class="btn btn-sm btn-secondary" title="Убрать из Кейсов" onclick="setCase('${n.id}',false,true)">&#128204;&#10007;</button>
     </div>`;
   }).join('');
-}
-
-async function loadTelegram() {
-  const el = document.getElementById('tg-list');
-  if (!el) return;
-  el.innerHTML = '<div style="color:var(--c-muted);padding:20px;text-align:center">Загрузка…</div>';
-  const r = await api('/api/telegram?limit=200');
-  const items = (r && r.news) || [];
-  const cnt = document.getElementById('tg-count');
-  if (cnt) cnt.textContent = items.length + ' постов';
-  if (!items.length) {
-    el.innerHTML = '<div style="color:var(--c-muted);padding:30px;text-align:center">Пока пусто. Здесь копятся посты из Telegram-источников — отдельно от ленты, кейсов, дайджестов и сюжетов.</div>';
-    return;
-  }
-  el.innerHTML = items.map(n => {
-    return `<div style="display:flex;gap:10px;align-items:flex-start;padding:10px 4px;border-bottom:1px solid #22303c">
-      <div style="flex:1;min-width:0">
-        <a href="${n.url}" target="_blank" style="color:#e1e8ed;text-decoration:none;font-size:0.95em">${esc(n.title)}</a>
-        <div style="font-size:0.74em;color:var(--c-muted);margin-top:3px">${esc(n.source)} · ${fmtDate(n.published_ts || n.published_at)} · &#128221;${n.word_count || 0}</div>
-      </div>
-      <button class="btn btn-sm btn-secondary" title="Скрыть — в Удалённые" onclick="tgHide('${n.id}')">&#128465;</button>
-    </div>`;
-  }).join('');
-}
-
-async function tgHide(id) {
-  const r = await api('/api/news/delete', {news_ids: [id]});
-  if (r && (r.status === 'ok' || r.deleted !== undefined)) { toast('Скрыто — в Удалённые'); loadTelegram(); }
-  else toast((r && r.message) || 'Ошибка', true);
 }
 
 async function edHide(id) {

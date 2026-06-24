@@ -35,8 +35,6 @@ def get_viral(query_params):
 
         conditions = []
         params = []
-        # Telegram-источники изолированы в свою вкладку — в виральность не идут.
-        conditions.append("n.source NOT LIKE 'TG:%'")
         if source_filter:
             conditions.append(f"n.source = {ph}")
             params.append(source_filter)

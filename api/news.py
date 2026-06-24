@@ -14,13 +14,6 @@ logger = logging.getLogger(__name__)
 
 _JSON_FIELDS = ['bigrams', 'trigrams', 'trends_data', 'keyso_data', 'viral_data', 'tags_data', 'entity_names', 'score_breakdown']
 
-# Telegram-источники изолированы в собственную вкладку и не должны протекать
-# в ленту, кейсы, сюжеты, дайджесты и виральность. Опознаются по префиксу "TG:"
-# в имени источника (та же конвенция, что в is_case_content). Работает в SQLite
-# и Postgres, литерал — без параметра.
-TG_EXCLUDE_SQL = "n.source NOT LIKE 'TG:%'"
-TG_ONLY_SQL = "n.source LIKE 'TG:%'"
-
 
 def _parse_json_fields(row: dict) -> dict:
     """Parse JSON string fields into Python objects for cleaner API responses."""
@@ -63,7 +56,6 @@ def get_news_unified(query_params):
         sort_dir = qs.get("dir", ["desc"])[0]
         include_deleted = qs.get("deleted", ["0"])[0] == "1"
         cases_only = qs.get("cases", ["0"])[0] == "1"
-        tg_mode = qs.get("tg", ["exclude"])[0]  # exclude (default) | only
 
         _ph = "%s" if _is_postgres() else "?"
         conditions = []
@@ -73,13 +65,6 @@ def get_news_unified(query_params):
         # Soft-delete filter
         if not include_deleted:
             conditions.append("COALESCE(n.is_deleted, 0) = 0")
-
-        # Telegram routing: by default keep TG out of every shared view; the
-        # dedicated Telegram tab passes tg=only to get just those sources.
-        if tg_mode == "only":
-            conditions.append(TG_ONLY_SQL)
-        else:
-            conditions.append(TG_EXCLUDE_SQL)
 
         # Cases tab: only bookmarked / research items
         if cases_only:
@@ -151,7 +136,7 @@ def get_news_unified(query_params):
         # Status stats (for editorial view)
         status_counts = {}
         if view == "editorial":
-            cur.execute("SELECT status, COUNT(*) FROM news WHERE COALESCE(is_deleted, 0) = 0 AND source NOT LIKE 'TG:%' GROUP BY status")
+            cur.execute("SELECT status, COUNT(*) FROM news WHERE COALESCE(is_deleted, 0) = 0 GROUP BY status")
             for row in cur.fetchall():
                 status_counts[row[0]] = row[1]
 
