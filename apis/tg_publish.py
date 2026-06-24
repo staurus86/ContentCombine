@@ -5,6 +5,7 @@ title · summary (trimmed) · hashtags · url, capped at Telegram's 4096 limit.
 Sends to config.TELEGRAM_PUBLISH_CHANNEL via the bot if token+channel are set;
 otherwise returns {"status": "no_token", "text": ...} so the UI copies it.
 """
+import html as _html
 import json
 import logging
 import re
@@ -15,7 +16,49 @@ from storage.database import get_connection, _is_postgres
 logger = logging.getLogger(__name__)
 
 TG_LIMIT = 4096
+CHUNK_LIMIT = 3800  # margin under TG_LIMIT for safe splitting
 SUMMARY_MAX = 600
+
+
+def _md_to_html(s: str) -> str:
+    """Convert digest markdown (**bold**, [text](url)) to Telegram HTML."""
+    s = _html.escape(s, quote=False)  # & < >
+    s = re.sub(r"\[([^\]]+)\]\((https?://[^\s)]+)\)",
+               lambda m: f'<a href="{m.group(2)}">{m.group(1)}</a>', s)
+    s = re.sub(r"\*\*([^*]+)\*\*", r"<b>\1</b>", s)
+    return s
+
+
+def _split_chunks(text: str, limit: int = CHUNK_LIMIT) -> list[str]:
+    """Split text into Telegram-sized chunks at paragraph boundaries."""
+    chunks, cur = [], ""
+    for block in text.split("\n\n"):
+        while len(block) > limit:  # a single oversized block — hard split
+            if cur.strip():
+                chunks.append(cur.rstrip()); cur = ""
+            chunks.append(block[:limit]); block = block[limit:]
+        if len(cur) + len(block) + 2 > limit and cur.strip():
+            chunks.append(cur.rstrip()); cur = ""
+        cur += block + "\n\n"
+    if cur.strip():
+        chunks.append(cur.rstrip())
+    return chunks or [text[:limit]]
+
+
+def _send_chunks(token: str, channel: str, chunks: list[str], parse_mode=None) -> dict:
+    """Send each chunk as a separate message. Returns ok only if all succeed."""
+    import requests
+    sent = 0
+    for chunk in chunks:
+        payload = {"chat_id": channel, "text": chunk, "disable_web_page_preview": True}
+        if parse_mode:
+            payload["parse_mode"] = parse_mode
+        resp = requests.post(f"https://api.telegram.org/bot{token}/sendMessage", json=payload, timeout=20)
+        data = resp.json()
+        if not data.get("ok"):
+            return {"status": "error", "message": data.get("description", "send failed"), "sent": sent}
+        sent += 1
+    return {"status": "ok", "sent": sent}
 
 
 def _hashtags(tags, entities, limit=5):
@@ -77,16 +120,19 @@ def _load_news_post(news_id: str):
 
 
 def publish(body: dict) -> dict:
-    """body: {news_id} or {text}. Returns status ok / no_token / error, always with text."""
+    """body: {news_id} | {text} [, markdown: bool]. Returns ok / no_token / error.
+
+    markdown=True (digests): **bold**/[text](url) → HTML, sent with parse_mode=HTML.
+    Long posts are split into multiple messages (Telegram's 4096 limit).
+    """
     text = (body.get("text") or "").strip()
     if not text and body.get("news_id"):
         text = _load_news_post(body["news_id"]) or ""
     if not text:
         return {"status": "error", "message": "text or news_id required"}
-    if len(text) > TG_LIMIT:
-        text = text[:TG_LIMIT - 1] + "…"
+    is_md = bool(body.get("markdown"))
 
-    # Preview: just return the composed text, never send.
+    # Preview: return the composed text untouched, never send.
     if body.get("preview"):
         return {"status": "preview", "text": text}
 
@@ -95,17 +141,17 @@ def publish(body: dict) -> dict:
     if not token or not channel:
         return {"status": "no_token", "text": text}
 
+    chunks = _split_chunks(text)
+    parse_mode = None
+    if is_md:
+        chunks = [_md_to_html(c) for c in chunks]
+        parse_mode = "HTML"
+
     try:
-        import requests
-        resp = requests.post(
-            f"https://api.telegram.org/bot{token}/sendMessage",
-            json={"chat_id": channel, "text": text, "disable_web_page_preview": False},
-            timeout=20,
-        )
-        data = resp.json()
-        if data.get("ok"):
-            return {"status": "ok", "text": text}
-        return {"status": "error", "message": data.get("description", "send failed"), "text": text}
+        result = _send_chunks(token, channel, chunks, parse_mode=parse_mode)
+        result["text"] = text
+        result["parts"] = len(chunks)
+        return result
     except Exception as e:
         logger.error("Telegram publish failed: %s", e)
         return {"status": "error", "message": str(e), "text": text}

@@ -3618,10 +3618,11 @@ async function publishSavedDigest(i) {
   const d = _savedDigests[i];
   if (!d) return;
   if (!confirm('Опубликовать этот дайджест в Telegram-канал?')) return;
-  const text = digestToTgText(d.title, d.text);
-  const r = await api('/api/telegram/publish', {text});
-  if (r && r.status === 'ok') toast('Опубликовано в Telegram ✓');
-  else if (r && r.status === 'no_token') { try { await navigator.clipboard.writeText(text); } catch(e){} toast('Канал не подключён — текст скопирован', true); }
+  // Send raw markdown (title + body); backend converts to HTML and splits into parts.
+  const text = (d.title ? '**' + d.title + '**\n\n' : '') + (d.text || '');
+  const r = await api('/api/telegram/publish', {text, markdown: true});
+  if (r && r.status === 'ok') toast(`Опубликовано в Telegram ✓ (${r.parts||1} ч.)`);
+  else if (r && r.status === 'no_token') { try { await navigator.clipboard.writeText(digestToTgText(d.title, d.text)); } catch(e){} toast('Канал не подключён — текст скопирован', true); }
   else toast((r && r.message) || 'Ошибка отправки', true);
 }
 
