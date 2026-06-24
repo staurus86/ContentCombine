@@ -242,7 +242,7 @@ def _parse_homepage(source: dict) -> int:
         try:
             from parsers.rss_parser import parse_rss_source
             rss_source = {**source, "type": "rss", "url": rss_url}
-            rss_count = parse_rss_source(rss_source)
+            rss_count = parse_rss_source(rss_source) or 0
             count += rss_count
             if rss_count:
                 logger.info("%s RSS supplement: %d new articles", name, rss_count)
@@ -332,7 +332,7 @@ def _parse_gamesradar(source: dict) -> int:
         try:
             from parsers.rss_parser import parse_rss_source
             rss_source = {**source, "type": "rss", "url": rss_url}
-            rss_count = parse_rss_source(rss_source)
+            rss_count = parse_rss_source(rss_source) or 0
             count += rss_count
             if rss_count:
                 logger.info("GamesRadar RSS supplement: %d new articles", rss_count)

@@ -29,7 +29,9 @@ def classify_error(error: str) -> str:
         return "connection"
     if any(k in err for k in ["ssl", "certificate", "handshake"]):
         return "ssl"
-    if any(k in err for k in ["json", "parse", "decode", "xml", "encoding"]):
+    if any(k in err for k in ["json", "parse", "decode", "xml", "encoding",
+                              "not well-formed", "invalid token", "mismatched tag",
+                              "syntax error", "not at start", "no element found", "bozo"]):
         return "parse_error"
     return "unknown"
 

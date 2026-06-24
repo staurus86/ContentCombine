@@ -589,7 +589,7 @@ def reparse_source(body):
     try:
         if source["type"] == "rss":
             from parsers.rss_parser import parse_rss_source
-            count = parse_rss_source(source)
+            count = parse_rss_source(source) or 0
         elif source["type"] == "sitemap":
             from parsers.html_parser import parse_sitemap_source
             count = parse_sitemap_source(source)
@@ -610,7 +610,7 @@ def reparse_all(body):
         for source in config.SOURCES:
             try:
                 if source["type"] == "rss":
-                    total += parse_rss_source(source)
+                    total += parse_rss_source(source) or 0
                 elif source["type"] == "sitemap":
                     total += parse_sitemap_source(source)
                 else:
@@ -669,7 +669,7 @@ def heal_source(body):
         try:
             if source["type"] == "rss":
                 from parsers.rss_parser import parse_rss_source
-                new_articles = parse_rss_source(source)
+                new_articles = parse_rss_source(source) or 0
             elif source["type"] == "sitemap":
                 from parsers.html_parser import parse_sitemap_source
                 new_articles = parse_sitemap_source(source)

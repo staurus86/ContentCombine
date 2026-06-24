@@ -33,6 +33,10 @@ from pipeline.orchestrator import (  # noqa: F401
 logger = logging.getLogger(__name__)
 RUNNING_SCHEDULER = None
 
+# Sentinel: run_with_timeout returns this on timeout / unhandled error (distinct from
+# a parser returning None, which means "I already recorded a specific failure").
+_PARSE_FAILED = object()
+
 
 def _parse_source_list(sources, label: str):
     """Parse the given list of sources. Error-isolated per source."""
@@ -78,10 +82,14 @@ def _parse_source_list(sources, label: str):
                     return parse_bluesky_source(src)
                 return 0
 
-            count = run_with_timeout(_parse_one, timeout=90, default=None,
+            count = run_with_timeout(_parse_one, timeout=90, default=_PARSE_FAILED,
                                      label=f"parse:{name}")
-            if count is None:
-                source_health.record_failure(name, "timeout or error")
+            if count is _PARSE_FAILED:
+                # timeout, or an unhandled error swallowed by run_with_timeout
+                source_health.record_failure(name, "read timed out")
+                failed += 1
+            elif count is None:
+                # parser detected a specific failure and already recorded it (DNS/404/parse…)
                 failed += 1
             else:
                 total += count

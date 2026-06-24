@@ -101,8 +101,20 @@ def fetch_full_text(url: str) -> tuple[str, str, str, str, int]:
         return "", "", "", "", 0
 
 
-def parse_rss_source(source: dict) -> int:
-    """Парсит один RSS-источник, возвращает количество новых новостей."""
+def _record_failure(name, err):
+    """Сообщить трекеру здоровья о конкретном сбое источника (DNS/404/битый фид…),
+    чтобы заработали «Причина» в дашборде и авто-отключение. Возврат None из парсера
+    сигналит вызывающему, что сбой уже записан (не перетирать record_success)."""
+    try:
+        from core.source_health import source_health
+        source_health.record_failure(name, str(err))
+    except Exception:
+        pass
+
+
+def parse_rss_source(source: dict):
+    """Парсит один RSS-источник. Возвращает количество новых новостей (int),
+    либо None при сбое фида (сбой уже записан в source_health)."""
     name = source["name"]
     url = source["url"]
     count = 0
@@ -119,7 +131,8 @@ def parse_rss_source(source: dict) -> int:
             feed = feedparser.parse(url, request_headers={"User-Agent": _get_random_ua()})
         if feed.bozo and not feed.entries:
             logger.warning("Feed error for %s: %s", name, feed.bozo_exception)
-            return 0
+            _record_failure(name, feed.bozo_exception)
+            return None
 
         cutoff = datetime.now(timezone.utc) - timedelta(days=MAX_AGE_DAYS)
 
@@ -173,6 +186,8 @@ def parse_rss_source(source: dict) -> int:
 
     except Exception as e:
         logger.error("Error parsing RSS %s: %s", name, e)
+        _record_failure(name, e)
+        return None
 
     logger.info("Parsed %s: %d new articles", name, count)
     return count
