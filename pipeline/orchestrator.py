@@ -1109,6 +1109,34 @@ def generate_auto_digest():
         logger.error("Auto-digest error: %s", e)
 
 
+def auto_publish_telegram_digest():
+    """Daily morning job: build the detailed digest of fresh news and publish it
+    to the Telegram channel. Skips quietly if no fresh news or no channel configured."""
+    try:
+        if not getattr(config, "TELEGRAM_BOT_TOKEN", "") or not getattr(config, "TELEGRAM_PUBLISH_CHANNEL", ""):
+            logger.info("Auto TG digest: bot token/channel not set — skipping")
+            return {"status": "no_token"}
+        from api.settings import generate_and_save_digest
+        from apis.tg_publish import publish
+
+        res = generate_and_save_digest({"style": "detailed"})
+        digest = (res or {}).get("digest", {})
+        if not digest or digest.get("news_count", 0) == 0:
+            logger.info("Auto TG digest: no fresh news — nothing to publish")
+            return {"status": "no_news"}
+
+        title = (digest.get("title") or "").strip()
+        text = digest.get("text") or ""
+        body_text = (f"**{title}**\n\n" if title else "") + text
+        pub = publish({"text": body_text, "markdown": True})
+        logger.info("Auto TG digest: %d news, publish status=%s parts=%s",
+                    digest.get("news_count", 0), pub.get("status"), pub.get("parts"))
+        return {"status": pub.get("status"), "parts": pub.get("parts"), "news_count": digest.get("news_count", 0), "title": title}
+    except Exception as e:
+        logger.error("Auto TG digest error: %s", e)
+        return {"status": "error", "message": str(e)[:300]}
+
+
 PUBLISH_SPACING_MINUTES = config.PUBLISH_SPACING_MINUTES  # Minimum minutes between auto-publications
 
 

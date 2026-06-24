@@ -26,7 +26,7 @@ from pipeline.orchestrator import (  # noqa: F401
     _update_task, _create_task, _fetch_news_by_id, _fetch_analysis_by_id,
     _calc_final_score, run_full_auto_pipeline, run_no_llm_pipeline,
     _save_rewrite_article, _build_check_result_from_analysis,
-    generate_auto_digest, publish_scheduled_articles,
+    generate_auto_digest, auto_publish_telegram_digest, publish_scheduled_articles,
     FULL_AUTO_SCORE_THRESHOLD, FULL_AUTO_FINAL_THRESHOLD,
 )
 
@@ -223,8 +223,9 @@ def start_scheduler():
     # Auto-rescore news with score=0: daily at 04:00
     scheduler.add_job(_auto_rescore_zero, "cron", hour=4, minute=0, id="auto_rescore_zero")
 
-    # Auto-digest: daily at 23:00 Moscow time
-    scheduler.add_job(generate_auto_digest, "cron", hour=23, minute=0, id="auto_digest")
+    # Auto digest → Telegram channel: daily at 11:00 Moscow time.
+    # Builds the detailed digest of fresh (24h) news and publishes it to the channel.
+    scheduler.add_job(auto_publish_telegram_digest, "cron", hour=11, minute=0, id="auto_tg_digest")
 
     # Storylines daily export: use dashboard settings if auto-export enabled,
     # otherwise fall back to hardcoded 09:00 schedule.

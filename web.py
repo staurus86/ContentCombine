@@ -319,6 +319,7 @@ class AdminHandler(BaseHTTPRequestHandler):
             "/api/prompt_versions/activate": lambda: self._activate_prompt_version(body),
             "/api/generate_digest": lambda: self._generate_digest(body),
             "/api/digest/generate": lambda: self._generate_and_save_digest(body),
+            "/api/digest/auto_publish": lambda: self._json(self._auto_publish_digest()),
             "/api/event_chain": lambda: self._get_event_chain(body),
             "/api/queue/cancel": lambda: self._cancel_queue_task(body),
             "/api/queue/cancel_all": lambda: self._cancel_all_queue(body),
@@ -1186,6 +1187,11 @@ async function login() {
     def _generate_digest(self, body):
         from api.settings import generate_digest
         self._json(generate_digest(body))
+
+    def _auto_publish_digest(self):
+        # Runs the same job as the daily 11:00 MSK cron — for manual testing / publish-now.
+        from pipeline.orchestrator import auto_publish_telegram_digest
+        return auto_publish_telegram_digest() or {"status": "done"}
 
     def _get_digests(self):
         from api.settings import get_digests
