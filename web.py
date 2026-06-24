@@ -182,6 +182,7 @@ class AdminHandler(BaseHTTPRequestHandler):
             "/api/rate_stats": lambda: self._json(self._get_rate_stats()),
             "/api/cache_stats": lambda: self._json(self._get_cache_stats()),
             "/api/editorial": lambda: self._json(self._get_editorial()),
+            "/api/telegram": lambda: self._json(self._get_telegram()),
             "/api/moderation_list": lambda: self._json(self._get_moderation_list()),
             "/api/digests": lambda: self._json(self._get_digests()),
             "/api/viral_triggers": lambda: self._json(self._get_viral_triggers()),
@@ -696,6 +697,14 @@ async function login() {
     def _get_news_unified(self):
         from api.news import get_news_unified
         qs = parse_qs(urlparse(self.path).query)
+        return get_news_unified(qs)
+
+    def _get_telegram(self):
+        # Отдельная вкладка «Телеграм»: та же лента-вью, но только TG-источники.
+        from api.news import get_news_unified
+        qs = parse_qs(urlparse(self.path).query)
+        qs["view"] = ["editorial"]
+        qs["tg"] = ["only"]
         return get_news_unified(qs)
 
     def _get_trash(self):
