@@ -19,6 +19,21 @@ def _ru_date_today() -> str:
     d = datetime.now(timezone.utc) + timedelta(hours=3)
     return f"{d.day} {_RU_MONTHS[d.month - 1]} {d.year}"
 
+
+def _call_llm_retry(prompt: str, attempts: int = 3, pause: float = 4.0):
+    """Call the LLM with up to N attempts and a pause between — smooths over
+    transient gateway timeouts/flaps when generating digests."""
+    import time
+    from apis.llm import _call_llm
+    for i in range(attempts):
+        result = _call_llm(prompt)
+        if result:
+            return result
+        if i < attempts - 1:
+            logger.warning("Digest LLM attempt %d/%d failed — retrying in %.0fs", i + 1, attempts, pause)
+            time.sleep(pause)
+    return None
+
 # Anti-AI-slop guardrails applied to every digest prompt. Mirrors the user's
 # Writing Standard: active voice, concrete facts, no signature AI phrasing.
 ANTI_SLOP = """## Язык
@@ -228,8 +243,7 @@ def generate_daily_digest(news_list: list[dict], style: str = "brief") -> dict:
     else:
         prompt = PROMPT_BRIEF.format(**common)
 
-    from apis.llm import _call_llm
-    result = _call_llm(prompt)
+    result = _call_llm_retry(prompt)
 
     if not result:
         logger.error("Digest LLM call failed")
@@ -322,8 +336,7 @@ def generate_tg_channels_digest(news_list: list[dict], period_label: str = "за
         anti_slop=ANTI_SLOP, period_label=period_label,
         news_count=len(news_list), numbered=_format_tg_sources(news_list), limit=limit,
     )
-    from apis.llm import _call_llm
-    result = _call_llm(prompt)
+    result = _call_llm_retry(prompt)
     if not result:
         logger.error("TG digest LLM call failed")
         return {"title": "Ошибка", "text": "Не удалось сгенерировать дайджест (LLM недоступен).", "news_count": 0}
