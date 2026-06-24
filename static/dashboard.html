@@ -1108,7 +1108,12 @@ input:focus, textarea:focus, select:focus { outline:none; border-color:#1da1f2; 
         <button class="btn btn-sm btn-secondary" onclick="loadTelegram()">Обновить</button>
       </div>
     </div>
-    <div style="overflow-x:auto">
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;position:sticky;top:0;z-index:6;background:#0f1923;padding:8px 0;border-bottom:1px solid #22303c">
+      <button class="btn btn-sm btn-secondary" onclick="tgGo('tg-sec-posts')">&#128203; Посты</button>
+      <button class="btn btn-sm btn-secondary" onclick="tgGo('tg-sec-digest')">&#128228; Дайджест</button>
+      <button class="btn btn-sm btn-secondary" onclick="tgGo('tg-analytics')">&#128202; Аналитика</button>
+    </div>
+    <div id="tg-sec-posts" style="overflow-x:auto">
       <table style="width:100%;font-size:0.88em">
         <thead><tr>
           <th class="sortable" onclick="tgSort('source')" style="width:95px">Источник</th>
@@ -1124,7 +1129,7 @@ input:focus, textarea:focus, select:focus { outline:none; border-color:#1da1f2; 
       </table>
     </div>
 
-    <div class="card" style="margin-top:22px;padding:16px">
+    <div class="card" id="tg-sec-digest" style="margin-top:22px;padding:16px">
       <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px">
         <div style="font-weight:600;font-size:0.98em">&#128228; Дайджест ТГ-каналов</div>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
@@ -5271,6 +5276,11 @@ async function loadCases() {
       <button class="btn btn-sm btn-secondary" title="Убрать из Кейсов" onclick="setCase('${n.id}',false,true)">&#128204;&#10007;</button>
     </div>`;
   }).join('');
+}
+
+function tgGo(id) {
+  const e = document.getElementById(id);
+  if (e) e.scrollIntoView({behavior: 'smooth', block: 'start'});
 }
 
 let _tgData = [], _tgSortField = '', _tgSortDir = 'desc';

@@ -147,21 +147,23 @@ def _render_links(news_list, sources, md=True):
 
 
 def _source_suffix(news_list, sources) -> str:
-    """Compact «(Источник)» links per item. One source → (Источник); many → numbered.
-    Deduplicates by URL so identical sources don't render twice."""
-    urls, seen = [], set()
+    """Compact source links per item, labelled with the channel/source NAME:
+    «(DrMax SEO)», «(Search Engine Land)». Deduplicates by URL."""
+    links, seen = [], set()
     for idx in sources or []:
         if not isinstance(idx, int) or idx < 1 or idx > len(news_list):
             continue
-        url = (news_list[idx - 1].get("url") or "").strip()
-        if url and url not in seen:
-            seen.add(url)
-            urls.append(url)
-    if not urls:
-        return ""
-    if len(urls) == 1:
-        return f"([Источник]({urls[0]}))"
-    return " ".join(f"([Источник {i}]({u}))" for i, u in enumerate(urls, 1))
+        n = news_list[idx - 1]
+        url = (n.get("url") or "").strip()
+        if not url or url in seen:
+            continue
+        seen.add(url)
+        name = (n.get("source") or "Источник").strip()
+        if name.startswith("TG:"):
+            name = name[3:].strip()
+        name = name.replace("[", "").replace("]", "") or "Источник"
+        links.append(f"([{name}]({url}))")
+    return " ".join(links)
 
 
 def _render_detailed(result, news_list) -> str:
