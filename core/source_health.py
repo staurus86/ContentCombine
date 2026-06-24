@@ -15,7 +15,9 @@ def classify_error(error: str) -> str:
     err = str(error).lower()
     if any(k in err for k in ["timeout", "timed out", "read timed out"]):
         return "timeout"
-    if any(k in err for k in ["name resolution", "dns", "getaddrinfo", "nodename nor servname"]):
+    if any(k in err for k in ["name resolution", "dns", "getaddrinfo", "nodename nor servname",
+                              "name or service not known", "no address associated",
+                              "failed to resolve", "temporary failure in name"]):
         return "dns"
     if any(k in err for k in ["401", "unauthorized", "forbidden", "403"]):
         return "auth"
