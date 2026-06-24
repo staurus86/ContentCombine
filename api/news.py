@@ -577,9 +577,9 @@ def compose_digest(dtype="feed", period="day"):
     period_label = "за сутки" if period == "day" else "за неделю"
 
     if dtype == "general":
-        feed_news = _pull_segment_news("n.source NOT LIKE 'TG:%' AND COALESCE(n.is_case, 0) = 0", from_h, 8)
-        cases_news = _pull_segment_news("COALESCE(n.is_case, 0) = 1", from_h, 8)
-        tg_news = _pull_segment_news("n.source LIKE 'TG:%'", from_h, 8)
+        feed_news = _pull_segment_news("n.source NOT LIKE 'TG:%' AND COALESCE(n.is_case, 0) = 0", from_h, 14)
+        cases_news = _pull_segment_news("COALESCE(n.is_case, 0) = 1", from_h, 14)
+        tg_news = _pull_segment_news("n.source LIKE 'TG:%'", from_h, 14)
         from apis.digest import generate_general_digest
         result = generate_general_digest(feed_news, cases_news, tg_news, period_label)
         style_tag = "gen_" + period
