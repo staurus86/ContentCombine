@@ -221,6 +221,113 @@ def get_news_unified(query_params):
         cur.close()
 
 
+def get_telegram_analytics():
+    """Analytics for the Telegram tab: per-author averages, popular tags
+    (24h / all-time), period summary, and top posts by score in the last 24h."""
+    from collections import Counter
+    from datetime import datetime, timezone, timedelta
+    conn = get_connection()
+    cur = conn.cursor()
+    _ph = "%s" if _is_postgres() else "?"
+    TG = "TG:%"
+    cutoff = datetime.now(timezone.utc) - timedelta(hours=24)
+
+    def _parse_dt(s):
+        if not s:
+            return None
+        try:
+            return datetime.fromisoformat(str(s).replace("Z", "+00:00"))
+        except Exception:
+            return None
+
+    try:
+        # Per-author averages (all-time)
+        cur.execute(f"""
+            SELECT n.source, AVG(COALESCE(a.total_score, 0)), AVG(COALESCE(a.relevance_score, 0)),
+                   AVG(COALESCE(a.viral_score, 0)), COUNT(*)
+            FROM news n LEFT JOIN news_analysis a ON a.news_id = n.id
+            WHERE n.source LIKE {_ph} AND COALESCE(n.is_deleted, 0) = 0
+            GROUP BY n.source
+        """, (TG,))
+        by_author = [{
+            "source": row[0],
+            "avg_score": round(float(row[1] or 0), 1),
+            "avg_relevance": round(float(row[2] or 0), 1),
+            "avg_viral": round(float(row[3] or 0), 1),
+            "count": row[4],
+        } for row in cur.fetchall()]
+        by_author.sort(key=lambda x: -x["avg_score"])
+
+        # Per-post rows → period summary + tag counts (24h / all-time)
+        cur.execute(f"""
+            SELECT COALESCE(a.total_score, 0), COALESCE(a.relevance_score, 0), COALESCE(a.viral_score, 0),
+                   COALESCE(n.published_ts, n.parsed_at), COALESCE(a.tags_data, '[]')
+            FROM news n LEFT JOIN news_analysis a ON a.news_id = n.id
+            WHERE n.source LIKE {_ph} AND COALESCE(n.is_deleted, 0) = 0
+        """, (TG,))
+        all_rows, day_rows = [], []
+        tags_all, tags_day = Counter(), Counter()
+        for sc, rel, vir, dt, td in cur.fetchall():
+            is_day = (_parse_dt(dt) or datetime.min.replace(tzinfo=timezone.utc)) > cutoff
+            all_rows.append((sc, rel, vir))
+            if is_day:
+                day_rows.append((sc, rel, vir))
+            try:
+                tags = json.loads(td) if isinstance(td, str) else (td or [])
+            except Exception:
+                tags = []
+            for t in tags or []:
+                lbl = (t.get("label") or t.get("id") or "").strip() if isinstance(t, dict) else str(t).strip()
+                if len(lbl) >= 2:
+                    tags_all[lbl] += 1
+                    if is_day:
+                        tags_day[lbl] += 1
+
+        def _summary(rows):
+            n = len(rows)
+            if not n:
+                return {"posts": 0, "avg_score": 0, "avg_relevance": 0, "avg_viral": 0}
+            return {
+                "posts": n,
+                "avg_score": round(sum(r[0] for r in rows) / n, 1),
+                "avg_relevance": round(sum(r[1] for r in rows) / n, 1),
+                "avg_viral": round(sum(r[2] for r in rows) / n, 1),
+            }
+
+        # Top posts by score in the last 24h
+        if _is_postgres():
+            cur.execute(f"""
+                SELECT n.source, n.title, n.url, COALESCE(a.total_score, 0),
+                       COALESCE(n.published_ts, n.parsed_at)
+                FROM news n LEFT JOIN news_analysis a ON a.news_id = n.id
+                WHERE n.source LIKE {_ph} AND COALESCE(n.is_deleted, 0) = 0
+                  AND COALESCE(n.published_ts, n.parsed_at)::timestamptz > (NOW() - INTERVAL '24 hours')
+                ORDER BY COALESCE(a.total_score, 0) DESC LIMIT 10
+            """, (TG,))
+        else:
+            cur.execute(f"""
+                SELECT n.source, n.title, n.url, COALESCE(a.total_score, 0),
+                       COALESCE(n.published_ts, n.parsed_at)
+                FROM news n LEFT JOIN news_analysis a ON a.news_id = n.id
+                WHERE n.source LIKE {_ph} AND COALESCE(n.is_deleted, 0) = 0
+                  AND COALESCE(n.published_ts, n.parsed_at) > datetime('now', '-1 day')
+                ORDER BY COALESCE(a.total_score, 0) DESC LIMIT 10
+            """, (TG,))
+        top_score_24h = [{
+            "source": r[0], "title": r[1], "url": r[2], "total_score": r[3], "date": str(r[4] or "")[:16],
+        } for r in cur.fetchall()]
+
+        return {
+            "by_author": by_author,
+            "summary": {"day": _summary(day_rows), "all": _summary(all_rows)},
+            "tags_24h": [{"label": l, "count": c} for l, c in tags_day.most_common(10)],
+            "tags_all": [{"label": l, "count": c} for l, c in tags_all.most_common(10)],
+            "top_score_24h": top_score_24h,
+        }
+    finally:
+        cur.close()
+
+
 def export_news_xlsx(query_params) -> bytes:
     """Export current filtered view as XLSX file. Returns bytes of the workbook."""
     import io

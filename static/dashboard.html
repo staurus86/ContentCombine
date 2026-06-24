@@ -1123,6 +1123,7 @@ input:focus, textarea:focus, select:focus { outline:none; border-color:#1da1f2; 
         <tbody id="tg-table"></tbody>
       </table>
     </div>
+    <div id="tg-analytics" style="margin-top:22px"></div>
   </div>
 
   <!-- TRENDS (storylines) -->
@@ -5297,6 +5298,73 @@ async function loadTelegram() {
       <td><button class="btn btn-sm btn-secondary" title="Скрыть — в Удалённые" onclick="tgHide('${n.id}')">&#128465;</button></td>
     </tr>`;
   }).join('');
+  loadTelegramAnalytics();
+}
+
+function _tgTagChips(list) {
+  if (!list || !list.length) return '<span style="color:var(--c-faint)">—</span>';
+  return list.map(t => `<span class="tag" style="font-size:0.72em;padding:2px 7px;margin:2px;display:inline-block">${esc(t.label)} <b style="color:#1da1f2">${t.count}</b></span>`).join(' ');
+}
+
+async function loadTelegramAnalytics() {
+  const el = document.getElementById('tg-analytics');
+  if (!el) return;
+  const r = await api('/api/telegram/analytics');
+  if (!r || r.error) { el.innerHTML = ''; return; }
+  const s = r.summary || {day:{}, all:{}};
+  const card = (title, d) => `
+    <div class="card" style="flex:1;min-width:180px;padding:12px">
+      <div style="font-weight:600;color:#1da1f2;font-size:0.9em;margin-bottom:8px">${title}</div>
+      <div style="display:flex;justify-content:space-between;font-size:0.85em;padding:2px 0"><span style="color:var(--c-muted)">Постов</span><b>${d.posts||0}</b></div>
+      <div style="display:flex;justify-content:space-between;font-size:0.85em;padding:2px 0"><span style="color:var(--c-muted)">Ср. скор</span><b>${d.avg_score||0}</b></div>
+      <div style="display:flex;justify-content:space-between;font-size:0.85em;padding:2px 0"><span style="color:var(--c-muted)">Ср. релевантность</span><b>${d.avg_relevance||0}</b></div>
+      <div style="display:flex;justify-content:space-between;font-size:0.85em;padding:2px 0"><span style="color:var(--c-muted)">Ср. виральность</span><b>${d.avg_viral||0}</b></div>
+    </div>`;
+  const topRows = (r.top_score_24h||[]).map(t => `
+    <tr>
+      <td style="font-size:0.78em;color:var(--c-muted)">${esc(t.source)}</td>
+      <td><a href="${t.url}" target="_blank" style="color:#e1e8ed;text-decoration:none">${esc(t.title)}</a></td>
+      <td><b style="color:${t.total_score>=70?'#17bf63':t.total_score>=40?'#ffad1f':'#e0245e'}">${t.total_score}</b></td>
+      <td style="font-size:0.76em;color:var(--c-muted)">${esc(t.date)}</td>
+    </tr>`).join('') || '<tr><td colspan="4" style="color:var(--c-faint);padding:10px;text-align:center">Нет постов за сутки</td></tr>';
+  const authorRows = (r.by_author||[]).map(a => `
+    <tr>
+      <td style="font-size:0.82em">${esc(a.source)}</td>
+      <td><b style="color:${a.avg_score>=70?'#17bf63':a.avg_score>=40?'#ffad1f':'#e0245e'}">${a.avg_score}</b></td>
+      <td style="color:var(--c-muted)">${a.avg_relevance}</td>
+      <td style="color:var(--c-muted)">${a.avg_viral}</td>
+      <td style="color:var(--c-muted)">${a.count}</td>
+    </tr>`).join('');
+  el.innerHTML = `
+    <h3 style="font-size:1em;margin:0 0 12px;border-top:1px solid #22303c;padding-top:16px">📊 Аналитика Telegram</h3>
+    <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px">
+      ${card('За сутки', s.day)}
+      ${card('За всё время', s.all)}
+    </div>
+    <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:16px">
+      <div style="flex:1;min-width:240px">
+        <div style="font-weight:600;font-size:0.9em;margin-bottom:8px">Популярные теги за сутки</div>
+        <div>${_tgTagChips(r.tags_24h)}</div>
+      </div>
+      <div style="flex:1;min-width:240px">
+        <div style="font-weight:600;font-size:0.9em;margin-bottom:8px">Популярные теги за всё время</div>
+        <div>${_tgTagChips(r.tags_all)}</div>
+      </div>
+    </div>
+    <div style="font-weight:600;font-size:0.9em;margin-bottom:8px">🔝 ТОП по скору за сутки</div>
+    <div style="overflow-x:auto;margin-bottom:18px">
+      <table style="width:100%;font-size:0.86em">
+        <thead><tr><th style="width:110px">Источник</th><th>Заголовок</th><th style="width:50px">Скор</th><th style="width:120px">Дата</th></tr></thead>
+        <tbody>${topRows}</tbody>
+      </table>
+    </div>
+    <div style="font-weight:600;font-size:0.9em;margin-bottom:8px">Средние по авторам</div>
+    <div style="overflow-x:auto">
+      <table style="width:100%;font-size:0.86em">
+        <thead><tr><th>Источник</th><th style="width:80px">Ср. скор</th><th style="width:90px">Ср. рел.</th><th style="width:90px">Ср. вирал.</th><th style="width:60px">Постов</th></tr></thead>
+        <tbody>${authorRows}</tbody>
+      </table>
+    </div>`;
 }
 
 async function tgHide(id) {

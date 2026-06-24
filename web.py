@@ -183,6 +183,7 @@ class AdminHandler(BaseHTTPRequestHandler):
             "/api/cache_stats": lambda: self._json(self._get_cache_stats()),
             "/api/editorial": lambda: self._json(self._get_editorial()),
             "/api/telegram": lambda: self._json(self._get_telegram()),
+            "/api/telegram/analytics": lambda: self._json(self._get_telegram_analytics()),
             "/api/moderation_list": lambda: self._json(self._get_moderation_list()),
             "/api/digests": lambda: self._json(self._get_digests()),
             "/api/viral_triggers": lambda: self._json(self._get_viral_triggers()),
@@ -707,6 +708,10 @@ async function login() {
         qs["view"] = ["editorial"]
         qs["tg"] = ["only"]
         return get_news_unified(qs)
+
+    def _get_telegram_analytics(self):
+        from api.news import get_telegram_analytics
+        return get_telegram_analytics()
 
     def _get_trash(self):
         from api.news import get_trash
