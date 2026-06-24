@@ -31,6 +31,9 @@ DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///news.db")
 
 # LLM
 LLM_MODEL = os.getenv("LLM_MODEL", "openai/gpt-4o-mini")
+# Fallback models tried in order if the primary times out / errors (e.g. Cloudflare
+# flaps on the gateway). Comma-separated env override.
+LLM_FALLBACK_MODELS = [m.strip() for m in os.getenv("LLM_FALLBACK_MODELS", "gpt-4o,gpt-4.1").split(",") if m.strip()]
 
 # Automation thresholds
 AUTO_APPROVE_THRESHOLD = _int_env("AUTO_APPROVE_THRESHOLD", 0)  # 0 = disabled, use pipeline buttons

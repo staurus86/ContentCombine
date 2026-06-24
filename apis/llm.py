@@ -99,15 +99,16 @@ PROMPT_KEYSO_QUERIES = """
 """
 
 
-def _call_llm_raw(prompt: str, key_index: int = 0, news_id: str = "") -> dict | None:
-    """Один вызов LLM с конкретным ключом."""
+def _call_llm_raw(prompt: str, key_index: int = 0, news_id: str = "", model: str = "") -> dict | None:
+    """Один вызов LLM с конкретным ключом и моделью (по умолчанию — основная)."""
     import time as _t
     key = _API_KEYS[key_index] if key_index < len(_API_KEYS) else _API_KEYS[0]
+    model = model or config.LLM_MODEL
     c = OpenAI(api_key=key, base_url=config.OPENAI_BASE_URL,
                default_headers={"User-Agent": BROWSER_UA})
     t0 = _t.time()
     response = c.chat.completions.create(
-        model=config.LLM_MODEL,
+        model=model,
         messages=[{"role": "user", "content": prompt}],
         temperature=config.LLM_TEMPERATURE,
         timeout=config.LLM_TIMEOUT_SECONDS,
@@ -124,7 +125,7 @@ def _call_llm_raw(prompt: str, key_index: int = 0, news_id: str = "") -> dict | 
         # Estimate cost (approximate for common models)
         cost = (tokens_in * 0.15 + tokens_out * 0.6) / 1_000_000  # gpt-4o-mini pricing
         from core.observability import track_api_call
-        track_api_call("llm", endpoint="chat.completions", model=config.LLM_MODEL,
+        track_api_call("llm", endpoint="chat.completions", model=model,
                        tokens_in=tokens_in, tokens_out=tokens_out, cost_usd=cost,
                        latency_ms=latency_ms, news_id=news_id)
     except Exception:
@@ -140,8 +141,10 @@ def _call_llm_raw(prompt: str, key_index: int = 0, news_id: str = "") -> dict | 
 
 
 def _call_llm(prompt: str) -> dict | None:
-    """Вызывает LLM с retry, fallback ключами и rate limiting."""
-    import time as _time
+    """Вызывает LLM с фолбэк-цепочкой моделей, запасным ключом и rate limiting.
+    При таймауте/ошибке основной модели (напр. Cloudflare-флап на гейтвее) пробует
+    следующую модель — это лечит повторяющиеся «LLM недоступен». Ограничено по числу
+    вызовов, чтобы worst-case не висел: модели×1 + один запасной ключ."""
     from apis.cache import rate_check, rate_increment
     if not rate_check("llm"):
         logger.warning("LLM rate limit exceeded")
@@ -149,28 +152,32 @@ def _call_llm(prompt: str) -> dict | None:
     if _api_circuit_open("llm"):
         logger.warning("LLM circuit breaker open — skipping")
         return None
-    for i in range(len(_API_KEYS)):
-        # Up to 3 attempts per key (JSON errors are retryable)
-        for attempt in range(3):
-            try:
-                result = _call_llm_raw(prompt, i)
-                rate_increment("llm")  # count only on actual call
-                if result is not None:
-                    return result
-            except json.JSONDecodeError as e:
-                logger.warning("LLM key %d JSON parse error (attempt %d/3): %s", i, attempt + 1, e)
-                if attempt < 2:
-                    _time.sleep(2 * (attempt + 1))  # 2s, 4s
-                    continue
-                # Last attempt failed — try next key
-                break
-            except Exception as e:
-                logger.warning("LLM key %d error (attempt %d/3): %s", i, attempt + 1, e)
-                if attempt < 2:
-                    _time.sleep(3 * (attempt + 1))  # 3s, 6s
-                    continue
-                break
-    logger.error("All LLM keys failed")
+
+    chain = [config.LLM_MODEL] + [m for m in config.LLM_FALLBACK_MODELS if m != config.LLM_MODEL]
+    for mi, model in enumerate(chain):
+        try:
+            result = _call_llm_raw(prompt, 0, model=model)
+            rate_increment("llm")  # count only on an actual call
+            if result is not None:
+                if mi > 0:
+                    logger.info("LLM fallback model succeeded: %s (primary %s failed)", model, config.LLM_MODEL)
+                return result
+        except json.JSONDecodeError as e:
+            logger.warning("LLM model %s JSON parse error — next model: %s", model, e)
+        except Exception as e:
+            logger.warning("LLM model %s error — next model: %s", model, e)
+
+    # Final fallback: a second API key with the primary model (key-specific issue).
+    if len(_API_KEYS) > 1:
+        try:
+            result = _call_llm_raw(prompt, 1, model=config.LLM_MODEL)
+            rate_increment("llm")
+            if result is not None:
+                return result
+        except Exception as e:
+            logger.warning("LLM second-key fallback failed: %s", e)
+
+    logger.error("All LLM models/keys failed")
     return None
 
 
