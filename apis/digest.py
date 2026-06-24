@@ -20,9 +20,10 @@ def _ru_date_today() -> str:
     return f"{d.day} {_RU_MONTHS[d.month - 1]} {d.year}"
 
 
-def _call_llm_retry(prompt: str, attempts: int = 3, pause: float = 4.0):
-    """Call the LLM with up to N attempts and a pause between — smooths over
-    transient gateway timeouts/flaps when generating digests."""
+def _call_llm_retry(prompt: str, attempts: int = 2, pause: float = 2.0):
+    """Call the LLM with up to N attempts and a short pause between — smooths over
+    transient flaps. Kept to 2 attempts so a slow/degraded gateway doesn't make the
+    request hang for minutes."""
     import time
     from apis.llm import _call_llm
     for i in range(attempts):
