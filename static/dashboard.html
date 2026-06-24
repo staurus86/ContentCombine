@@ -400,6 +400,7 @@ input:focus, textarea:focus, select:focus { outline:none; border-color:#1da1f2; 
     <div class="tab" data-tab="editorial">&#128240; Лента</div>
     <div class="tab" data-tab="cases" id="tab-cases">&#128204; Кейсы</div>
     <div class="tab" data-tab="telegram" id="tab-telegram">&#9993; Телеграм</div>
+    <div class="tab" data-tab="digests" id="tab-digests">&#128240; Дайджесты</div>
     <!-- Платные/LLM-вкладки скрыты в бесплатном режиме -->
     <div class="tab" data-tab="news" style="display:none">Обогащённые</div>
     <div class="tab" data-tab="final" style="display:none">Финал</div>
@@ -903,8 +904,6 @@ input:focus, textarea:focus, select:focus { outline:none; border-color:#1da1f2; 
       <h2 style="margin:0">Аналитика</h2>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         <button class="btn btn-sm btn-secondary" onclick="loadAnalytics()">Обновить</button>
-        <button class="btn btn-sm btn-primary" onclick="generateDigest('today')">&#128240; Дайджест за день</button>
-        <button class="btn btn-sm btn-primary" onclick="generateDigest('week')">&#128240; Дайджест за неделю</button>
       </div>
     </div>
 
@@ -994,28 +993,34 @@ input:focus, textarea:focus, select:focus { outline:none; border-color:#1da1f2; 
       </div>
     </div>
 
-    <!-- Digest result (inline from old button) -->
+  </div>
+
+  <!-- DIGESTS (own tab) -->
+  <div class="panel" id="panel-digests">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:14px">
+      <h2 style="margin:0">&#128240; Дайджесты</h2>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <select id="digest-style-select" style="padding:5px 8px;background:#192734;border:1px solid #38444d;border-radius:6px;color:#e1e8ed;font-size:0.85em">
+          <option value="detailed">Подробный</option>
+          <option value="brief">Краткий</option>
+          <option value="telegram">Telegram</option>
+        </select>
+        <button class="btn btn-sm btn-success" onclick="generateAndSaveDigest()">Сгенерировать</button>
+        <button class="btn btn-sm btn-secondary" onclick="loadSavedDigests()">Обновить</button>
+        <span style="width:1px;height:20px;background:#38444d;margin:0 2px"></span>
+        <button class="btn btn-sm btn-secondary" onclick="generateDigest('today')" title="Краткая сводка за день (summary + топ-новости + тренды)">Сводка за день</button>
+        <button class="btn btn-sm btn-secondary" onclick="generateDigest('week')" title="Краткая сводка за неделю">за неделю</button>
+      </div>
+    </div>
+
+    <!-- Period summary result (generateDigest) -->
     <div class="card" id="digest-result" style="display:none;margin-bottom:16px">
-      <h3 style="font-size:0.95em;margin-bottom:10px">Дайджест</h3>
+      <h3 style="font-size:0.95em;margin-bottom:10px">Сводка</h3>
       <div id="digest-content"></div>
     </div>
 
-    <!-- Saved Digests section -->
-    <div class="card" style="margin-bottom:16px">
-      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px">
-        <h3 style="font-size:0.95em;margin:0">Дайджесты</h3>
-        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-          <select id="digest-style-select" style="padding:4px 8px;background:#192734;border:1px solid #38444d;border-radius:6px;color:#e1e8ed;font-size:0.85em">
-            <option value="detailed">Подробный</option>
-            <option value="brief">Краткий</option>
-            <option value="telegram">Telegram</option>
-          </select>
-          <button class="btn btn-sm btn-success" onclick="generateAndSaveDigest()">Сгенерировать</button>
-          <button class="btn btn-sm btn-secondary" onclick="loadSavedDigests()">Обновить</button>
-        </div>
-      </div>
-      <div id="saved-digests-list" style="color:var(--c-muted);font-size:0.85em">Нажмите «Обновить» для загрузки</div>
-    </div>
+    <!-- Saved digests -->
+    <div id="saved-digests-list" style="color:var(--c-muted);font-size:0.9em">Нажмите «Обновить» для загрузки</div>
   </div>
 
   <!-- QUEUE (standalone tab) -->
@@ -1805,7 +1810,8 @@ document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () =>
   if (t.dataset.tab === 'final') { loadFinal(); }
   if (t.dataset.tab === 'editor') { loadArticles(); }
   if (t.dataset.tab === 'viral') { loadViral(); }
-  if (t.dataset.tab === 'analytics') { loadAnalytics(); loadSavedDigests(); loadFunnelAnalytics(); loadPromptInsights(); }
+  if (t.dataset.tab === 'analytics') { loadAnalytics(); loadFunnelAnalytics(); loadPromptInsights(); }
+  if (t.dataset.tab === 'digests') { loadSavedDigests(); }
   if (t.dataset.tab === 'queue') { loadQueueStandalone(); }
   if (t.dataset.tab === 'health') { loadHealth(); }
   if (t.dataset.tab === 'storylines') { loadStorylines(); loadSlSettings(); loadTopicCloud(); }
