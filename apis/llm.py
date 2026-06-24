@@ -13,9 +13,16 @@ _API_KEYS = [k for k in [
     os.getenv("OPENAI_API_KEY_2", ""),
 ] if k]
 
+# Browser-like UA: the gateway sits behind Cloudflare, which serves a
+# «Just a moment…» challenge to the openai-SDK's default httpx User-Agent.
+# A real-browser UA passes the managed challenge (verified against the gateway).
+BROWSER_UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+              "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+
 client = OpenAI(
     api_key=_API_KEYS[0] if _API_KEYS else "",
     base_url=config.OPENAI_BASE_URL,
+    default_headers={"User-Agent": BROWSER_UA},
 )
 
 PROMPT_TREND_FORECAST = """
@@ -96,7 +103,8 @@ def _call_llm_raw(prompt: str, key_index: int = 0, news_id: str = "") -> dict | 
     """Один вызов LLM с конкретным ключом."""
     import time as _t
     key = _API_KEYS[key_index] if key_index < len(_API_KEYS) else _API_KEYS[0]
-    c = OpenAI(api_key=key, base_url=config.OPENAI_BASE_URL)
+    c = OpenAI(api_key=key, base_url=config.OPENAI_BASE_URL,
+               default_headers={"User-Agent": BROWSER_UA})
     t0 = _t.time()
     response = c.chat.completions.create(
         model=config.LLM_MODEL,
