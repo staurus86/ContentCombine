@@ -6,8 +6,18 @@ Brief and telegram styles return free-form text.
 """
 
 import logging
+from datetime import datetime, timezone, timedelta
 
 logger = logging.getLogger(__name__)
+
+_RU_MONTHS = ["января", "февраля", "марта", "апреля", "мая", "июня", "июля",
+              "августа", "сентября", "октября", "ноября", "декабря"]
+
+
+def _ru_date_today() -> str:
+    """Today's date in Russian, Moscow time (UTC+3)."""
+    d = datetime.now(timezone.utc) + timedelta(hours=3)
+    return f"{d.day} {_RU_MONTHS[d.month - 1]} {d.year}"
 
 # Anti-AI-slop guardrails applied to every digest prompt. Mirrors the user's
 # Writing Standard: active voice, concrete facts, no signature AI phrasing.
@@ -116,18 +126,35 @@ def _render_links(news_list, sources, md=True):
     return links
 
 
+def _source_suffix(news_list, sources) -> str:
+    """Compact «(Источник)» links per item. One source → (Источник); many → numbered."""
+    urls, seen = [], set()
+    for idx in sources or []:
+        if not isinstance(idx, int) or idx < 1 or idx > len(news_list) or idx in seen:
+            continue
+        seen.add(idx)
+        url = (news_list[idx - 1].get("url") or "").strip()
+        if url:
+            urls.append(url)
+    if not urls:
+        return ""
+    if len(urls) == 1:
+        return f"([Источник]({urls[0]}))"
+    return " ".join(f"([Источник {i}]({u}))" for i, u in enumerate(urls, 1))
+
+
 def _render_detailed(result, news_list) -> str:
-    """Markdown text: bold headline, paragraph, real source links per item."""
+    """Markdown: bold headline, paragraph, «(Источник)» link(s) after each item."""
     blocks = []
     for it in result.get("items", []):
         head = (it.get("headline") or "").strip()
         body = (it.get("summary") or "").strip()
-        links = _render_links(news_list, it.get("sources"))
+        suffix = _source_suffix(news_list, it.get("sources"))
         block = f"**{head}**" if head else ""
         if body:
             block += ("\n" if block else "") + body
-        if links:
-            block += "\nИсточник: " + " · ".join(links)
+        if suffix:
+            block += (" " if block else "") + suffix
         if block.strip():
             blocks.append(block.strip())
     return "\n\n".join(blocks)
@@ -186,6 +213,8 @@ def generate_daily_digest(news_list: list[dict], style: str = "brief") -> dict:
 
     if style == "detailed":
         text = _render_detailed(result, news_list)
+        if text:
+            text = f"📅 {_ru_date_today()}\n\n" + text
     elif style == "telegram":
         text = _render_telegram(result, news_list)
     else:
