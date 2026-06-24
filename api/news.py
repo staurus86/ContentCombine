@@ -240,35 +240,24 @@ def get_telegram_analytics():
         except Exception:
             return None
 
-    try:
-        # Per-author averages (all-time)
-        cur.execute(f"""
-            SELECT n.source, AVG(COALESCE(a.total_score, 0)), AVG(COALESCE(a.relevance_score, 0)),
-                   AVG(COALESCE(a.viral_score, 0)), COUNT(*)
-            FROM news n LEFT JOIN news_analysis a ON a.news_id = n.id
-            WHERE n.source LIKE {_ph} AND COALESCE(n.is_deleted, 0) = 0
-            GROUP BY n.source
-        """, (TG,))
-        by_author = [{
-            "source": row[0],
-            "avg_score": round(float(row[1] or 0), 1),
-            "avg_relevance": round(float(row[2] or 0), 1),
-            "avg_viral": round(float(row[3] or 0), 1),
-            "count": row[4],
-        } for row in cur.fetchall()]
-        by_author.sort(key=lambda x: -x["avg_score"])
+    week_cutoff = datetime.now(timezone.utc) - timedelta(days=7)
 
-        # Per-post rows → period summary + tag counts (24h / all-time)
+    try:
+        # Single pass over all TG posts → global summary/tags + per-author dashboard
         cur.execute(f"""
-            SELECT COALESCE(a.total_score, 0), COALESCE(a.relevance_score, 0), COALESCE(a.viral_score, 0),
-                   COALESCE(n.published_ts, n.parsed_at), COALESCE(a.tags_data, '[]')
+            SELECT n.source, COALESCE(a.total_score, 0), COALESCE(a.relevance_score, 0),
+                   COALESCE(a.viral_score, 0), COALESCE(n.published_ts, n.parsed_at),
+                   COALESCE(a.tags_data, '[]')
             FROM news n LEFT JOIN news_analysis a ON a.news_id = n.id
             WHERE n.source LIKE {_ph} AND COALESCE(n.is_deleted, 0) = 0
         """, (TG,))
         all_rows, day_rows = [], []
         tags_all, tags_day = Counter(), Counter()
-        for sc, rel, vir, dt, td in cur.fetchall():
-            is_day = (_parse_dt(dt) or datetime.min.replace(tzinfo=timezone.utc)) > cutoff
+        authors = {}
+        for src, sc, rel, vir, dt, td in cur.fetchall():
+            d = _parse_dt(dt) or datetime.min.replace(tzinfo=timezone.utc)
+            is_day = d > cutoff
+            is_week = d > week_cutoff
             all_rows.append((sc, rel, vir))
             if is_day:
                 day_rows.append((sc, rel, vir))
@@ -276,12 +265,33 @@ def get_telegram_analytics():
                 tags = json.loads(td) if isinstance(td, str) else (td or [])
             except Exception:
                 tags = []
+            au = authors.setdefault(src, {"sc": [], "rel": [], "vir": [], "week": 0, "day": 0, "tags": Counter()})
+            au["sc"].append(sc); au["rel"].append(rel); au["vir"].append(vir)
+            if is_week:
+                au["week"] += 1
+            if is_day:
+                au["day"] += 1
             for t in tags or []:
                 lbl = (t.get("label") or t.get("id") or "").strip() if isinstance(t, dict) else str(t).strip()
                 if len(lbl) >= 2:
                     tags_all[lbl] += 1
+                    au["tags"][lbl] += 1
                     if is_day:
                         tags_day[lbl] += 1
+
+        def _avg(xs):
+            return round(sum(xs) / len(xs), 1) if xs else 0
+        by_author = [{
+            "source": src,
+            "avg_score": _avg(a["sc"]),
+            "avg_relevance": _avg(a["rel"]),
+            "avg_viral": _avg(a["vir"]),
+            "count": len(a["sc"]),
+            "posts_week": a["week"],
+            "posts_day": a["day"],
+            "top_tags": [l for l, _ in a["tags"].most_common(2)],
+        } for src, a in authors.items()]
+        by_author.sort(key=lambda x: (-x["posts_week"], -x["avg_score"]))
 
         def _summary(rows):
             n = len(rows)

@@ -5392,14 +5392,19 @@ async function loadTelegramAnalytics() {
       <td><b style="color:${scColor(t.total_score)}">${t.total_score}</b></td>
       <td style="font-size:0.76em;color:var(--c-muted)">${esc(t.date)}</td>
     </tr>`).join('') || '<tr><td colspan="5" style="color:var(--c-faint);padding:14px;text-align:center">Нет постов за сутки</td></tr>';
-  const authorRows = (r.by_author||[]).map(a => `
-    <tr>
+  const authorRows = (r.by_author||[]).map(a => {
+    const tags = (a.top_tags||[]).map(t => `<span class="tag" style="font-size:0.68em;padding:1px 6px">${esc(t)}</span>`).join(' ');
+    return `<tr>
       <td style="font-size:0.84em">${esc(a.source)}</td>
+      <td><b style="color:#17bf63">${a.posts_week||0}</b></td>
+      <td style="color:var(--c-muted)">${a.posts_day||0}</td>
+      <td style="color:var(--c-muted)">${a.count}</td>
       <td><b style="color:${scColor(a.avg_score)}">${a.avg_score}</b></td>
       <td style="color:#1da1f2">${a.avg_relevance}</td>
       <td style="color:#794bc4">${a.avg_viral}</td>
-      <td style="color:var(--c-muted)">${a.count}</td>
-    </tr>`).join('');
+      <td>${tags || '<span style="color:var(--c-faint)">—</span>'}</td>
+    </tr>`;
+  }).join('');
   el.innerHTML = `
     <h3 style="font-size:1.05em;margin:0 0 16px;border-top:1px solid #22303c;padding-top:18px;display:flex;align-items:center;gap:8px">📊 Аналитика Telegram</h3>
     <div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:18px">
@@ -5420,10 +5425,19 @@ async function loadTelegramAnalytics() {
       </div>
     </div>
     <div class="card" style="padding:14px">
-      <div style="font-weight:600;font-size:0.9em;margin-bottom:10px">👤 Средние по авторам</div>
+      <div style="font-weight:600;font-size:0.9em;margin-bottom:10px">📺 Каналы — состояние и активность</div>
       <div style="overflow-x:auto">
         <table style="width:100%;font-size:0.86em">
-          <thead><tr><th>Источник</th><th style="width:80px">Ср. скор</th><th style="width:90px">Ср. релев.</th><th style="width:90px">Ср. вирал.</th><th style="width:60px">Постов</th></tr></thead>
+          <thead><tr>
+            <th>Канал</th>
+            <th style="width:74px" title="Постов за 7 дней">Постов/нед</th>
+            <th style="width:60px" title="Постов за сутки">За сутки</th>
+            <th style="width:54px" title="Всего постов">Всего</th>
+            <th style="width:64px">Ср. скор</th>
+            <th style="width:72px">Ср. релев.</th>
+            <th style="width:72px">Ср. вирал.</th>
+            <th style="width:160px">Топ-теги</th>
+          </tr></thead>
           <tbody>${authorRows}</tbody>
         </table>
       </div>
@@ -5434,8 +5448,14 @@ let _lastTgDigest = null;
 async function genTgDigest(period) {
   const el = document.getElementById('tg-digest-result');
   if (!el) return;
-  el.innerHTML = '<div style="padding:16px;text-align:center;color:var(--c-muted)">Генерация дайджеста… (LLM, ~30–60 сек)</div>';
-  const r = await api('/api/telegram/digest', {period});
+  el.innerHTML = '<div style="padding:16px;text-align:center;color:var(--c-muted)">Генерация дайджеста… (LLM, до ~90 сек, не закрывай вкладку)</div>';
+  let r;
+  try {
+    r = await api('/api/telegram/digest', {period});
+  } catch (e) {
+    el.innerHTML = '<span style="color:#e0245e">Не удалось получить дайджест (долгий запрос/сеть прервалась). Попробуй ещё раз.</span>';
+    return;
+  }
   if (!r || r.status !== 'ok' || !r.digest) { el.innerHTML = '<span style="color:#e0245e">' + ((r && r.message) || 'Ошибка генерации') + '</span>'; return; }
   const d = r.digest;
   _lastTgDigest = d;
