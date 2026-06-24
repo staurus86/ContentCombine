@@ -184,6 +184,7 @@ class AdminHandler(BaseHTTPRequestHandler):
             "/api/editorial": lambda: self._json(self._get_editorial()),
             "/api/telegram": lambda: self._json(self._get_telegram()),
             "/api/telegram/analytics": lambda: self._json(self._get_telegram_analytics()),
+            "/api/cases/analytics": lambda: self._json(self._get_cases_analytics()),
             "/api/moderation_list": lambda: self._json(self._get_moderation_list()),
             "/api/digests": lambda: self._json(self._get_digests()),
             "/api/viral_triggers": lambda: self._json(self._get_viral_triggers()),
@@ -321,6 +322,7 @@ class AdminHandler(BaseHTTPRequestHandler):
             "/api/generate_digest": lambda: self._generate_digest(body),
             "/api/digest/generate": lambda: self._generate_and_save_digest(body),
             "/api/digest/auto_publish": lambda: self._json(self._auto_publish_digest()),
+            "/api/digest/delete": lambda: self._json(self._delete_digest(body)),
             "/api/telegram/digest": lambda: self._json(self._tg_channels_digest(body)),
             "/api/event_chain": lambda: self._get_event_chain(body),
             "/api/queue/cancel": lambda: self._cancel_queue_task(body),
@@ -713,6 +715,10 @@ async function login() {
     def _get_telegram_analytics(self):
         from api.news import get_telegram_analytics
         return get_telegram_analytics()
+
+    def _get_cases_analytics(self):
+        from api.news import get_cases_analytics
+        return get_cases_analytics()
 
     def _get_trash(self):
         from api.news import get_trash
@@ -1204,6 +1210,13 @@ async function login() {
         from api.news import get_tg_channels_digest
         period = (body or {}).get("period", "day")
         return get_tg_channels_digest(period)
+
+    def _delete_digest(self, body):
+        from storage.database import delete_digest
+        did = (body or {}).get("id", "")
+        if not did:
+            return {"status": "error", "message": "id required"}
+        return {"status": "ok", "deleted": delete_digest(did)}
 
     def _get_digests(self):
         from api.settings import get_digests

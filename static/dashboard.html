@@ -1096,7 +1096,26 @@ input:focus, textarea:focus, select:focus { outline:none; border-color:#1da1f2; 
         <button class="btn btn-sm btn-secondary" onclick="loadCases()">Обновить</button>
       </div>
     </div>
-    <div id="cases-list" style="font-size:0.9em"></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;position:sticky;top:0;z-index:6;background:#0f1923;padding:8px 0;border-bottom:1px solid #22303c">
+      <button class="btn btn-sm btn-secondary" onclick="tgGo('cases-sec-list')">&#128204; Кейсы</button>
+      <button class="btn btn-sm btn-secondary" onclick="tgGo('cases-analytics')">&#128202; Аналитика</button>
+    </div>
+    <div id="cases-sec-list" style="overflow-x:auto">
+      <table style="width:100%;font-size:0.88em">
+        <thead><tr>
+          <th class="sortable" onclick="casesSort('source')" style="width:95px">Источник</th>
+          <th>Заголовок</th>
+          <th class="sortable" onclick="casesSort('total_score')" style="width:54px">Скор <span id="cassort-total_score" style="opacity:.5"></span></th>
+          <th style="width:58px">Кач/Рел</th>
+          <th class="sortable" onclick="casesSort('viral_score')" style="width:70px">Вирал. <span id="cassort-viral_score" style="opacity:.5"></span></th>
+          <th style="width:135px">Теги</th>
+          <th class="sortable" onclick="casesSort('date')" style="width:80px">Дата <span id="cassort-date" style="opacity:.5"></span></th>
+          <th style="width:78px"></th>
+        </tr></thead>
+        <tbody id="cases-table"></tbody>
+      </table>
+    </div>
+    <div id="cases-analytics" style="margin-top:22px"></div>
   </div>
 
   <!-- TELEGRAM (изолированная вкладка: только TG-источники) -->
@@ -5251,31 +5270,73 @@ async function loadTopicCloud() {
   } catch (e) { el.innerHTML = ''; }
 }
 
+let _casesData = [], _casSortField = '', _casSortDir = 'desc';
 async function loadCases() {
-  const el = document.getElementById('cases-list');
-  if (!el) return;
-  el.innerHTML = '<div style="color:var(--c-muted);padding:20px;text-align:center">Загрузка…</div>';
+  const tb = document.getElementById('cases-table');
+  if (!tb) return;
+  tb.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:20px;color:var(--c-muted)">Загрузка…</td></tr>';
   const r = await api('/api/news/list?cases=1&limit=200');
-  const items = (r && r.news) || [];
+  _casesData = (r && r.news) || [];
   const cnt = document.getElementById('cases-count');
-  if (cnt) cnt.textContent = items.length + ' кейсов';
-  if (!items.length) {
-    el.innerHTML = '<div style="color:var(--c-muted);padding:30px;text-align:center">Пока пусто. Жми 📌 на новости в Ленте или Трендах — кейсы копятся здесь и не удаляются автоматически.</div>';
+  if (cnt) cnt.textContent = _casesData.length + ' кейсов';
+  renderCasesTable();
+  loadCasesAnalytics();
+}
+
+function casesSort(field) {
+  if (_casSortField === field) _casSortDir = _casSortDir === 'asc' ? 'desc' : 'asc';
+  else { _casSortField = field; _casSortDir = field === 'source' ? 'asc' : 'desc'; }
+  renderCasesTable();
+}
+
+function _casVal(n, f) {
+  if (f === 'date') return n.published_ts || n.published_at || n.parsed_at || '';
+  if (f === 'source') return (n.source || '').toLowerCase();
+  return n[f] || 0;
+}
+
+function renderCasesTable() {
+  const tb = document.getElementById('cases-table');
+  if (!tb) return;
+  ['source','total_score','viral_score','date'].forEach(f => {
+    const e = document.getElementById('cassort-' + f);
+    if (e) e.textContent = _casSortField === f ? (_casSortDir === 'asc' ? '▲' : '▼') : '';
+  });
+  if (!_casesData.length) {
+    tb.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--c-muted)">Пока пусто. Жми &#128204; на новости в Ленте или Трендах — кейсы копятся здесь и не удаляются автоматически.</td></tr>';
     return;
   }
-  el.innerHTML = items.map(n => {
+  let data = [..._casesData];
+  if (_casSortField) data.sort((a, b) => {
+    const va = _casVal(a, _casSortField), vb = _casVal(b, _casSortField);
+    if (va < vb) return _casSortDir === 'asc' ? -1 : 1;
+    if (va > vb) return _casSortDir === 'asc' ? 1 : -1;
+    return 0;
+  });
+  tb.innerHTML = data.map(n => {
+    const sc = n.total_score || 0;
+    const scColor = sc >= 70 ? '#17bf63' : sc >= 40 ? '#ffad1f' : sc > 0 ? '#e0245e' : 'var(--c-faint)';
+    const vl = n.viral_level || '';
+    const vs = n.viral_score || 0;
+    const vlColor = {high:'#e0245e', medium:'#ffad1f', low:'#1da1f2'}[vl] || 'var(--c-faint)';
     let tags = [];
-    try { tags = typeof n.tags_data === 'string' ? JSON.parse(n.tags_data || '[]') : (n.tags_data || []); } catch (e) {}
-    const tg = (Array.isArray(tags) ? tags : []).slice(0, 3).map(t =>
-      `<span class="tag tag-${t.id || ''}" style="font-size:0.7em;padding:1px 5px">${esc(t.label || t.id || '')}</span>`).join(' ');
-    return `<div style="display:flex;gap:10px;align-items:flex-start;padding:10px 4px;border-bottom:1px solid #22303c">
-      <div style="flex:1;min-width:0">
-        <a href="${n.url}" target="_blank" style="color:#e1e8ed;text-decoration:none;font-size:0.95em">${esc(n.title)}</a>
-        <div style="font-size:0.74em;color:var(--c-muted);margin-top:3px">${esc(n.source)} · ${fmtDate(n.published_ts || n.published_at)} · &#128221;${n.word_count || 0} ${tg}</div>
-      </div>
-      <button class="btn btn-sm btn-secondary" title="В Telegram" onclick="openTgModal('${n.id}')">&#128228;</button>
-      <button class="btn btn-sm btn-secondary" title="Убрать из Кейсов" onclick="setCase('${n.id}',false,true)">&#128204;&#10007;</button>
-    </div>`;
+    try { tags = typeof n.tags_data === 'string' ? JSON.parse(n.tags_data || '[]') : (n.tags_data || []); } catch(e) {}
+    if (!Array.isArray(tags)) tags = [];
+    const tagsHtml = tags.slice(0,3).map(t => {
+      const label = typeof t === 'object' ? (t.label || t.id || '') : String(t);
+      const tid = typeof t === 'object' ? (t.id || '') : '';
+      return `<span class="tag tag-${tid}" style="font-size:0.7em;padding:1px 5px">${esc(label)}</span>`;
+    }).join(' ');
+    return `<tr>
+      <td style="font-size:0.78em;color:var(--c-muted)">${esc(n.source)}</td>
+      <td><a href="${n.url}" target="_blank" style="color:#e1e8ed;text-decoration:none">${esc(n.title)}</a></td>
+      <td><b style="color:${scColor}">${sc}</b></td>
+      <td style="font-size:0.82em;color:var(--c-muted)">${n.quality_score || 0}/${n.relevance_score || 0}</td>
+      <td><span style="color:${vlColor};font-weight:bold">${vs}</span>${vl ? `<div style="font-size:0.66em;color:${vlColor}">${vl}</div>` : ''}</td>
+      <td>${tagsHtml}</td>
+      <td style="font-size:0.78em;color:var(--c-muted)">${fmtDate(n.published_ts || n.published_at)}</td>
+      <td style="white-space:nowrap"><button class="btn btn-sm btn-secondary" title="В Telegram" onclick="openTgModal('${n.id}')">&#128228;</button> <button class="btn btn-sm btn-secondary" title="Убрать из Кейсов" onclick="setCase('${n.id}',false,true)">&#10007;</button></td>
+    </tr>`;
   }).join('');
 }
 
@@ -5374,7 +5435,18 @@ function _tgMetric(label, val, accent) {
 async function loadTelegramAnalytics() {
   const el = document.getElementById('tg-analytics');
   if (!el) return;
-  const r = await api('/api/telegram/analytics');
+  renderSegmentAnalytics(el, await api('/api/telegram/analytics'),
+    {title: '📊 Аналитика Telegram', authorsTitle: '📺 Каналы — состояние и активность', authorCol: 'Канал'});
+}
+
+async function loadCasesAnalytics() {
+  const el = document.getElementById('cases-analytics');
+  if (!el) return;
+  renderSegmentAnalytics(el, await api('/api/cases/analytics'),
+    {title: '📊 Аналитика кейсов', authorsTitle: '📚 Источники кейсов', authorCol: 'Источник'});
+}
+
+function renderSegmentAnalytics(el, r, opts) {
   if (!r || r.error) { el.innerHTML = ''; return; }
   const s = r.summary || {day:{}, all:{}};
   const scColor = v => v>=70?'#17bf63':v>=40?'#ffad1f':v>0?'#e0245e':'var(--c-faint)';
@@ -5418,7 +5490,7 @@ async function loadTelegramAnalytics() {
     </tr>`;
   }).join('');
   el.innerHTML = `
-    <h3 style="font-size:1.05em;margin:0 0 16px;border-top:1px solid #22303c;padding-top:18px;display:flex;align-items:center;gap:8px">📊 Аналитика Telegram</h3>
+    <h3 style="font-size:1.05em;margin:0 0 16px;border-top:1px solid #22303c;padding-top:18px;display:flex;align-items:center;gap:8px">${opts.title}</h3>
     <div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:18px">
       ${summaryCard('Активность', 'за сутки', s.day)}
       ${summaryCard('Активность', 'за всё время', s.all)}
@@ -5437,11 +5509,11 @@ async function loadTelegramAnalytics() {
       </div>
     </div>
     <div class="card" style="padding:14px">
-      <div style="font-weight:600;font-size:0.9em;margin-bottom:10px">📺 Каналы — состояние и активность</div>
+      <div style="font-weight:600;font-size:0.9em;margin-bottom:10px">${opts.authorsTitle}</div>
       <div style="overflow-x:auto">
         <table style="width:100%;font-size:0.86em">
           <thead><tr>
-            <th>Канал</th>
+            <th>${opts.authorCol}</th>
             <th style="width:74px" title="Постов за 7 дней">Постов/нед</th>
             <th style="width:60px" title="Постов за сутки">За сутки</th>
             <th style="width:54px" title="Всего постов">Всего</th>
@@ -5510,6 +5582,7 @@ async function loadTgDigestHistory() {
           <div style="display:flex;gap:8px;align-items:center">
             <span style="font-size:0.76em;color:var(--c-muted)">${d.digest_date || ''} · ${d.style === 'tg_week' ? 'неделя' : 'сутки'} · ${d.news_count || 0} постов</span>
             <button class="btn btn-sm btn-secondary" onclick="publishTgHist(${i})" title="Опубликовать в канал">&#128228;</button>
+            <button class="btn btn-sm btn-secondary" onclick="deleteTgDigest(${i})" title="Удалить дайджест">&#128465;</button>
           </div>
         </div>
         <div id="tg-hist-${i}" style="display:none;white-space:pre-wrap;line-height:1.5;font-size:0.85em;margin-top:8px;color:#e1e8ed">${digestMdToHtml(d.text)}</div>
@@ -5528,6 +5601,15 @@ async function publishTgHist(i) {
   if (r && r.status === 'ok') toast(`Опубликовано в Telegram ✓ (${r.parts || 1} ч.)`);
   else if (r && r.status === 'no_token') toast('Канал не подключён', true);
   else toast((r && r.message) || 'Ошибка отправки', true);
+}
+
+async function deleteTgDigest(i) {
+  const d = _tgHistory[i];
+  if (!d || !d.id) return;
+  if (!confirm('Удалить этот дайджест из истории?')) return;
+  const r = await api('/api/digest/delete', {id: d.id});
+  if (r && r.status === 'ok') { toast('Дайджест удалён'); loadTgDigestHistory(); }
+  else toast((r && r.message) || 'Ошибка удаления', true);
 }
 
 async function tgHide(id) {

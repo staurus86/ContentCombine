@@ -221,15 +221,14 @@ def get_news_unified(query_params):
         cur.close()
 
 
-def get_telegram_analytics():
-    """Analytics for the Telegram tab: per-author averages, popular tags
-    (24h / all-time), period summary, and top posts by score in the last 24h."""
+def _segment_analytics(seg_where, seg_params):
+    """Shared analytics for a news segment (TG channels, cases, …): per-source
+    averages, popular tags (24h / all-time), period summary, top by score in 24h.
+    seg_where — SQL filter (e.g. 'n.source LIKE %s'); seg_params — its params."""
     from collections import Counter
     from datetime import datetime, timezone, timedelta
     conn = get_connection()
     cur = conn.cursor()
-    _ph = "%s" if _is_postgres() else "?"
-    TG = "TG:%"
     cutoff = datetime.now(timezone.utc) - timedelta(hours=24)
 
     def _parse_dt(s):
@@ -249,8 +248,8 @@ def get_telegram_analytics():
                    COALESCE(a.viral_score, 0), COALESCE(n.published_ts, n.parsed_at),
                    COALESCE(a.tags_data, '[]')
             FROM news n LEFT JOIN news_analysis a ON a.news_id = n.id
-            WHERE n.source LIKE {_ph} AND COALESCE(n.is_deleted, 0) = 0
-        """, (TG,))
+            WHERE {seg_where} AND COALESCE(n.is_deleted, 0) = 0
+        """, seg_params)
         all_rows, day_rows = [], []
         tags_all, tags_day = Counter(), Counter()
         authors = {}
@@ -310,19 +309,19 @@ def get_telegram_analytics():
                 SELECT n.source, n.title, n.url, COALESCE(a.total_score, 0),
                        COALESCE(n.published_ts, n.parsed_at)
                 FROM news n LEFT JOIN news_analysis a ON a.news_id = n.id
-                WHERE n.source LIKE {_ph} AND COALESCE(n.is_deleted, 0) = 0
+                WHERE {seg_where} AND COALESCE(n.is_deleted, 0) = 0
                   AND COALESCE(n.published_ts, n.parsed_at)::timestamptz > (NOW() - INTERVAL '24 hours')
                 ORDER BY COALESCE(a.total_score, 0) DESC LIMIT 10
-            """, (TG,))
+            """, seg_params)
         else:
             cur.execute(f"""
                 SELECT n.source, n.title, n.url, COALESCE(a.total_score, 0),
                        COALESCE(n.published_ts, n.parsed_at)
                 FROM news n LEFT JOIN news_analysis a ON a.news_id = n.id
-                WHERE n.source LIKE {_ph} AND COALESCE(n.is_deleted, 0) = 0
+                WHERE {seg_where} AND COALESCE(n.is_deleted, 0) = 0
                   AND COALESCE(n.published_ts, n.parsed_at) > datetime('now', '-1 day')
                 ORDER BY COALESCE(a.total_score, 0) DESC LIMIT 10
-            """, (TG,))
+            """, seg_params)
         top_score_24h = [{
             "source": r[0], "title": r[1], "url": r[2], "total_score": r[3], "date": str(r[4] or "")[:16],
         } for r in cur.fetchall()]
@@ -336,6 +335,17 @@ def get_telegram_analytics():
         }
     finally:
         cur.close()
+
+
+def get_telegram_analytics():
+    """Analytics for the Telegram tab (only TG: sources)."""
+    _ph = "%s" if _is_postgres() else "?"
+    return _segment_analytics(f"n.source LIKE {_ph}", ("TG:%",))
+
+
+def get_cases_analytics():
+    """Analytics for the Cases tab (only is_case=1 items)."""
+    return _segment_analytics("COALESCE(n.is_case, 0) = 1", ())
 
 
 def get_tg_channels_digest(period="day", send=False):

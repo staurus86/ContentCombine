@@ -818,6 +818,20 @@ def get_digests(limit: int = 10) -> list[dict]:
         cur.close()
 
 
+def delete_digest(digest_id: str) -> bool:
+    """Удаляет дайджест по id. Возвращает True, если что-то удалено."""
+    conn = get_connection()
+    cur = conn.cursor()
+    ph = "%s" if _is_postgres() else "?"
+    try:
+        cur.execute(f"DELETE FROM digests WHERE id = {ph}", (digest_id,))
+        if not _is_postgres():
+            conn.commit()
+        return cur.rowcount > 0
+    finally:
+        cur.close()
+
+
 def log_health_snapshot():
     """Record current health metrics to DB (called every 5 minutes)."""
     import threading as _threading
