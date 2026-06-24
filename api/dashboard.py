@@ -238,6 +238,7 @@ def get_storylines(days: int = 3):
             FROM news n
             LEFT JOIN news_analysis a ON n.id = a.news_id
             WHERE COALESCE(n.published_ts, n.parsed_at) > {ph}
+              AND n.source NOT LIKE 'TG:%'
             ORDER BY COALESCE(n.published_ts, n.parsed_at) DESC
             LIMIT 2000
         """, (cutoff,))
