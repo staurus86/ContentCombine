@@ -16,10 +16,11 @@ _JSON_FIELDS = ['bigrams', 'trigrams', 'trends_data', 'keyso_data', 'viral_data'
 
 # Telegram-источники изолированы в собственную вкладку и не должны протекать
 # в ленту, кейсы, сюжеты, дайджесты и виральность. Опознаются по префиксу "TG:"
-# в имени источника (та же конвенция, что в is_case_content). Работает в SQLite
-# и Postgres, литерал — без параметра.
-TG_EXCLUDE_SQL = "n.source NOT LIKE 'TG:%'"
-TG_ONLY_SQL = "n.source LIKE 'TG:%'"
+# в имени источника (та же конвенция, что в is_case_content).
+# ВАЖНО: паттерн передаётся ПАРАМЕТРОМ, не литералом в SQL. На Postgres psycopg2
+# %-форматирует строку запроса, когда execute идёт с params, и литеральный '%'
+# в 'TG:%' роняет запрос (см. память psycopg2-literal-percent-crash).
+TG_LIKE_PATTERN = "TG:%"
 
 
 def _parse_json_fields(row: dict) -> dict:
@@ -76,10 +77,12 @@ def get_news_unified(query_params):
 
         # Telegram routing: by default keep TG out of every shared view; the
         # dedicated Telegram tab passes tg=only to get just those sources.
+        # Pattern is a bound parameter — never a literal (psycopg2 % safety).
         if tg_mode == "only":
-            conditions.append(TG_ONLY_SQL)
+            conditions.append(f"n.source LIKE {_ph}")
         else:
-            conditions.append(TG_EXCLUDE_SQL)
+            conditions.append(f"n.source NOT LIKE {_ph}")
+        params.append(TG_LIKE_PATTERN)
 
         # Cases tab: only bookmarked / research items
         if cases_only:
@@ -151,7 +154,7 @@ def get_news_unified(query_params):
         # Status stats (for editorial view)
         status_counts = {}
         if view == "editorial":
-            cur.execute("SELECT status, COUNT(*) FROM news WHERE COALESCE(is_deleted, 0) = 0 AND source NOT LIKE 'TG:%' GROUP BY status")
+            cur.execute(f"SELECT status, COUNT(*) FROM news WHERE COALESCE(is_deleted, 0) = 0 AND source NOT LIKE {_ph} GROUP BY status", (TG_LIKE_PATTERN,))
             for row in cur.fetchall():
                 status_counts[row[0]] = row[1]
 
