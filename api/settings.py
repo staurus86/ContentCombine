@@ -872,39 +872,43 @@ def generate_digest(body):
             interval = "7 days"
         else:
             interval = "1 day"
+        statuses = "'approved', 'processed', 'in_review', 'ready'"
         if _is_postgres():
-            cur.execute(f"SELECT id, title, source, url FROM news WHERE status IN ('approved', 'processed') AND source NOT LIKE {ph} AND parsed_at::timestamptz > (NOW() - INTERVAL '{interval}') ORDER BY parsed_at DESC LIMIT 30", ("TG:%",))
+            cur.execute(f"SELECT id, title, source, url FROM news WHERE status IN ({statuses}) AND source NOT LIKE {ph} AND COALESCE(published_ts, parsed_at)::timestamptz > (NOW() - INTERVAL '{interval}') ORDER BY parsed_at DESC LIMIT 30", ("TG:%",))
             columns = [desc[0] for desc in cur.description]
             news_list = [dict(zip(columns, row)) for row in cur.fetchall()]
         else:
-            cur.execute(f"SELECT id, title, source, url FROM news WHERE status IN ('approved', 'processed') AND source NOT LIKE {ph} AND parsed_at > datetime('now', '-{interval}') ORDER BY parsed_at DESC LIMIT 30", ("TG:%",))
+            cur.execute(f"SELECT id, title, source, url FROM news WHERE status IN ({statuses}) AND source NOT LIKE {ph} AND COALESCE(published_ts, parsed_at) > datetime('now', '-{interval}') ORDER BY parsed_at DESC LIMIT 30", ("TG:%",))
             news_list = [dict(row) for row in cur.fetchall()]
 
         if not news_list:
-            return {"status": "ok", "digest": {"title": "Нет данных", "summary": "Нет одобренных новостей за выбранный период.", "top_news": [], "trends": []}, "news_count": 0}
+            return {"status": "ok", "digest": {"title": "Нет данных", "summary": "Нет свежих новостей за выбранный период.", "top_news": [], "trends": []}, "news_count": 0}
 
         from apis.llm import _call_llm
+        from apis.digest import ANTI_SLOP
         news_text = "\n".join(f"- [{n['source']}] {n['title']}" for n in news_list)
         period_label = 'неделю' if period == 'week' else 'день'
-        prompt = f"""Ты — главный редактор крупного игрового портала. Составь профессиональный дайджест «Главное за {period_label}» из новостей ниже.
+        prompt = f"""Ты — выпускающий редактор издания про SEO, AI и digital-маркетинг. Составь обзор «Главное за {period_label}» из новостей ниже.
 
-    ## Новости ({len(news_list)} шт.):
-    {news_text}
+{ANTI_SLOP}
 
-    ## Правила:
-    1. title — яркий заголовок дайджеста (напр. «Игровой дайджест: GTA 6, новый патч Elden Ring и скандал вокруг Ubisoft»)
-    2. summary — связный текст на 4-6 предложений, охватывающий самые значимые события, не простое перечисление
-    3. top_news — 3-5 самых важных новостей, одной фразой каждая (не копируй заголовки дословно, перефразируй)
-    4. trends — 2-3 тенденции, которые прослеживаются в потоке новостей (напр. «Рост интереса к ретро-играм», «Волна переносов релизов»)
-    5. Язык: русский
+## Новости ({len(news_list)} шт.):
+{news_text}
 
-    Ответь строго JSON без markdown:
-    {{
-      "title": "Заголовок дайджеста",
-      "summary": "Связный обзорный текст",
-      "top_news": ["Ключевая новость 1", "Ключевая новость 2", "Ключевая новость 3"],
-      "trends": ["Тенденция 1", "Тенденция 2"]
-    }}"""
+## Что вернуть
+1. title — конкретный заголовок по главной теме периода (без кликбейта).
+2. summary — связный обзор на 4-6 предложений по самым значимым событиям, не перечисление.
+3. top_news — 3-5 ключевых новостей, каждая одной фразой, своими словами.
+4. trends — 2-3 тенденции, прослеживающиеся в потоке.
+5. Язык: русский.
+
+Ответь строго JSON без markdown:
+{{
+  "title": "Заголовок дайджеста",
+  "summary": "Связный обзорный текст",
+  "top_news": ["Ключевая новость 1", "Ключевая новость 2", "Ключевая новость 3"],
+  "trends": ["Тенденция 1", "Тенденция 2"]
+}}"""
         result = _call_llm(prompt)
         if result:
             return {"status": "ok", "digest": result, "news_count": len(news_list)}
@@ -921,36 +925,39 @@ def generate_and_save_digest(body):
     cur = conn.cursor()
     try:
         ph = "%s" if _is_postgres() else "?"
+        # Свежесть: только новости за последние 24ч по ДАТЕ ПУБЛИКАЦИИ
+        # (published_ts; при её отсутствии — parsed_at). Так в дайджест не попадают
+        # старые статьи, собранные парсером сегодня.
         if _is_postgres():
             cur.execute("""
-                SELECT n.id, n.title, n.source, n.url,
+                SELECT n.id, n.title, n.source, n.url, n.published_at,
                        COALESCE(a.total_score, 0) as total_score
                 FROM news n
                 LEFT JOIN news_analysis a ON a.news_id = n.id
                 WHERE n.status IN ('approved', 'processed', 'in_review', 'ready')
                   AND n.source NOT LIKE %s
-                  AND n.parsed_at::timestamptz > (NOW() - INTERVAL '24 hours')
+                  AND COALESCE(n.published_ts, n.parsed_at)::timestamptz > (NOW() - INTERVAL '24 hours')
                 ORDER BY COALESCE(a.total_score, 0) DESC
-                LIMIT 20
+                LIMIT 25
             """, ("TG:%",))
             columns = [desc[0] for desc in cur.description]
             news_list = [dict(zip(columns, row)) for row in cur.fetchall()]
         else:
             cur.execute("""
-                SELECT n.id, n.title, n.source, n.url,
+                SELECT n.id, n.title, n.source, n.url, n.published_at,
                        COALESCE(a.total_score, 0) as total_score
                 FROM news n
                 LEFT JOIN news_analysis a ON a.news_id = n.id
                 WHERE n.status IN ('approved', 'processed', 'in_review', 'ready')
                   AND n.source NOT LIKE ?
-                  AND n.parsed_at > datetime('now', '-1 day')
+                  AND COALESCE(n.published_ts, n.parsed_at) > datetime('now', '-1 day')
                 ORDER BY COALESCE(a.total_score, 0) DESC
-                LIMIT 20
+                LIMIT 25
             """, ("TG:%",))
             news_list = [dict(row) for row in cur.fetchall()]
 
         if not news_list:
-            return {"status": "ok", "digest": {"title": "Нет данных", "text": "Нет новостей за последние 24 часа.", "news_count": 0}}
+            return {"status": "ok", "digest": {"title": "Нет данных", "text": "Нет свежих новостей за последние 24 часа.", "news_count": 0}}
 
         from apis.digest import generate_daily_digest
         result = generate_daily_digest(news_list, style=style)

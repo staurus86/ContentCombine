@@ -899,9 +899,9 @@ input:focus, textarea:focus, select:focus { outline:none; border-color:#1da1f2; 
   </div>
 
   <div class="panel" id="panel-analytics">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-      <h2>Аналитика</h2>
-      <div style="display:flex;gap:8px">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+      <h2 style="margin:0">Аналитика</h2>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
         <button class="btn btn-sm btn-secondary" onclick="loadAnalytics()">Обновить</button>
         <button class="btn btn-sm btn-primary" onclick="generateDigest('today')">&#128240; Дайджест за день</button>
         <button class="btn btn-sm btn-primary" onclick="generateDigest('week')">&#128240; Дайджест за неделю</button>
@@ -1002,12 +1002,12 @@ input:focus, textarea:focus, select:focus { outline:none; border-color:#1da1f2; 
 
     <!-- Saved Digests section -->
     <div class="card" style="margin-bottom:16px">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px">
         <h3 style="font-size:0.95em;margin:0">Дайджесты</h3>
-        <div style="display:flex;gap:8px;align-items:center">
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
           <select id="digest-style-select" style="padding:4px 8px;background:#192734;border:1px solid #38444d;border-radius:6px;color:#e1e8ed;font-size:0.85em">
-            <option value="brief">Краткий</option>
             <option value="detailed">Подробный</option>
+            <option value="brief">Краткий</option>
             <option value="telegram">Telegram</option>
           </select>
           <button class="btn btn-sm btn-success" onclick="generateAndSaveDigest()">Сгенерировать</button>
@@ -3575,24 +3575,54 @@ async function generateDigest(period) {
 }
 
 // ---- Saved Digests ----
+// Renders digest markdown: escapes HTML, then **bold** and [text](url) links.
+function digestMdToHtml(text) {
+  let s = (text || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  s = s.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,
+    '<a href="$2" target="_blank" rel="noopener" style="color:#1da1f2">$1</a>');
+  s = s.replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>');
+  return s;
+}
+// Plain text for Telegram (auto-links bare URLs): [name](url) → name — url, drop **.
+function digestToTgText(title, text) {
+  let s = (text || '').replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '$1 — $2')
+                      .replace(/\*\*([^*]+)\*\*/g, '$1');
+  return (title ? title + '\n\n' : '') + s;
+}
+let _savedDigests = [];
 async function loadSavedDigests() {
   const r = await api('/api/digests');
   const el = document.getElementById('saved-digests-list');
-  if (r.status === 'ok' && r.digests && r.digests.length > 0) {
+  _savedDigests = (r && r.digests) || [];
+  if (r.status === 'ok' && _savedDigests.length > 0) {
     const styleLabels = {brief: 'Краткий', detailed: 'Подробный', telegram: 'Telegram'};
-    el.innerHTML = r.digests.map(d => `
+    el.innerHTML = _savedDigests.map((d, i) => `
       <div class="card" style="margin-bottom:8px;padding:10px">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-          <span style="font-weight:600;color:#1da1f2;font-size:0.95em">${d.title||'Дайджест'}</span>
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px">
+          <span style="font-weight:600;color:#1da1f2;font-size:0.95em">${(d.title||'Дайджест').replace(/</g,'&lt;')}</span>
           <span style="font-size:0.78em;color:var(--c-muted)">${d.digest_date||''} &middot; ${styleLabels[d.style]||d.style} &middot; ${d.news_count||0} новостей</span>
         </div>
-        <div style="white-space:pre-wrap;line-height:1.5;font-size:0.88em;color:#e1e8ed">${(d.text||'').replace(/</g,'&lt;')}</div>
-        <div style="margin-top:6px;font-size:0.75em;color:var(--c-faint)">${d.created_at||''}</div>
+        <div style="white-space:pre-wrap;line-height:1.55;font-size:0.88em;color:#e1e8ed">${digestMdToHtml(d.text)}</div>
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-top:8px">
+          <span style="font-size:0.75em;color:var(--c-faint)">${d.created_at||''}</span>
+          <button class="btn btn-sm btn-secondary" onclick="publishSavedDigest(${i})" title="Опубликовать в Telegram-канал">&#128228; В Telegram</button>
+        </div>
       </div>
     `).join('');
   } else {
     el.innerHTML = '<div style="text-align:center;padding:20px;color:var(--c-faint)">Нет сохранённых дайджестов</div>';
   }
+}
+
+async function publishSavedDigest(i) {
+  const d = _savedDigests[i];
+  if (!d) return;
+  if (!confirm('Опубликовать этот дайджест в Telegram-канал?')) return;
+  const text = digestToTgText(d.title, d.text);
+  const r = await api('/api/telegram/publish', {text});
+  if (r && r.status === 'ok') toast('Опубликовано в Telegram ✓');
+  else if (r && r.status === 'no_token') { try { await navigator.clipboard.writeText(text); } catch(e){} toast('Канал не подключён — текст скопирован', true); }
+  else toast((r && r.message) || 'Ошибка отправки', true);
 }
 
 async function generateAndSaveDigest() {
