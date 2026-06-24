@@ -1174,6 +1174,79 @@ def catchup_tg_digest():
         logger.error("Catch-up TG digest error: %s", e)
 
 
+ALERT_CRITICAL_SOURCES = ["Google Search Status"]
+
+
+def _esc_html(s):
+    return str(s or "").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+
+def send_admin_alert(text):
+    """Send an operational alert to the admin's private Telegram chat (HTML)."""
+    chat = getattr(config, "TELEGRAM_ALERT_CHAT", "")
+    token = getattr(config, "TELEGRAM_BOT_TOKEN", "")
+    if not chat or not token:
+        return False
+    try:
+        import requests
+        r = requests.post(
+            f"https://api.telegram.org/bot{token}/sendMessage",
+            json={"chat_id": chat, "text": text, "parse_mode": "HTML", "disable_web_page_preview": False},
+            timeout=15,
+        )
+        return bool(r.ok)
+    except Exception as e:
+        logger.warning("Admin alert failed: %s", e)
+        return False
+
+
+def check_critical_alerts():
+    """Scheduler job: alert the admin about new critical-source incidents (Core/Spam
+    updates, outages) and mass source failures. Idempotent via app_settings markers,
+    so restarts don't re-alert; pre-existing items are seeded silently."""
+    try:
+        from storage.database import get_app_setting, set_app_setting, get_connection, _is_postgres
+        ph = "%s" if _is_postgres() else "?"
+        conn = get_connection()
+        cur = conn.cursor()
+        try:
+            for src in ALERT_CRITICAL_SOURCES:
+                cur.execute(
+                    f"SELECT title, url FROM news WHERE source = {ph} AND COALESCE(is_deleted, 0) = 0 "
+                    f"ORDER BY COALESCE(published_ts, parsed_at) DESC LIMIT 1", (src,))
+                row = cur.fetchone()
+                if not row:
+                    continue
+                title, url = row[0], row[1]
+                cur_val = (url or title or "").strip()
+                if not cur_val:
+                    continue
+                key = "alert_last_" + src.replace(" ", "_")
+                prev = get_app_setting(key)
+                if not prev:
+                    set_app_setting(key, cur_val)  # seed silently — don't alert pre-existing items
+                elif prev != cur_val:
+                    send_admin_alert(f"🚨 <b>{_esc_html(src)}</b>\n{_esc_html(title)}\n{url or ''}")
+                    set_app_setting(key, cur_val)
+        finally:
+            cur.close()
+
+        # Mass source failure (>= 5 auto-disabled at once), 6h cooldown to avoid spam.
+        from core.source_health import source_health
+        disabled = [n for n, s in source_health.get_status().items() if s.get("disabled_at")]
+        if len(disabled) >= 5:
+            import time
+            last = get_app_setting("alert_mass_failure_ts")
+            now = time.time()
+            if not last or (now - float(last)) > 6 * 3600:
+                send_admin_alert(
+                    f"⚠️ <b>Массовый сбой источников</b>: {len(disabled)} отключено.\n"
+                    "Примеры: " + _esc_html(", ".join(disabled[:8])))
+                set_app_setting("alert_mass_failure_ts", str(now))
+    except Exception as e:
+        logger.error("check_critical_alerts error: %s", e)
+
+
 PUBLISH_SPACING_MINUTES = config.PUBLISH_SPACING_MINUTES  # Minimum minutes between auto-publications
 
 

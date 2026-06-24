@@ -26,7 +26,8 @@ from pipeline.orchestrator import (  # noqa: F401
     _update_task, _create_task, _fetch_news_by_id, _fetch_analysis_by_id,
     _calc_final_score, run_full_auto_pipeline, run_no_llm_pipeline,
     _save_rewrite_article, _build_check_result_from_analysis,
-    generate_auto_digest, auto_publish_telegram_digest, catchup_tg_digest, publish_scheduled_articles,
+    generate_auto_digest, auto_publish_telegram_digest, catchup_tg_digest,
+    check_critical_alerts, publish_scheduled_articles,
     FULL_AUTO_SCORE_THRESHOLD, FULL_AUTO_FINAL_THRESHOLD,
 )
 
@@ -245,6 +246,9 @@ def start_scheduler():
     # Daily subscriber snapshot for TG channels (for the «Подписчики» delta).
     from api.news import refresh_tg_subscribers
     scheduler.add_job(refresh_tg_subscribers, "cron", hour=10, minute=30, id="tg_subs_snapshot")
+
+    # Operational alerts → admin Telegram: new critical incidents + mass source failure.
+    scheduler.add_job(check_critical_alerts, "interval", minutes=10, id="critical_alerts")
 
     # Storylines daily export: use dashboard settings if auto-export enabled,
     # otherwise fall back to hardcoded 09:00 schedule.

@@ -125,6 +125,8 @@ TELEGRAM_NOTIFY_THRESHOLD = _int_env("TELEGRAM_NOTIFY_THRESHOLD", 70)
 # Channel for one-click publishing of a news post (e.g. "@my_seo_channel" or "-100...").
 # Empty => publish endpoint returns no_token and UI copies the post to clipboard.
 TELEGRAM_PUBLISH_CHANNEL = os.getenv("TELEGRAM_PUBLISH_CHANNEL", "")
+# Private admin chat for operational alerts (critical incidents, mass source failure).
+TELEGRAM_ALERT_CHAT = os.getenv("TELEGRAM_ALERT_CHAT", "")
 
 # VK API
 VK_API_TOKEN = os.getenv("VK_API_TOKEN", "")
