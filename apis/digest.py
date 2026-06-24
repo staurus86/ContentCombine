@@ -349,8 +349,8 @@ def generate_tg_channels_digest(news_list: list[dict], period_label: str = "за
 
     text = _render_detailed(result, news_list)
     if text:
-        header = result.get("title", "Дайджест SEO-каналов")
-        text = f"📨 {header}\n📅 {_ru_date_today()} · {period_label}\n\n" + text
+        # Title is kept as a separate field — not duplicated into the body.
+        text = f"📅 {_ru_date_today()} · {period_label}\n\n" + text
         tags = _top_tags(news_list, 3)
         if tags:
             text += "\n\n**Темы:** " + " · ".join(tags)
