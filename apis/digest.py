@@ -21,7 +21,10 @@ def _ru_date_today() -> str:
 
 # Anti-AI-slop guardrails applied to every digest prompt. Mirrors the user's
 # Writing Standard: active voice, concrete facts, no signature AI phrasing.
-ANTI_SLOP = """## Как писать
+ANTI_SLOP = """## Язык
+- Пиши на русском языке, даже если источники на английском — переводи заголовки и суть.
+
+## Как писать
 - Активный залог, сильный глагол. Подлежащее — кто действует.
 - Конкретика: имена, числа, продукты, даты. Не «эксперты считают» — кто именно.
 - Каждое слово несёт смысл. Режь воду и вводные.
