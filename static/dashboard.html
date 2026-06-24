@@ -1123,6 +1123,18 @@ input:focus, textarea:focus, select:focus { outline:none; border-color:#1da1f2; 
         <tbody id="tg-table"></tbody>
       </table>
     </div>
+
+    <div class="card" style="margin-top:22px;padding:16px">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+        <div style="font-weight:600;font-size:0.98em">&#128228; Дайджест ТГ-каналов</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-sm btn-success" onclick="genTgDigest('day')">Собрать за сутки</button>
+          <button class="btn btn-sm btn-success" onclick="genTgDigest('week')">За неделю</button>
+        </div>
+      </div>
+      <div id="tg-digest-result" style="font-size:0.9em;color:var(--c-muted)">Итоговый дайджест по постам SEO/AI-каналов со ссылками на сами посты. Нажми «Собрать».</div>
+    </div>
+
     <div id="tg-analytics" style="margin-top:22px"></div>
   </div>
 
@@ -5416,6 +5428,37 @@ async function loadTelegramAnalytics() {
         </table>
       </div>
     </div>`;
+}
+
+let _lastTgDigest = null;
+async function genTgDigest(period) {
+  const el = document.getElementById('tg-digest-result');
+  if (!el) return;
+  el.innerHTML = '<div style="padding:16px;text-align:center;color:var(--c-muted)">Генерация дайджеста… (LLM, ~30–60 сек)</div>';
+  const r = await api('/api/telegram/digest', {period});
+  if (!r || r.status !== 'ok' || !r.digest) { el.innerHTML = '<span style="color:#e0245e">' + ((r && r.message) || 'Ошибка генерации') + '</span>'; return; }
+  const d = r.digest;
+  _lastTgDigest = d;
+  if (!d.news_count) { el.innerHTML = '<div style="padding:16px;text-align:center;color:var(--c-faint)">Нет постов TG-каналов за период</div>'; return; }
+  el.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+      <div style="font-weight:600;color:#1da1f2">${esc(d.title || 'Дайджест')}</div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <span style="font-size:0.8em;color:var(--c-muted)">${period === 'week' ? 'за неделю' : 'за сутки'} · ${d.news_count} постов</span>
+        <button class="btn btn-sm btn-secondary" onclick="publishTgDigest()" title="Опубликовать в Telegram-канал">&#128228; В Telegram</button>
+      </div>
+    </div>
+    <div style="white-space:pre-wrap;line-height:1.55;color:#e1e8ed;background:#15202b;border:1px solid #22303c;border-radius:8px;padding:12px">${digestMdToHtml(d.text)}</div>`;
+}
+
+async function publishTgDigest() {
+  if (!_lastTgDigest) return;
+  if (!confirm('Опубликовать этот дайджест ТГ-каналов в Telegram-канал?')) return;
+  const text = (_lastTgDigest.title ? '**' + _lastTgDigest.title + '**\n\n' : '') + (_lastTgDigest.text || '');
+  const r = await api('/api/telegram/publish', {text, markdown: true});
+  if (r && r.status === 'ok') toast(`Опубликовано в Telegram ✓ (${r.parts || 1} ч.)`);
+  else if (r && r.status === 'no_token') toast('Канал не подключён', true);
+  else toast((r && r.message) || 'Ошибка отправки', true);
 }
 
 async function tgHide(id) {
