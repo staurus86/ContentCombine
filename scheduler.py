@@ -227,6 +227,10 @@ def start_scheduler():
     # Builds the detailed digest of fresh (24h) news and publishes it to the channel.
     scheduler.add_job(auto_publish_telegram_digest, "cron", hour=11, minute=0, id="auto_tg_digest")
 
+    # Daily subscriber snapshot for TG channels (for the «Подписчики» delta).
+    from api.news import refresh_tg_subscribers
+    scheduler.add_job(refresh_tg_subscribers, "cron", hour=10, minute=30, id="tg_subs_snapshot")
+
     # Storylines daily export: use dashboard settings if auto-export enabled,
     # otherwise fall back to hardcoded 09:00 schedule.
     try:

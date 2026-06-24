@@ -337,10 +337,131 @@ def _segment_analytics(seg_where, seg_params):
         cur.close()
 
 
-def get_telegram_analytics():
-    """Analytics for the Telegram tab (only TG: sources)."""
+# Subscriber counts per channel — cached 12h (counts change slowly).
+_tg_subs_cache = {}  # channel handle -> (count, ts)
+
+
+def _ensure_subs_table(cur):
+    cur.execute("""CREATE TABLE IF NOT EXISTS tg_subs_history (
+        channel TEXT, snapshot_date TEXT, subscribers INTEGER,
+        PRIMARY KEY (channel, snapshot_date))""")
+
+
+def _store_subs_snapshot(counts):
+    """Upsert today's subscriber count per channel (one row per channel per day)."""
+    from datetime import datetime, timezone
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    conn = get_connection()
+    cur = conn.cursor()
+    try:
+        _ensure_subs_table(cur)
+        for ch, cnt in counts.items():
+            if cnt is None:
+                continue
+            if _is_postgres():
+                cur.execute("""INSERT INTO tg_subs_history (channel, snapshot_date, subscribers)
+                               VALUES (%s, %s, %s)
+                               ON CONFLICT (channel, snapshot_date) DO UPDATE SET subscribers = EXCLUDED.subscribers""",
+                            (ch, today, cnt))
+            else:
+                cur.execute("INSERT OR REPLACE INTO tg_subs_history (channel, snapshot_date, subscribers) VALUES (?, ?, ?)",
+                            (ch, today, cnt))
+        if not _is_postgres():
+            conn.commit()
+    except Exception as e:
+        logger.warning("Store subs snapshot failed: %s", e)
+    finally:
+        cur.close()
+
+
+def _get_prev_subs(channels):
+    """Most recent snapshot strictly before today, per channel — for the delta."""
+    from datetime import datetime, timezone
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    conn = get_connection()
+    cur = conn.cursor()
     _ph = "%s" if _is_postgres() else "?"
-    return _segment_analytics(f"n.source LIKE {_ph}", ("TG:%",))
+    out = {}
+    try:
+        _ensure_subs_table(cur)
+        cur.execute(f"""SELECT t.channel, t.subscribers FROM tg_subs_history t
+            WHERE t.snapshot_date = (SELECT MAX(t2.snapshot_date) FROM tg_subs_history t2
+                                     WHERE t2.channel = t.channel AND t2.snapshot_date < {_ph})""",
+                    (today,))
+        for ch, cnt in cur.fetchall():
+            out[ch] = cnt
+    except Exception as e:
+        logger.warning("Get prev subs failed: %s", e)
+    finally:
+        cur.close()
+    return out
+
+
+def _tg_subscribers(channels, force=False):
+    """Fetch subscriber counts via the bot (cached 12h, parallel). Stores a daily
+    snapshot for freshly fetched channels. Returns {handle: count|None}."""
+    import time
+    import config
+    token = getattr(config, "TELEGRAM_BOT_TOKEN", "")
+    handles = [c for c in set(channels) if c]
+    if not token or not handles:
+        return {c: _tg_subs_cache.get(c, (None, 0))[0] for c in channels}
+    now = time.time()
+    need = handles if force else [c for c in handles if now - _tg_subs_cache.get(c, (0, 0))[1] > 12 * 3600]
+
+    def _fetch(ch):
+        try:
+            import requests
+            r = requests.get(f"https://api.telegram.org/bot{token}/getChatMemberCount",
+                             params={"chat_id": "@" + ch}, timeout=10).json()
+            return ch, (r.get("result") if r.get("ok") else None)
+        except Exception:
+            return ch, None
+
+    if need:
+        from concurrent.futures import ThreadPoolExecutor
+        fetched = {}
+        try:
+            with ThreadPoolExecutor(max_workers=10) as ex:
+                for ch, cnt in ex.map(_fetch, need):
+                    if cnt is not None:
+                        _tg_subs_cache[ch] = (cnt, now)
+                        fetched[ch] = cnt
+        except Exception as e:
+            logger.warning("TG subscriber fetch failed: %s", e)
+        if fetched:
+            _store_subs_snapshot(fetched)
+    return {c: _tg_subs_cache.get(c, (None, 0))[0] for c in channels}
+
+
+def refresh_tg_subscribers():
+    """Daily job: force-refresh all TG channel subscriber counts and snapshot them."""
+    import config
+    chans = [(s.get("channel") or "").lstrip("@") for s in config.SOURCES if s.get("type") == "telegram"]
+    _tg_subscribers([c for c in chans if c], force=True)
+    logger.info("TG subscribers snapshot refreshed (%d channels)", len([c for c in chans if c]))
+
+
+def get_telegram_analytics():
+    """Analytics for the Telegram tab (only TG: sources), enriched with subscribers + daily delta."""
+    _ph = "%s" if _is_postgres() else "?"
+    res = _segment_analytics(f"n.source LIKE {_ph}", ("TG:%",))
+    try:
+        import config
+        name_to_chan = {s["name"]: (s.get("channel") or "").lstrip("@")
+                        for s in config.SOURCES if s.get("type") == "telegram"}
+        chans = [name_to_chan.get(a["source"]) for a in res.get("by_author", [])]
+        subs = _tg_subscribers(chans)
+        prev = _get_prev_subs([c for c in chans if c])
+        for a in res.get("by_author", []):
+            ch = name_to_chan.get(a["source"])
+            cur_cnt = subs.get(ch) if ch else None
+            a["subscribers"] = cur_cnt
+            p = prev.get(ch) if ch else None
+            a["subs_delta"] = (cur_cnt - p) if (cur_cnt is not None and p is not None) else None
+    except Exception as e:
+        logger.warning("Subscriber enrich failed: %s", e)
+    return res
 
 
 def get_cases_analytics():

@@ -5438,7 +5438,7 @@ async function loadTelegramAnalytics() {
   const el = document.getElementById('tg-analytics');
   if (!el) return;
   renderSegmentAnalytics(el, await api('/api/telegram/analytics'),
-    {title: '📊 Аналитика Telegram', authorsTitle: '📺 Каналы — состояние и активность', authorCol: 'Канал'});
+    {title: '📊 Аналитика Telegram', authorsTitle: '📺 Каналы — состояние и активность', authorCol: 'Канал', showSubs: true});
 }
 
 async function loadCasesAnalytics() {
@@ -5482,6 +5482,7 @@ function renderSegmentAnalytics(el, r, opts) {
     const tags = (a.top_tags||[]).map(t => `<span class="tag" style="font-size:0.68em;padding:1px 6px">${esc(t)}</span>`).join(' ');
     return `<tr>
       <td style="font-size:0.84em">${esc(a.source)}</td>
+      ${opts.showSubs ? `<td style="font-size:0.85em"><b style="color:#1da1f2">${a.subscribers!=null?Number(a.subscribers).toLocaleString('ru-RU'):'—'}</b>${a.subs_delta ? `<span style="color:${a.subs_delta>0?'#17bf63':'#e0245e'};font-size:0.85em"> ${a.subs_delta>0?'▲+':'▼'}${a.subs_delta>0?a.subs_delta:Math.abs(a.subs_delta)}</span>` : ''}</td>` : ''}
       <td><b style="color:#17bf63">${a.posts_week||0}</b></td>
       <td style="color:var(--c-muted)">${a.posts_day||0}</td>
       <td style="color:var(--c-muted)">${a.count}</td>
@@ -5516,6 +5517,7 @@ function renderSegmentAnalytics(el, r, opts) {
         <table style="width:100%;font-size:0.86em">
           <thead><tr>
             <th>${opts.authorCol}</th>
+            ${opts.showSubs ? '<th style="width:90px" title="Подписчиков канала">Подписчики</th>' : ''}
             <th style="width:74px" title="Постов за 7 дней">Постов/нед</th>
             <th style="width:60px" title="Постов за сутки">За сутки</th>
             <th style="width:54px" title="Всего постов">Всего</th>
