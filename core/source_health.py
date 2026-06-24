@@ -21,7 +21,7 @@ def classify_error(error: str) -> str:
         return "dns"
     if any(k in err for k in ["401", "unauthorized", "forbidden", "403"]):
         return "auth"
-    if any(k in err for k in ["404", "not found", "410 gone"]):
+    if any(k in err for k in ["404", "not found", "410 gone", "400", "bad request", "invalidrequest"]):
         return "http_4xx"
     if any(k in err for k in ["500", "502", "503", "504", "internal server error", "bad gateway", "service unavailable"]):
         return "http_5xx"

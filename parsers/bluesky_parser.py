@@ -11,7 +11,19 @@ from storage.database import insert_news, news_exists
 logger = logging.getLogger(__name__)
 
 BLUESKY_API = "https://public.api.bsky.app/xrpc"
-MAX_AGE_DAYS = 7
+# SEO-персоны постят в Bluesky нерегулярно (раз в 1-3 недели), поэтому окно шире,
+# чем у новостных RSS — иначе редкие, но ценные посты никогда не попадают в ленту.
+MAX_AGE_DAYS = 30
+
+
+def _record_failure(name, err):
+    """Сообщить трекеру здоровья о конкретном сбое (см. rss_parser). Возврат None
+    из парсера сигналит вызывающему, что сбой уже записан."""
+    try:
+        from core.source_health import source_health
+        source_health.record_failure(name, str(err))
+    except Exception:
+        pass
 
 
 def _truncate_title(text: str, max_len: int = 100) -> str:
@@ -76,7 +88,8 @@ def parse_bluesky_source(source: dict) -> int:
 
         if resp.status_code != 200:
             logger.warning("Bluesky API returned %d for %s", resp.status_code, handle)
-            return 0
+            _record_failure(name, f"HTTP {resp.status_code} {resp.text[:80]}")
+            return None
 
         data = resp.json()
         feed = data.get("feed", [])
@@ -139,7 +152,8 @@ def parse_bluesky_source(source: dict) -> int:
 
     except Exception as e:
         logger.error("Error parsing Bluesky %s (%s): %s", name, handle, e)
-        return 0
+        _record_failure(name, e)
+        return None
 
     logger.info("Parsed Bluesky %s: %d new articles", name, count)
     return count
