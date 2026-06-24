@@ -29,17 +29,7 @@ def _truncate_to_word(text: str, max_len: int = 100) -> str:
 
 
 def _extract_url_from_message(message, channel_clean: str) -> str:
-    """Извлекает первый URL из entities сообщения или генерирует ссылку на пост."""
-    if message.entities:
-        for entity in message.entities:
-            if isinstance(entity, MessageEntityTextUrl):
-                return entity.url
-            if isinstance(entity, MessageEntityUrl):
-                # URL содержится в тексте сообщения
-                offset = entity.offset
-                length = entity.length
-                return message.text[offset:offset + length]
-
+    """Ссылка на сам пост в Telegram (а не вшитая в текст внешняя ссылка)."""
     return f"https://t.me/{channel_clean}/{message.id}"
 
 
@@ -217,19 +207,13 @@ def _parse_via_web_preview(source: dict) -> int:
                 except (ValueError, TypeError):
                     pass
 
-            # Извлекаем внешнюю ссылку (если есть)
-            ext_link_el = msg_el.select_one(".tgme_widget_message_link_preview")
-            ext_url = post_url
-            if ext_link_el:
-                href = ext_link_el.get("href", "")
-                if href and "t.me" not in href:
-                    ext_url = href
-
+            # Ссылка всегда ведёт на сам пост в Telegram, а не на вшитую/превью
+            # внешнюю ссылку из тела поста.
             title = _truncate_to_word(text)
 
             news_id = insert_news(
                 source=name,
-                url=ext_url if ext_url != post_url else post_url,
+                url=post_url,
                 title=title,
                 h1="",
                 description=text[:300],
