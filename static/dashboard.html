@@ -1138,6 +1138,7 @@ input:focus, textarea:focus, select:focus { outline:none; border-color:#1da1f2; 
         </div>
       </div>
       <div id="tg-digest-result" style="font-size:0.9em;color:var(--c-muted)">Итоговый дайджест по постам SEO/AI-каналов со ссылками на сами посты. Нажми «Собрать».</div>
+      <div id="tg-digest-history" style="margin-top:14px"></div>
     </div>
 
     <div id="tg-analytics" style="margin-top:22px"></div>
@@ -3633,7 +3634,7 @@ async function loadSavedDigests() {
   const el = document.getElementById('saved-digests-list');
   _savedDigests = (r && r.digests) || [];
   if (r.status === 'ok' && _savedDigests.length > 0) {
-    const styleLabels = {brief: 'Краткий', detailed: 'Подробный', telegram: 'Telegram'};
+    const styleLabels = {brief: 'Краткий', detailed: 'Подробный', telegram: 'Telegram', tg_day: 'ТГ-каналы · сутки', tg_week: 'ТГ-каналы · неделя'};
     el.innerHTML = _savedDigests.map((d, i) => `
       <div class="card" style="margin-bottom:8px;padding:10px">
         <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px">
@@ -5294,6 +5295,7 @@ async function loadTelegram() {
   if (cnt) cnt.textContent = _tgData.length + ' постов';
   renderTgTable();
   loadTelegramAnalytics();
+  loadTgDigestHistory();
 }
 
 function tgSort(field) {
@@ -5479,12 +5481,49 @@ async function genTgDigest(period) {
       </div>
     </div>
     <div style="white-space:pre-wrap;line-height:1.55;color:#e1e8ed;background:#15202b;border:1px solid #22303c;border-radius:8px;padding:12px">${digestMdToHtml(d.text)}</div>`;
+  loadTgDigestHistory();
 }
 
 async function publishTgDigest() {
   if (!_lastTgDigest) return;
   if (!confirm('Опубликовать этот дайджест ТГ-каналов в Telegram-канал?')) return;
   const text = (_lastTgDigest.title ? '**\u{1F4E8} ' + _lastTgDigest.title + '**\n' : '') + (_lastTgDigest.text || '');
+  const r = await api('/api/telegram/publish', {text, markdown: true});
+  if (r && r.status === 'ok') toast(`Опубликовано в Telegram ✓ (${r.parts || 1} ч.)`);
+  else if (r && r.status === 'no_token') toast('Канал не подключён', true);
+  else toast((r && r.message) || 'Ошибка отправки', true);
+}
+
+// History of collected TG-channel digests (persisted in the digests table)
+let _tgHistory = [];
+async function loadTgDigestHistory() {
+  const el = document.getElementById('tg-digest-history');
+  if (!el) return;
+  const r = await api('/api/digests');
+  _tgHistory = ((r && r.digests) || []).filter(d => (d.style || '').startsWith('tg_') && (d.news_count || 0) > 0);
+  if (!_tgHistory.length) { el.innerHTML = ''; return; }
+  el.innerHTML = '<div style="font-size:0.82em;color:var(--c-muted);margin:10px 0 6px">Сохранённые дайджесты:</div>' +
+    _tgHistory.map((d, i) => `
+      <div class="card" style="padding:10px;margin-bottom:8px">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
+          <span style="font-weight:600;color:#1da1f2;font-size:0.9em;cursor:pointer" onclick="toggleTgHist(${i})" title="Показать/скрыть">${esc(d.title || 'Дайджест')}</span>
+          <div style="display:flex;gap:8px;align-items:center">
+            <span style="font-size:0.76em;color:var(--c-muted)">${d.digest_date || ''} · ${d.style === 'tg_week' ? 'неделя' : 'сутки'} · ${d.news_count || 0} постов</span>
+            <button class="btn btn-sm btn-secondary" onclick="publishTgHist(${i})" title="Опубликовать в канал">&#128228;</button>
+          </div>
+        </div>
+        <div id="tg-hist-${i}" style="display:none;white-space:pre-wrap;line-height:1.5;font-size:0.85em;margin-top:8px;color:#e1e8ed">${digestMdToHtml(d.text)}</div>
+      </div>`).join('');
+}
+function toggleTgHist(i) {
+  const e = document.getElementById('tg-hist-' + i);
+  if (e) e.style.display = e.style.display === 'none' ? 'block' : 'none';
+}
+async function publishTgHist(i) {
+  const d = _tgHistory[i];
+  if (!d) return;
+  if (!confirm('Опубликовать этот дайджест в Telegram-канал?')) return;
+  const text = (d.title ? '**\u{1F4E8} ' + d.title + '**\n' : '') + (d.text || '');
   const r = await api('/api/telegram/publish', {text, markdown: true});
   if (r && r.status === 'ok') toast(`Опубликовано в Telegram ✓ (${r.parts || 1} ч.)`);
   else if (r && r.status === 'no_token') toast('Канал не подключён', true);
