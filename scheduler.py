@@ -223,9 +223,9 @@ def start_scheduler():
     # Auto-rescore news with score=0: daily at 04:00
     scheduler.add_job(_auto_rescore_zero, "cron", hour=4, minute=0, id="auto_rescore_zero")
 
-    # Auto digest → Telegram channel: daily at 11:00 Moscow time.
-    # Builds the detailed digest of fresh (24h) news and publishes it to the channel.
-    scheduler.add_job(auto_publish_telegram_digest, "cron", hour=11, minute=0, id="auto_tg_digest")
+    # Auto digest → Telegram channel: daily at 19:00 Moscow time.
+    # Builds the GENERAL digest (best of feed + cases + telegram, 24h) and publishes it.
+    scheduler.add_job(auto_publish_telegram_digest, "cron", hour=19, minute=0, id="auto_tg_digest")
 
     # Daily subscriber snapshot for TG channels (for the «Подписчики» delta).
     from api.news import refresh_tg_subscribers

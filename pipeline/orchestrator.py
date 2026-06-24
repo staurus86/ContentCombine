@@ -1110,16 +1110,17 @@ def generate_auto_digest():
 
 
 def auto_publish_telegram_digest():
-    """Daily morning job: build the detailed digest of fresh news and publish it
-    to the Telegram channel. Skips quietly if no fresh news or no channel configured."""
+    """Daily evening job: build the GENERAL digest (best of feed + cases + telegram
+    over the last 24h, grouped into sections) and publish it to the Telegram channel.
+    Skips quietly if no fresh news or no channel configured."""
     try:
         if not getattr(config, "TELEGRAM_BOT_TOKEN", "") or not getattr(config, "TELEGRAM_PUBLISH_CHANNEL", ""):
             logger.info("Auto TG digest: bot token/channel not set — skipping")
             return {"status": "no_token"}
-        from api.settings import generate_and_save_digest
+        from api.news import compose_digest
         from apis.tg_publish import publish
 
-        res = generate_and_save_digest({"style": "detailed"})
+        res = compose_digest("general", "day")
         digest = (res or {}).get("digest", {})
         if not digest or digest.get("news_count", 0) == 0:
             logger.info("Auto TG digest: no fresh news — nothing to publish")
@@ -1127,9 +1128,9 @@ def auto_publish_telegram_digest():
 
         title = (digest.get("title") or "").strip()
         text = digest.get("text") or ""
-        body_text = (f"**{title}**\n\n" if title else "") + text
+        body_text = (f"**\U0001F4E8 {title}**\n" if title else "") + text
         pub = publish({"text": body_text, "markdown": True})
-        logger.info("Auto TG digest: %d news, publish status=%s parts=%s",
+        logger.info("Auto TG general digest: %d items, publish status=%s parts=%s",
                     digest.get("news_count", 0), pub.get("status"), pub.get("parts"))
         return {"status": pub.get("status"), "parts": pub.get("parts"), "news_count": digest.get("news_count", 0), "title": title}
     except Exception as e:
