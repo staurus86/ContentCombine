@@ -229,7 +229,10 @@ def start_scheduler():
 
     # Self-heal: if a deploy restarted the in-memory scheduler right at 20:00 and the
     # cron run was lost, this catch-up republishes once (idempotent via the date marker).
-    scheduler.add_job(catchup_tg_digest, "interval", minutes=5, id="catchup_tg_digest")
+    # First check ~60s after start (not the default 5 min) so recovery is fast.
+    from datetime import datetime as _dt_catch, timedelta as _td_catch
+    scheduler.add_job(catchup_tg_digest, "interval", minutes=5, id="catchup_tg_digest",
+                      next_run_time=_dt_catch.now(scheduler.timezone) + _td_catch(seconds=60))
 
     # Daily subscriber snapshot for TG channels (for the «Подписчики» delta).
     from api.news import refresh_tg_subscribers
@@ -318,8 +321,11 @@ def start_scheduler():
 
     scheduler.add_job(_cleanup_health_log, "interval", hours=24, id="cleanup_health_log")
 
-    # Initial parse on startup (includes auto-review)
-    adaptive_parse_tick()
+    # Initial parse on startup — in a BACKGROUND thread so a slow full parse
+    # (144 sources, many slow/failing) does NOT delay scheduler.start() and the
+    # cron jobs (esp. the 20:00 publish). Previously this blocked startup by minutes.
+    import threading as _threading_init
+    _threading_init.Thread(target=adaptive_parse_tick, daemon=True, name="initial-parse").start()
 
     logger.info("Scheduler started")
     try:
