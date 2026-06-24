@@ -181,6 +181,25 @@ def _render_telegram(result, news_list) -> str:
     return text
 
 
+def _top_tags(news_list, n=3) -> list[str]:
+    """Top-N most frequent tag labels across the digest news (самые обсуждаемые)."""
+    import json as _json
+    from collections import Counter
+    counts = Counter()
+    for item in news_list:
+        td = item.get("tags_data")
+        if isinstance(td, str):
+            try:
+                td = _json.loads(td or "[]")
+            except Exception:
+                td = []
+        for t in td or []:
+            label = (t.get("label") or t.get("id") or "").strip() if isinstance(t, dict) else str(t).strip()
+            if len(label) >= 2:
+                counts[label] += 1
+    return [lbl for lbl, _ in counts.most_common(n)]
+
+
 def generate_daily_digest(news_list: list[dict], style: str = "brief") -> dict:
     """Генерирует дайджест из списка новостей через LLM.
 
@@ -215,6 +234,9 @@ def generate_daily_digest(news_list: list[dict], style: str = "brief") -> dict:
         text = _render_detailed(result, news_list)
         if text:
             text = f"📅 {_ru_date_today()}\n\n" + text
+            tags = _top_tags(news_list, 3)
+            if tags:
+                text += "\n\n**Главные темы дня:** " + " · ".join(tags)
     elif style == "telegram":
         text = _render_telegram(result, news_list)
     else:

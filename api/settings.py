@@ -931,7 +931,8 @@ def generate_and_save_digest(body):
         if _is_postgres():
             cur.execute("""
                 SELECT n.id, n.title, n.source, n.url, n.published_at,
-                       COALESCE(a.total_score, 0) as total_score
+                       COALESCE(a.total_score, 0) as total_score,
+                       COALESCE(a.tags_data, '[]') as tags_data
                 FROM news n
                 LEFT JOIN news_analysis a ON a.news_id = n.id
                 WHERE n.status IN ('approved', 'processed', 'in_review', 'ready')
@@ -945,7 +946,8 @@ def generate_and_save_digest(body):
         else:
             cur.execute("""
                 SELECT n.id, n.title, n.source, n.url, n.published_at,
-                       COALESCE(a.total_score, 0) as total_score
+                       COALESCE(a.total_score, 0) as total_score,
+                       COALESCE(a.tags_data, '[]') as tags_data
                 FROM news n
                 LEFT JOIN news_analysis a ON a.news_id = n.id
                 WHERE n.status IN ('approved', 'processed', 'in_review', 'ready')

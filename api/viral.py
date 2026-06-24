@@ -70,14 +70,19 @@ def get_viral(query_params):
         sentiment_counts = {"positive": 0, "negative": 0, "neutral": 0}
         source_scores = {}
 
-        # Category mapping from trigger_id prefix (SEO/GEO)
+        # Category mapping from trigger_id prefix (SEO/GEO). Includes combo-triggers
+        # (leak/closure/lawsuit/scandal/calendar) so they don't fall into «Прочее».
         CATEGORY_MAP = {
             "aisearch": "AI-поиск", "agentic": "AI-агенты", "crawler": "AI-краулеры",
             "modelrelease": "Релизы моделей", "protocol": "Протоколы", "zeroclick": "Zero-click",
             "regulation": "Регуляции", "algoupd": "Апдейты", "penalty": "Санкции",
             "volatility": "Волатильность", "ranking": "Ранжирование", "technical": "Техничка",
             "link": "Ссылки", "content": "Контент", "measure": "Метрики", "urgency": "Срочное",
+            "leak": "Утечки", "closure": "Индустрия", "lawsuit": "Регуляции",
+            "scandal": "Скандалы", "calendar": "События",
         }
+        # Pure scoring signals — not topical, excluded from category/trigger stats.
+        SCORING_ONLY = {"dedup", "entity_boost"}
 
         for row in rows:
             ck = cache_key("viral_tab", row["id"])
@@ -96,6 +101,8 @@ def get_viral(query_params):
             trigger_categories = set()
             for t in vr["triggers"]:
                 tid = t["id"]
+                if tid in SCORING_ONLY:
+                    continue
                 prefix = tid.split("_")[0]
                 cat = CATEGORY_MAP.get(tid, CATEGORY_MAP.get(prefix, "Прочее"))
                 trigger_categories.add(cat)
@@ -136,6 +143,8 @@ def get_viral(query_params):
             stats[vr["level"]] = stats.get(vr["level"], 0) + 1
             sentiment_counts[sent["label"]] = sentiment_counts.get(sent["label"], 0) + 1
             for t in vr["triggers"]:
+                if t["id"] in SCORING_ONLY:
+                    continue
                 trigger_counts[t["label"]] = trigger_counts.get(t["label"], 0) + 1
                 prefix = t["id"].split("_")[0]
                 cat = CATEGORY_MAP.get(t["id"], CATEGORY_MAP.get(prefix, "Прочее"))
