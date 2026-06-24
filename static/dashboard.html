@@ -1153,7 +1153,9 @@ input:focus, textarea:focus, select:focus { outline:none; border-color:#1da1f2; 
         <div style="font-weight:600;font-size:0.98em">&#128228; Дайджест ТГ-каналов</div>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
           <button class="btn btn-sm btn-success" onclick="genTgDigest('day')">Собрать за сутки</button>
+          <button class="btn btn-sm btn-secondary" onclick="genTgDigest('prev_day')" title="Фолбэк, если дайджест за сутки не вышел">За прошлые сутки</button>
           <button class="btn btn-sm btn-success" onclick="genTgDigest('week')">За неделю</button>
+          <button class="btn btn-sm btn-success" onclick="genTgDigest('month')">За месяц</button>
         </div>
       </div>
       <div id="tg-digest-result" style="font-size:0.9em;color:var(--c-muted)">Итоговый дайджест по постам SEO/AI-каналов со ссылками на сами посты. Нажми «Собрать».</div>
@@ -3653,7 +3655,7 @@ async function loadSavedDigests() {
   const el = document.getElementById('saved-digests-list');
   _savedDigests = (r && r.digests) || [];
   if (r.status === 'ok' && _savedDigests.length > 0) {
-    const styleLabels = {brief: 'Краткий', detailed: 'Подробный', telegram: 'Telegram', tg_day: 'ТГ-каналы · сутки', tg_week: 'ТГ-каналы · неделя'};
+    const styleLabels = {brief: 'Краткий', detailed: 'Подробный', telegram: 'Telegram', tg_day: 'ТГ-каналы · сутки', tg_prev_day: 'ТГ-каналы · прошлые сутки', tg_week: 'ТГ-каналы · неделя', tg_month: 'ТГ-каналы · месяц'};
     el.innerHTML = _savedDigests.map((d, i) => `
       <div class="card" style="margin-bottom:8px;padding:10px">
         <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px">
@@ -5548,7 +5550,7 @@ async function genTgDigest(period) {
     <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px">
       <div style="font-weight:600;color:#1da1f2">${esc(d.title || 'Дайджест')}</div>
       <div style="display:flex;gap:8px;align-items:center">
-        <span style="font-size:0.8em;color:var(--c-muted)">${period === 'week' ? 'за неделю' : 'за сутки'} · ${d.news_count} постов</span>
+        <span style="font-size:0.8em;color:var(--c-muted)">${({day:'за сутки',prev_day:'за прошлые сутки',week:'за неделю',month:'за месяц'})[period] || 'за период'} · ${d.news_count} постов</span>
         <button class="btn btn-sm btn-secondary" onclick="publishTgDigest()" title="Опубликовать в Telegram-канал">&#128228; В Telegram</button>
       </div>
     </div>
@@ -5580,7 +5582,7 @@ async function loadTgDigestHistory() {
         <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
           <span style="font-weight:600;color:#1da1f2;font-size:0.9em;cursor:pointer" onclick="toggleTgHist(${i})" title="Показать/скрыть">${esc(d.title || 'Дайджест')}</span>
           <div style="display:flex;gap:8px;align-items:center">
-            <span style="font-size:0.76em;color:var(--c-muted)">${d.digest_date || ''} · ${d.style === 'tg_week' ? 'неделя' : 'сутки'} · ${d.news_count || 0} постов</span>
+            <span style="font-size:0.76em;color:var(--c-muted)">${d.digest_date || ''} · ${({tg_day:'сутки',tg_prev_day:'прошлые сутки',tg_week:'неделя',tg_month:'месяц'})[d.style] || 'период'} · ${d.news_count || 0} постов</span>
             <button class="btn btn-sm btn-secondary" onclick="publishTgHist(${i})" title="Опубликовать в канал">&#128228;</button>
             <button class="btn btn-sm btn-secondary" onclick="deleteTgDigest(${i})" title="Удалить дайджест">&#128465;</button>
           </div>

@@ -349,42 +349,45 @@ def get_cases_analytics():
 
 
 def get_tg_channels_digest(period="day", send=False):
-    """Generate a digest of Telegram channels for a period (day | week).
+    """Generate a digest of Telegram channels for a period.
 
+    period: day (24h) | prev_day (24-48h ago) | week (7d) | month (30d).
     Pulls fresh TG posts ranked by score+virality and asks the LLM for an
     engaging, subscriber-friendly digest with links to the posts. send=False
     (default) only generates and saves — it never posts to the channel.
     """
+    PERIODS = {
+        "day":      {"label": "за сутки",         "limit": 7,  "from_h": 24,      "to_h": 0},
+        "prev_day": {"label": "за прошлые сутки",  "limit": 7,  "from_h": 48,      "to_h": 24},
+        "week":     {"label": "за неделю",         "limit": 10, "from_h": 24 * 7,  "to_h": 0},
+        "month":    {"label": "за месяц",          "limit": 12, "from_h": 24 * 30, "to_h": 0},
+    }
+    cfg = PERIODS.get(period, PERIODS["day"])
+    period_label, item_limit, from_h, to_h = cfg["label"], cfg["limit"], cfg["from_h"], cfg["to_h"]
+
     conn = get_connection()
     cur = conn.cursor()
     _ph = "%s" if _is_postgres() else "?"
     TG = "TG:%"
-    hours = 24 if period == "day" else 24 * 7
-    period_label = "за сутки" if period == "day" else "за неделю"
-    item_limit = 7 if period == "day" else 10
     try:
         if _is_postgres():
-            cur.execute(f"""
-                SELECT n.id, n.title, n.source, n.url, n.published_at,
-                       COALESCE(a.total_score, 0), COALESCE(a.viral_score, 0),
-                       COALESCE(a.viral_level, ''), COALESCE(a.tags_data, '[]')
-                FROM news n LEFT JOIN news_analysis a ON a.news_id = n.id
-                WHERE n.source LIKE {_ph} AND COALESCE(n.is_deleted, 0) = 0
-                  AND COALESCE(n.published_ts, n.parsed_at)::timestamptz > (NOW() - INTERVAL '{hours} hours')
-                ORDER BY (COALESCE(a.total_score, 0) + COALESCE(a.viral_score, 0)) DESC
-                LIMIT 30
-            """, (TG,))
+            time_cond = f"COALESCE(n.published_ts, n.parsed_at)::timestamptz > (NOW() - INTERVAL '{from_h} hours')"
+            if to_h:
+                time_cond += f" AND COALESCE(n.published_ts, n.parsed_at)::timestamptz <= (NOW() - INTERVAL '{to_h} hours')"
         else:
-            cur.execute(f"""
-                SELECT n.id, n.title, n.source, n.url, n.published_at,
-                       COALESCE(a.total_score, 0), COALESCE(a.viral_score, 0),
-                       COALESCE(a.viral_level, ''), COALESCE(a.tags_data, '[]')
-                FROM news n LEFT JOIN news_analysis a ON a.news_id = n.id
-                WHERE n.source LIKE {_ph} AND COALESCE(n.is_deleted, 0) = 0
-                  AND COALESCE(n.published_ts, n.parsed_at) > datetime('now', '-{hours} hours')
-                ORDER BY (COALESCE(a.total_score, 0) + COALESCE(a.viral_score, 0)) DESC
-                LIMIT 30
-            """, (TG,))
+            time_cond = f"COALESCE(n.published_ts, n.parsed_at) > datetime('now', '-{from_h} hours')"
+            if to_h:
+                time_cond += f" AND COALESCE(n.published_ts, n.parsed_at) <= datetime('now', '-{to_h} hours')"
+        cur.execute(f"""
+            SELECT n.id, n.title, n.source, n.url, n.published_at,
+                   COALESCE(a.total_score, 0), COALESCE(a.viral_score, 0),
+                   COALESCE(a.viral_level, ''), COALESCE(a.tags_data, '[]')
+            FROM news n LEFT JOIN news_analysis a ON a.news_id = n.id
+            WHERE n.source LIKE {_ph} AND COALESCE(n.is_deleted, 0) = 0
+              AND {time_cond}
+            ORDER BY (COALESCE(a.total_score, 0) + COALESCE(a.viral_score, 0)) DESC
+            LIMIT 40
+        """, (TG,))
         cols = ["id", "title", "source", "url", "published_at", "total_score",
                 "viral_score", "viral_level", "tags_data"]
         news_list = [dict(zip(cols, row)) for row in cur.fetchall()]
