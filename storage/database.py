@@ -466,8 +466,32 @@ def _add_column_if_missing(cur, table, column, col_type):
         pass  # Column already exists
 
 
+_TRACKING_PARAMS = {"utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content",
+                    "gclid", "fbclid", "yclid", "ymclid", "_openstat", "mc_cid", "mc_eid",
+                    "igshid", "ref_src", "spm"}
+
+
+def _normalize_url(url: str) -> str:
+    """Канонизирует URL для дедупа: убирает #фрагмент, трекинг-параметры (utm_*/gclid…)
+    и хвостовой слеш — чтобы один материал с разными ?utm=/#… не плодил дубли."""
+    from urllib.parse import urlsplit, urlunsplit, parse_qsl, urlencode
+    try:
+        sp = urlsplit((url or "").strip())
+        scheme = (sp.scheme or "https").lower()
+        netloc = sp.netloc.lower()
+        path = sp.path.rstrip("/") or "/"
+        q = [(k, v) for k, v in parse_qsl(sp.query) if k.lower() not in _TRACKING_PARAMS]
+        return urlunsplit((scheme, netloc, path, urlencode(q), ""))
+    except Exception:
+        return url or ""
+
+
+def _news_id(url: str) -> str:
+    return hashlib.md5(_normalize_url(url).encode()).hexdigest()
+
+
 def news_exists(url: str) -> bool:
-    news_id = hashlib.md5(url.encode()).hexdigest()
+    news_id = _news_id(url)
     conn = get_connection()
     cur = conn.cursor()
     try:
@@ -561,7 +585,7 @@ def normalize_ts(date_str, fallback_iso: str) -> str:
 def insert_news(source: str, url: str, title: str, h1: str = "",
                 description: str = "", plain_text: str = "", published_at: str = "",
                 image_count: int = 0):
-    news_id = hashlib.md5(url.encode()).hexdigest()
+    news_id = _news_id(url)
     if news_exists(url):
         return None
 
