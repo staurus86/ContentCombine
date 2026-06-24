@@ -1109,11 +1109,26 @@ def generate_auto_digest():
         logger.error("Auto-digest error: %s", e)
 
 
+AUTO_TG_PUBLISH_MARKER = "auto_tg_publish_date"  # idempotency: date of last successful auto-publish (MSK)
+
+
+def _today_msk():
+    from datetime import datetime, timezone, timedelta
+    return (datetime.now(timezone.utc) + timedelta(hours=3)).strftime("%Y-%m-%d")
+
+
 def auto_publish_telegram_digest():
     """Daily evening job: build the GENERAL digest (best of feed + cases + telegram
     over the last 24h, grouped into sections) and publish it to the Telegram channel.
-    Skips quietly if no fresh news or no channel configured."""
+    Idempotent — publishes at most once per MSK day (a date marker guards against a
+    second send from the catch-up job / repeated restarts). Skips quietly if no fresh
+    news or no channel configured."""
     try:
+        from storage.database import get_app_setting, set_app_setting
+        today = _today_msk()
+        if get_app_setting(AUTO_TG_PUBLISH_MARKER) == today:
+            logger.info("Auto TG digest: already published today (%s) — skip", today)
+            return {"status": "already_done", "date": today}
         if not getattr(config, "TELEGRAM_BOT_TOKEN", "") or not getattr(config, "TELEGRAM_PUBLISH_CHANNEL", ""):
             logger.info("Auto TG digest: bot token/channel not set — skipping")
             return {"status": "no_token"}
@@ -1130,12 +1145,33 @@ def auto_publish_telegram_digest():
         text = digest.get("text") or ""
         body_text = (f"**\U0001F4E8 {title}**\n" if title else "") + text
         pub = publish({"text": body_text, "markdown": True})
+        # Mark the day done only on a successful send, so failures retry on the next tick.
+        if pub.get("status") == "ok":
+            set_app_setting(AUTO_TG_PUBLISH_MARKER, today)
         logger.info("Auto TG general digest: %d items, publish status=%s parts=%s",
                     digest.get("news_count", 0), pub.get("status"), pub.get("parts"))
         return {"status": pub.get("status"), "parts": pub.get("parts"), "news_count": digest.get("news_count", 0), "title": title}
     except Exception as e:
         logger.error("Auto TG digest error: %s", e)
         return {"status": "error", "message": str(e)[:300]}
+
+
+def catchup_tg_digest():
+    """Self-heal: if the 20:00 cron was missed (e.g. a deploy restarted the in-memory
+    scheduler right at 20:00), publish once it's past 20:00 MSK and not yet sent today.
+    Runs on a short interval; a no-op before 20:00 or after the day is already sent."""
+    try:
+        from datetime import datetime, timezone, timedelta
+        msk = datetime.now(timezone.utc) + timedelta(hours=3)
+        if msk.hour < 20:
+            return  # before the slot — the daily cron will handle it
+        from storage.database import get_app_setting
+        if get_app_setting(AUTO_TG_PUBLISH_MARKER) == _today_msk():
+            return  # already published today
+        logger.warning("Catch-up: 20:00 digest not sent yet (now %s MSK) — publishing now", msk.strftime("%H:%M"))
+        auto_publish_telegram_digest()
+    except Exception as e:
+        logger.error("Catch-up TG digest error: %s", e)
 
 
 PUBLISH_SPACING_MINUTES = config.PUBLISH_SPACING_MINUTES  # Minimum minutes between auto-publications

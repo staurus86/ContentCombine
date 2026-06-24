@@ -26,7 +26,7 @@ from pipeline.orchestrator import (  # noqa: F401
     _update_task, _create_task, _fetch_news_by_id, _fetch_analysis_by_id,
     _calc_final_score, run_full_auto_pipeline, run_no_llm_pipeline,
     _save_rewrite_article, _build_check_result_from_analysis,
-    generate_auto_digest, auto_publish_telegram_digest, publish_scheduled_articles,
+    generate_auto_digest, auto_publish_telegram_digest, catchup_tg_digest, publish_scheduled_articles,
     FULL_AUTO_SCORE_THRESHOLD, FULL_AUTO_FINAL_THRESHOLD,
 )
 
@@ -226,6 +226,10 @@ def start_scheduler():
     # Auto digest → Telegram channel: daily at 20:00 Moscow time.
     # Builds the GENERAL digest (best of feed + cases + telegram, 24h) and publishes it.
     scheduler.add_job(auto_publish_telegram_digest, "cron", hour=20, minute=0, id="auto_tg_digest")
+
+    # Self-heal: if a deploy restarted the in-memory scheduler right at 20:00 and the
+    # cron run was lost, this catch-up republishes once (idempotent via the date marker).
+    scheduler.add_job(catchup_tg_digest, "interval", minutes=5, id="catchup_tg_digest")
 
     # Daily subscriber snapshot for TG channels (for the «Подписчики» delta).
     from api.news import refresh_tg_subscribers
