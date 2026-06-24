@@ -2019,6 +2019,8 @@ function jumpToNewsPage(val) {
 }
 
 const STATUS_LABELS = {new:'Новая',in_review:'Проверка',approved:'Одобр.',processed:'Обогащ.',duplicate:'Дубль',rejected:'Откл.',ready:'Готова'};
+// Critical official sources — highlighted red in the feed so они не теряются (Core/Spam updates, outages).
+const CRITICAL_SOURCES = ['Google Search Status'];
 
 function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
 function fmtDate(d) { if (!d) return '-'; return d.replace('T',' ').slice(0,16); }
@@ -2683,9 +2685,10 @@ function renderNewsFiltered() {
       }
     } catch(e){}
     const analyzed = n.processed_at ? fmtDate(n.processed_at) : '-';
-    return `<tr>
-      <td><input type="checkbox" class="news-tab-check" data-id="${n.id}" onchange="updateNewsSelectedCount()"></td>
-      <td>${n.source}</td>
+    const crit = CRITICAL_SOURCES.includes(n.source);
+    return `<tr${crit ? ' style="background:rgba(224,36,94,0.12)"' : ''}>
+      <td${crit ? ' style="box-shadow:inset 3px 0 0 #e0245e"' : ''}><input type="checkbox" class="news-tab-check" data-id="${n.id}" onchange="updateNewsSelectedCount()"></td>
+      <td${crit ? ' style="color:#e0245e;font-weight:700"' : ''}>${crit ? '&#128308; ' : ''}${n.source}</td>
       <td class="td-title"><a href="${n.url}" target="_blank" title="${esc(n.description||'')}">${esc(n.title||'')}</a>${n.h1 && n.h1 !== n.title ? `<div style="font-size:0.8em;color:#1da1f2;margin-top:2px">&#127760; ${esc(n.h1)}</div>` : ''}</td>
       <td>${fmtDate(n.published_at)}</td>
       <td><span class="badge badge-${n.status}">${statusLabel}</span></td>
