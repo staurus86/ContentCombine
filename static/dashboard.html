@@ -1108,7 +1108,21 @@ input:focus, textarea:focus, select:focus { outline:none; border-color:#1da1f2; 
         <button class="btn btn-sm btn-secondary" onclick="loadTelegram()">Обновить</button>
       </div>
     </div>
-    <div id="tg-list" style="font-size:0.9em"></div>
+    <div style="overflow-x:auto">
+      <table style="width:100%;font-size:0.88em">
+        <thead><tr>
+          <th style="width:95px">Источник</th>
+          <th>Заголовок</th>
+          <th style="width:48px">Скор</th>
+          <th style="width:58px">Кач/Рел</th>
+          <th style="width:64px">Вирал.</th>
+          <th style="width:135px">Теги</th>
+          <th style="width:72px">Дата</th>
+          <th style="width:40px"></th>
+        </tr></thead>
+        <tbody id="tg-table"></tbody>
+      </table>
+    </div>
   </div>
 
   <!-- TRENDS (storylines) -->
@@ -5247,25 +5261,41 @@ async function loadCases() {
 }
 
 async function loadTelegram() {
-  const el = document.getElementById('tg-list');
-  if (!el) return;
-  el.innerHTML = '<div style="color:var(--c-muted);padding:20px;text-align:center">Загрузка…</div>';
+  const tb = document.getElementById('tg-table');
+  if (!tb) return;
+  tb.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:20px;color:var(--c-muted)">Загрузка…</td></tr>';
   const r = await api('/api/telegram?limit=200');
   const items = (r && r.news) || [];
   const cnt = document.getElementById('tg-count');
   if (cnt) cnt.textContent = items.length + ' постов';
   if (!items.length) {
-    el.innerHTML = '<div style="color:var(--c-muted);padding:30px;text-align:center">Пока пусто. Здесь копятся посты из Telegram-источников — отдельно от ленты, кейсов, дайджестов и сюжетов.</div>';
+    tb.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--c-muted)">Пока пусто. Здесь копятся посты из Telegram-источников — отдельно от ленты, кейсов, дайджестов и сюжетов.</td></tr>';
     return;
   }
-  el.innerHTML = items.map(n => {
-    return `<div style="display:flex;gap:10px;align-items:flex-start;padding:10px 4px;border-bottom:1px solid #22303c">
-      <div style="flex:1;min-width:0">
-        <a href="${n.url}" target="_blank" style="color:#e1e8ed;text-decoration:none;font-size:0.95em">${esc(n.title)}</a>
-        <div style="font-size:0.74em;color:var(--c-muted);margin-top:3px">${esc(n.source)} · ${fmtDate(n.published_ts || n.published_at)} · &#128221;${n.word_count || 0}</div>
-      </div>
-      <button class="btn btn-sm btn-secondary" title="Скрыть — в Удалённые" onclick="tgHide('${n.id}')">&#128465;</button>
-    </div>`;
+  tb.innerHTML = items.map(n => {
+    const sc = n.total_score || 0;
+    const scColor = sc >= 70 ? '#17bf63' : sc >= 40 ? '#ffad1f' : sc > 0 ? '#e0245e' : 'var(--c-faint)';
+    const vl = n.viral_level || '';
+    const vs = n.viral_score || 0;
+    const vlColor = {high:'#e0245e', medium:'#ffad1f', low:'#1da1f2'}[vl] || 'var(--c-faint)';
+    let tags = [];
+    try { tags = typeof n.tags_data === 'string' ? JSON.parse(n.tags_data || '[]') : (n.tags_data || []); } catch(e) {}
+    if (!Array.isArray(tags)) tags = [];
+    const tagsHtml = tags.slice(0,3).map(t => {
+      const label = typeof t === 'object' ? (t.label || t.id || '') : String(t);
+      const tid = typeof t === 'object' ? (t.id || '') : '';
+      return `<span class="tag tag-${tid}" style="font-size:0.7em;padding:1px 5px">${esc(label)}</span>`;
+    }).join(' ');
+    return `<tr>
+      <td style="font-size:0.78em;color:var(--c-muted)">${esc(n.source)}</td>
+      <td><a href="${n.url}" target="_blank" style="color:#e1e8ed;text-decoration:none">${esc(n.title)}</a></td>
+      <td><b style="color:${scColor}">${sc}</b></td>
+      <td style="font-size:0.82em;color:var(--c-muted)">${n.quality_score || 0}/${n.relevance_score || 0}</td>
+      <td><span style="color:${vlColor};font-weight:bold">${vs}</span>${vl ? `<div style="font-size:0.66em;color:${vlColor}">${vl}</div>` : ''}</td>
+      <td>${tagsHtml}</td>
+      <td style="font-size:0.78em;color:var(--c-muted)">${fmtDate(n.published_ts || n.published_at)}</td>
+      <td><button class="btn btn-sm btn-secondary" title="Скрыть — в Удалённые" onclick="tgHide('${n.id}')">&#128465;</button></td>
+    </tr>`;
   }).join('');
 }
 
