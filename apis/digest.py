@@ -76,7 +76,7 @@ PROMPT_DETAILED = """Ты — выпускающий редактор отрас
 {numbered}
 
 ## Задача
-1. Отбери только САМОЕ значимое — строго не больше 7 пунктов. Проходные анонсы и перепечатки пропусти.
+1. Отбери только САМОЕ значимое — строго не больше {max_items} пунктов. Проходные анонсы и перепечатки пропусти.
 2. Несколько новостей об одном событии — объедини в один пункт, перечислив все номера-источники.
 3. На каждый пункт: ёмкий заголовок и 1-2 предложения с сутью и тем, что это меняет на практике. Без воды.
 4. Расположи пункты по важности.
@@ -223,12 +223,15 @@ def _top_tags(news_list, n=3) -> list[str]:
     return [lbl for lbl, _ in counts.most_common(n)]
 
 
-def generate_daily_digest(news_list: list[dict], style: str = "brief") -> dict:
+def generate_daily_digest(news_list: list[dict], style: str = "brief",
+                          period_label: str = "", max_items: int = 7) -> dict:
     """Генерирует дайджест из списка новостей через LLM.
 
     Args:
         news_list: словари с title, source, url, published_at, опц. total_score
         style: brief | detailed | telegram
+        period_label: подпись периода для шапки («за сутки», «за неделю»)
+        max_items: максимум пунктов (detailed) — для «Общего» дайджеста = 3
 
     Returns:
         {"title": "...", "text": "...", "news_count": N}
@@ -237,7 +240,8 @@ def generate_daily_digest(news_list: list[dict], style: str = "brief") -> dict:
         return {"title": "Нет данных", "text": "Нет свежих новостей за выбранный период.", "news_count": 0}
 
     numbered = _format_sources(news_list)
-    common = {"anti_slop": ANTI_SLOP, "news_count": len(news_list), "numbered": numbered}
+    common = {"anti_slop": ANTI_SLOP, "news_count": len(news_list), "numbered": numbered,
+              "max_items": max_items}
 
     if style == "detailed":
         prompt = PROMPT_DETAILED.format(**common)
@@ -254,19 +258,20 @@ def generate_daily_digest(news_list: list[dict], style: str = "brief") -> dict:
 
     # Keep the digest within one Telegram message (≤4096): cap to the top items.
     if isinstance(result.get("items"), list):
-        result["items"] = result["items"][:7]
+        result["items"] = result["items"][:max_items]
 
+    _date_head = f"📅 {_ru_date_today()}" + (f" · {period_label}" if period_label else "")
     if style == "detailed":
         text = _render_detailed(result, news_list)
         if text:
-            text = f"📅 {_ru_date_today()}\n\n" + text
+            text = _date_head + "\n\n" + text
             tags = _top_tags(news_list, 3)
             if tags:
                 text += "\n\n**Главные темы дня:** " + " · ".join(tags)
     elif style == "telegram":
         text = _render_telegram(result, news_list)
         if text:
-            text = f"📅 {_ru_date_today()}\n\n" + text
+            text = _date_head + "\n\n" + text
     else:
         text = result.get("text", "")
 

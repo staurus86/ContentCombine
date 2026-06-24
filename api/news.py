@@ -538,6 +538,72 @@ def get_tg_channels_digest(period="day", send=False):
     return {"status": "ok", "digest": result, "period": period}
 
 
+def compose_digest(dtype="feed", period="day"):
+    """Compose a digest for a content type and period, save it to history, return it.
+
+    dtype: feed (main feed, no TG/cases) | cases (is_case=1) | telegram (TG posts)
+           | general (best 2-3 across feed + cases + telegram, one TG message).
+    period: day (24h) | week (7d).
+    """
+    if dtype == "telegram":
+        return get_tg_channels_digest(period)
+
+    from_h = 24 if period == "day" else 24 * 7
+    period_label = "за сутки" if period == "day" else "за неделю"
+
+    if dtype == "cases":
+        seg, max_items, style_tag = "COALESCE(n.is_case, 0) = 1", 7, "cs_" + period
+    elif dtype == "general":
+        seg, max_items, style_tag = "1 = 1", 3, "gen_" + period
+    else:  # feed: main feed excludes TG channels and bookmarked cases
+        dtype = "feed"
+        seg, max_items, style_tag = "n.source NOT LIKE 'TG:%' AND COALESCE(n.is_case, 0) = 0", 7, "feed_" + period
+
+    conn = get_connection()
+    cur = conn.cursor()
+    try:
+        if _is_postgres():
+            time_cond = f"COALESCE(n.published_ts, n.parsed_at)::timestamptz > (NOW() - INTERVAL '{from_h} hours')"
+        else:
+            time_cond = f"COALESCE(n.published_ts, n.parsed_at) > datetime('now', '-{from_h} hours')"
+        cur.execute(f"""
+            SELECT n.id, n.title, n.source, n.url, n.published_at,
+                   COALESCE(a.total_score, 0), COALESCE(a.viral_score, 0),
+                   COALESCE(a.viral_level, ''), COALESCE(a.tags_data, '[]')
+            FROM news n LEFT JOIN news_analysis a ON a.news_id = n.id
+            WHERE {seg} AND COALESCE(n.is_deleted, 0) = 0 AND {time_cond}
+            ORDER BY (COALESCE(a.total_score, 0) + COALESCE(a.viral_score, 0)) DESC
+            LIMIT 40
+        """)
+        cols = ["id", "title", "source", "url", "published_at", "total_score",
+                "viral_score", "viral_level", "tags_data"]
+        news_list = [dict(zip(cols, row)) for row in cur.fetchall()]
+    finally:
+        cur.close()
+
+    from apis.digest import generate_daily_digest
+    result = generate_daily_digest(news_list, style="detailed",
+                                   period_label=period_label, max_items=max_items)
+
+    try:
+        import uuid
+        from datetime import datetime, timezone
+        from storage.database import save_digest
+        if result.get("news_count", 0) > 0:
+            save_digest(
+                digest_id=str(uuid.uuid4())[:12],
+                digest_date=datetime.now(timezone.utc).strftime("%Y-%m-%d"),
+                style=style_tag,
+                title=result.get("title", ""),
+                text=result.get("text", ""),
+                news_count=result.get("news_count", 0),
+            )
+    except Exception as e:
+        logger.warning("Compose digest save failed: %s", e)
+
+    return {"status": "ok", "digest": result, "type": dtype, "period": period}
+
+
 def export_news_xlsx(query_params) -> bytes:
     """Export current filtered view as XLSX file. Returns bytes of the workbook."""
     import io

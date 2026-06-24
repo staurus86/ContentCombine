@@ -1000,16 +1000,18 @@ input:focus, textarea:focus, select:focus { outline:none; border-color:#1da1f2; 
     <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:14px">
       <h2 style="margin:0">&#128240; Дайджесты</h2>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-        <select id="digest-style-select" style="padding:5px 8px;background:#192734;border:1px solid #38444d;border-radius:6px;color:#e1e8ed;font-size:0.85em">
-          <option value="detailed">Подробный</option>
-          <option value="brief">Краткий</option>
-          <option value="telegram">Telegram</option>
+        <select id="digest-type-select" style="padding:5px 8px;background:#192734;border:1px solid #38444d;border-radius:6px;color:#e1e8ed;font-size:0.85em" title="Источник дайджеста">
+          <option value="feed">Лента</option>
+          <option value="cases">Кейсы</option>
+          <option value="telegram">Телеграм</option>
+          <option value="general">Общий — лучшее</option>
         </select>
-        <button class="btn btn-sm btn-success" onclick="generateAndSaveDigest()">Сгенерировать</button>
+        <select id="digest-period-select" style="padding:5px 8px;background:#192734;border:1px solid #38444d;border-radius:6px;color:#e1e8ed;font-size:0.85em" title="Период">
+          <option value="day">За сутки</option>
+          <option value="week">За неделю</option>
+        </select>
+        <button class="btn btn-sm btn-success" onclick="composeDigest()">Составить</button>
         <button class="btn btn-sm btn-secondary" onclick="loadSavedDigests()">Обновить</button>
-        <span style="width:1px;height:20px;background:#38444d;margin:0 2px"></span>
-        <button class="btn btn-sm btn-secondary" onclick="generateDigest('today')" title="Краткая сводка за день (summary + топ-новости + тренды)">Сводка за день</button>
-        <button class="btn btn-sm btn-secondary" onclick="generateDigest('week')" title="Краткая сводка за неделю">за неделю</button>
       </div>
     </div>
 
@@ -3612,6 +3614,44 @@ async function activatePromptVersion(id) {
   else toast(r.message, true);
 }
 
+let _lastComposed = null;
+async function composeDigest() {
+  const type = document.getElementById('digest-type-select').value;
+  const period = document.getElementById('digest-period-select').value;
+  const card = document.getElementById('digest-result');
+  const content = document.getElementById('digest-content');
+  card.style.display = 'block';
+  content.innerHTML = '<div style="padding:14px;text-align:center;color:var(--c-muted)">Составляю дайджест… (LLM, до ~30 сек)</div>';
+  let r;
+  try { r = await api('/api/digest/compose', {type, period}); }
+  catch (e) { content.innerHTML = '<span style="color:#e0245e">Сеть прервалась или запрос затянулся. Попробуй ещё раз.</span>'; return; }
+  if (!r || r.status !== 'ok' || !r.digest) { content.innerHTML = '<span style="color:#e0245e">' + ((r && r.message) || 'Ошибка генерации') + '</span>'; return; }
+  const d = r.digest;
+  _lastComposed = d;
+  if (!d.news_count) { content.innerHTML = '<div style="padding:14px;text-align:center;color:var(--c-faint)">Нет новостей за выбранный период</div>'; return; }
+  const typeLabel = {feed:'Лента', cases:'Кейсы', telegram:'Телеграм', general:'Общий'}[type] || type;
+  content.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+      <div style="font-weight:600;color:#1da1f2">${esc(d.title || 'Дайджест')}</div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <span style="font-size:0.8em;color:var(--c-muted)">${typeLabel} · ${period === 'week' ? 'за неделю' : 'за сутки'} · ${d.news_count}</span>
+        <button class="btn btn-sm btn-secondary" onclick="publishComposed()" title="Опубликовать в Telegram-канал">&#128228; В Telegram</button>
+      </div>
+    </div>
+    <div style="white-space:pre-wrap;line-height:1.55;color:#e1e8ed;background:#15202b;border:1px solid #22303c;border-radius:8px;padding:12px">${digestMdToHtml(d.text)}</div>`;
+  loadSavedDigests();
+}
+
+async function publishComposed() {
+  if (!_lastComposed) return;
+  if (!confirm('Опубликовать этот дайджест в Telegram-канал?')) return;
+  const text = (_lastComposed.title ? '**\u{1F4E8} ' + _lastComposed.title + '**\n' : '') + (_lastComposed.text || '');
+  const r = await api('/api/telegram/publish', {text, markdown: true});
+  if (r && r.status === 'ok') toast(`Опубликовано в Telegram ✓ (${r.parts || 1} ч.)`);
+  else if (r && r.status === 'no_token') toast('Канал не подключён', true);
+  else toast((r && r.message) || 'Ошибка отправки', true);
+}
+
 async function generateDigest(period) {
   if (!confirm(`$ Сгенерировать дайджест за ${period === 'week' ? 'неделю' : 'день'}? Это вызов LLM API.`)) return;
   toast('Генерация дайджеста...');
@@ -3655,7 +3695,7 @@ async function loadSavedDigests() {
   const el = document.getElementById('saved-digests-list');
   _savedDigests = (r && r.digests) || [];
   if (r.status === 'ok' && _savedDigests.length > 0) {
-    const styleLabels = {brief: 'Краткий', detailed: 'Подробный', telegram: 'Telegram', tg_day: 'ТГ-каналы · сутки', tg_prev_day: 'ТГ-каналы · прошлые сутки', tg_week: 'ТГ-каналы · неделя', tg_month: 'ТГ-каналы · месяц'};
+    const styleLabels = {brief: 'Краткий', detailed: 'Подробный', telegram: 'Telegram', tg_day: 'ТГ-каналы · сутки', tg_prev_day: 'ТГ-каналы · прошлые сутки', tg_week: 'ТГ-каналы · неделя', tg_month: 'ТГ-каналы · месяц', feed_day: 'Лента · сутки', feed_week: 'Лента · неделя', cs_day: 'Кейсы · сутки', cs_week: 'Кейсы · неделя', gen_day: 'Общий · сутки', gen_week: 'Общий · неделя'};
     el.innerHTML = _savedDigests.map((d, i) => `
       <div class="card" style="margin-bottom:8px;padding:10px">
         <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px">

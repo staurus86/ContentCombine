@@ -323,6 +323,7 @@ class AdminHandler(BaseHTTPRequestHandler):
             "/api/digest/generate": lambda: self._generate_and_save_digest(body),
             "/api/digest/auto_publish": lambda: self._json(self._auto_publish_digest()),
             "/api/digest/delete": lambda: self._json(self._delete_digest(body)),
+            "/api/digest/compose": lambda: self._json(self._compose_digest(body)),
             "/api/telegram/digest": lambda: self._json(self._tg_channels_digest(body)),
             "/api/event_chain": lambda: self._get_event_chain(body),
             "/api/queue/cancel": lambda: self._cancel_queue_task(body),
@@ -1217,6 +1218,12 @@ async function login() {
         if not did:
             return {"status": "error", "message": "id required"}
         return {"status": "ok", "deleted": delete_digest(did)}
+
+    def _compose_digest(self, body):
+        from api.news import compose_digest
+        dtype = (body or {}).get("type", "feed")
+        period = (body or {}).get("period", "day")
+        return compose_digest(dtype, period)
 
     def _get_digests(self):
         from api.settings import get_digests
