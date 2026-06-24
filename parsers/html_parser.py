@@ -69,8 +69,18 @@ def _is_junk_url(url: str) -> bool:
     return bool(_JUNK_URL_RE.search(path))
 
 
-def parse_html_source(source: dict) -> int:
-    """Парсит HTML-страницу с новостями, возвращает количество новых."""
+def _record_failure(name, err):
+    """Сообщить трекеру здоровья о конкретном сбое источника (см. rss_parser).
+    Возврат None из парсера сигналит вызывающему, что сбой уже записан."""
+    try:
+        from core.source_health import source_health
+        source_health.record_failure(name, str(err))
+    except Exception:
+        pass
+
+
+def parse_html_source(source: dict):
+    """Парсит HTML-страницу. Возвращает количество новых (int) либо None при сбое."""
     if source.get("type") == "dtf":
         return _parse_dtf(source)
     if source.get("type") == "gamesradar":
@@ -158,6 +168,8 @@ def parse_html_source(source: dict) -> int:
 
     except Exception as e:
         logger.error("Error parsing HTML %s: %s", name, e)
+        _record_failure(name, e)
+        return None
 
     logger.info("Parsed %s (HTML): %d new articles", name, count)
     return count
@@ -169,6 +181,7 @@ def _parse_homepage(source: dict) -> int:
     url = source["url"]
     domain = re.search(r'https?://([^/]+)', url).group(1) if re.search(r'https?://([^/]+)', url) else ""
     count = 0
+    hard_err = None
 
     try:
         resp = fetch_with_retry(url)
@@ -235,6 +248,7 @@ def _parse_homepage(source: dict) -> int:
 
     except Exception as e:
         logger.error("Error parsing %s homepage: %s", name, e)
+        hard_err = e
 
     # Also try RSS as supplement
     rss_url = source.get("rss_url")
@@ -249,6 +263,9 @@ def _parse_homepage(source: dict) -> int:
         except Exception as e:
             logger.debug("%s RSS fallback failed: %s", name, e)
 
+    if count == 0 and hard_err is not None:
+        _record_failure(name, hard_err)
+        return None
     logger.info("Parsed %s (homepage+RSS): %d new articles", name, count)
     return count
 
@@ -534,6 +551,8 @@ def parse_sitemap_source(source: dict) -> int:
 
     except Exception as e:
         logger.error("Error parsing sitemap %s: %s", name, e)
+        _record_failure(name, e)
+        return None
 
     logger.info("Parsed %s (sitemap): %d new articles", name, count)
     return count

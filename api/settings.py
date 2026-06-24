@@ -592,10 +592,10 @@ def reparse_source(body):
             count = parse_rss_source(source) or 0
         elif source["type"] == "sitemap":
             from parsers.html_parser import parse_sitemap_source
-            count = parse_sitemap_source(source)
+            count = parse_sitemap_source(source) or 0
         else:
             from parsers.html_parser import parse_html_source
-            count = parse_html_source(source)
+            count = parse_html_source(source) or 0
         return {"status": "ok", "new_articles": count}
     except Exception as e:
         return {"status": "error", "message": str(e)}
@@ -612,9 +612,9 @@ def reparse_all(body):
                 if source["type"] == "rss":
                     total += parse_rss_source(source) or 0
                 elif source["type"] == "sitemap":
-                    total += parse_sitemap_source(source)
+                    total += parse_sitemap_source(source) or 0
                 else:
-                    total += parse_html_source(source)
+                    total += parse_html_source(source) or 0
             except Exception as e:
                 logger.error("Reparse %s error: %s", source["name"], e)
         return {"status": "ok", "new_articles": total}
@@ -672,10 +672,10 @@ def heal_source(body):
                 new_articles = parse_rss_source(source) or 0
             elif source["type"] == "sitemap":
                 from parsers.html_parser import parse_sitemap_source
-                new_articles = parse_sitemap_source(source)
+                new_articles = parse_sitemap_source(source) or 0
             else:
                 from parsers.html_parser import parse_html_source
-                new_articles = parse_html_source(source)
+                new_articles = parse_html_source(source) or 0
             steps.append({"action": "reparse", "status": "ok", "detail": f"Получено {new_articles} новых статей"})
             if new_articles > 0:
                 healed = True
