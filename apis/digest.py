@@ -365,3 +365,91 @@ def generate_tg_channels_digest(news_list: list[dict], period_label: str = "за
         "text": text or "Не удалось собрать пункты дайджеста.",
         "news_count": len(news_list),
     }
+
+
+# ---------------------------------------------------------------------------
+# Общий дайджест: лучшее из ленты + кейсов + телеграма, разбито по разделам
+# ---------------------------------------------------------------------------
+
+_SECTION_EMOJI = {"Новости": "📰", "Кейсы": "📌", "Телеграм": "📨"}
+
+
+PROMPT_GENERAL = """Ты ведёшь Telegram-канал по SEO, AI и digital-маркетингу. Собери КОМПАКТНЫЙ общий
+дайджест {period_label}, разбитый на три раздела: Новости, Кейсы, Телеграм.
+
+{anti_slop}
+
+## Материалы — у каждого помечен тип [Новости]/[Кейсы]/[Телеграм]. Ссылайся по номеру:
+{numbered}
+
+## Задача
+1. Из КАЖДОГО типа отбери 2-3 самых интересных пункта. Если по типу материалов нет — пропусти его.
+2. Каждый пункт — ОДНА короткая ёмкая фраза по сути (что произошло/в чём польза). Без второго предложения,
+   без воды и канцелярита. Поле summary оставляй пустым.
+3. В поле section укажи тип пункта строго одним из: «Новости», «Кейсы», «Телеграм».
+4. В sources укажи номера источников пункта.
+5. Весь дайджест должен уместиться в одно сообщение Telegram.
+
+Верни строго JSON без markdown:
+{{
+  "title": "Цепляющий заголовок общего дайджеста",
+  "items": [{{"section": "Новости", "headline": "Одна ёмкая фраза по сути", "summary": "", "sources": [1]}}]
+}}"""
+
+
+def _render_general(result, news_list) -> str:
+    """Render the general digest grouped into Новости / Кейсы / Телеграм sections."""
+    from collections import OrderedDict
+    buckets = OrderedDict((s, []) for s in ("Новости", "Кейсы", "Телеграм"))
+    for it in result.get("items", []):
+        sec = (it.get("section") or "Новости").strip()
+        if sec not in buckets:
+            buckets[sec] = []
+        head = (it.get("headline") or "").strip()
+        body = (it.get("summary") or "").strip()
+        suffix = _source_suffix(news_list, it.get("sources"))
+        line = head
+        if body:
+            line += (" — " if line else "") + body
+        if suffix:
+            line += (" " if line else "") + suffix
+        if line.strip():
+            buckets[sec].append("• " + line.strip())
+    blocks = []
+    for sec, items in buckets.items():
+        if items:
+            blocks.append(f"**{_SECTION_EMOJI.get(sec, '•')} {sec}**\n" + "\n".join(items))
+    return "\n\n".join(blocks)
+
+
+def generate_general_digest(feed_news, cases_news, tg_news, period_label="за сутки") -> dict:
+    """Общий дайджест: 2-3 лучших из ленты, кейсов и телеграма, короткие подписи,
+    разбито по разделам, в один пост Telegram."""
+    groups = [("Новости", feed_news or []), ("Кейсы", cases_news or []), ("Телеграм", tg_news or [])]
+    all_news, lines = [], []
+    for label, lst in groups:
+        for n in lst:
+            all_news.append(n)
+            i = len(all_news)
+            date = (n.get("published_at") or n.get("parsed_at") or "")[:10]
+            sc = n.get("total_score", 0)
+            title = (n.get("title", "?") or "").replace("\n", " ")[:140]
+            lines.append(f"{i}. [{label}] [{n.get('source', '?')}] {title}"
+                         + (f" ({date})" if date else "") + (f" · скор {sc}" if sc else ""))
+    if not all_news:
+        return {"title": "Нет данных", "text": "Нет материалов за выбранный период.", "news_count": 0}
+
+    prompt = PROMPT_GENERAL.format(anti_slop=ANTI_SLOP, period_label=period_label, numbered="\n".join(lines))
+    result = _call_llm_retry(prompt)
+    if not result:
+        logger.error("General digest LLM call failed")
+        return {"title": "Ошибка", "text": "Не удалось сгенерировать дайджест (LLM недоступен).", "news_count": 0}
+
+    text = _render_general(result, all_news)
+    if text:
+        text = f"📅 {_ru_date_today()} · {period_label}\n\n" + text
+    return {
+        "title": result.get("title", "Общий дайджест"),
+        "text": text or "Не удалось собрать пункты дайджеста.",
+        "news_count": len(all_news),
+    }
