@@ -328,6 +328,72 @@ def get_telegram_analytics():
         cur.close()
 
 
+def get_tg_channels_digest(period="day", send=False):
+    """Generate a digest of Telegram channels for a period (day | week).
+
+    Pulls fresh TG posts ranked by score+virality and asks the LLM for an
+    engaging, subscriber-friendly digest with links to the posts. send=False
+    (default) only generates and saves — it never posts to the channel.
+    """
+    conn = get_connection()
+    cur = conn.cursor()
+    _ph = "%s" if _is_postgres() else "?"
+    TG = "TG:%"
+    hours = 24 if period == "day" else 24 * 7
+    period_label = "за сутки" if period == "day" else "за неделю"
+    item_limit = 7 if period == "day" else 10
+    try:
+        if _is_postgres():
+            cur.execute(f"""
+                SELECT n.id, n.title, n.source, n.url, n.published_at,
+                       COALESCE(a.total_score, 0), COALESCE(a.viral_score, 0),
+                       COALESCE(a.viral_level, ''), COALESCE(a.tags_data, '[]')
+                FROM news n LEFT JOIN news_analysis a ON a.news_id = n.id
+                WHERE n.source LIKE {_ph} AND COALESCE(n.is_deleted, 0) = 0
+                  AND COALESCE(n.published_ts, n.parsed_at)::timestamptz > (NOW() - INTERVAL '{hours} hours')
+                ORDER BY (COALESCE(a.total_score, 0) + COALESCE(a.viral_score, 0)) DESC
+                LIMIT 30
+            """, (TG,))
+        else:
+            cur.execute(f"""
+                SELECT n.id, n.title, n.source, n.url, n.published_at,
+                       COALESCE(a.total_score, 0), COALESCE(a.viral_score, 0),
+                       COALESCE(a.viral_level, ''), COALESCE(a.tags_data, '[]')
+                FROM news n LEFT JOIN news_analysis a ON a.news_id = n.id
+                WHERE n.source LIKE {_ph} AND COALESCE(n.is_deleted, 0) = 0
+                  AND COALESCE(n.published_ts, n.parsed_at) > datetime('now', '-{hours} hours')
+                ORDER BY (COALESCE(a.total_score, 0) + COALESCE(a.viral_score, 0)) DESC
+                LIMIT 30
+            """, (TG,))
+        cols = ["id", "title", "source", "url", "published_at", "total_score",
+                "viral_score", "viral_level", "tags_data"]
+        news_list = [dict(zip(cols, row)) for row in cur.fetchall()]
+    finally:
+        cur.close()
+
+    from apis.digest import generate_tg_channels_digest
+    result = generate_tg_channels_digest(news_list, period_label=period_label, limit=item_limit)
+
+    # Save to digests list (style tg_<period>) for history
+    try:
+        import uuid
+        from datetime import datetime, timezone
+        from storage.database import save_digest
+        if result.get("news_count", 0) > 0:
+            save_digest(
+                digest_id=str(uuid.uuid4())[:12],
+                digest_date=datetime.now(timezone.utc).strftime("%Y-%m-%d"),
+                style="tg_" + period,
+                title=result.get("title", ""),
+                text=result.get("text", ""),
+                news_count=result.get("news_count", 0),
+            )
+    except Exception as e:
+        logger.warning("TG digest save failed: %s", e)
+
+    return {"status": "ok", "digest": result, "period": period}
+
+
 def export_news_xlsx(query_params) -> bytes:
     """Export current filtered view as XLSX file. Returns bytes of the workbook."""
     import io

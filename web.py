@@ -321,6 +321,7 @@ class AdminHandler(BaseHTTPRequestHandler):
             "/api/generate_digest": lambda: self._generate_digest(body),
             "/api/digest/generate": lambda: self._generate_and_save_digest(body),
             "/api/digest/auto_publish": lambda: self._json(self._auto_publish_digest()),
+            "/api/telegram/digest": lambda: self._json(self._tg_channels_digest(body)),
             "/api/event_chain": lambda: self._get_event_chain(body),
             "/api/queue/cancel": lambda: self._cancel_queue_task(body),
             "/api/queue/cancel_all": lambda: self._cancel_all_queue(body),
@@ -1197,6 +1198,12 @@ async function login() {
         # Runs the same job as the daily 11:00 MSK cron — for manual testing / publish-now.
         from pipeline.orchestrator import auto_publish_telegram_digest
         return auto_publish_telegram_digest() or {"status": "done"}
+
+    def _tg_channels_digest(self, body):
+        # Generate (never auto-send) a digest of Telegram channels for a period.
+        from api.news import get_tg_channels_digest
+        period = (body or {}).get("period", "day")
+        return get_tg_channels_digest(period)
 
     def _get_digests(self):
         from api.settings import get_digests

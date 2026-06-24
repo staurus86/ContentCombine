@@ -257,3 +257,85 @@ def generate_daily_digest(news_list: list[dict], style: str = "brief") -> dict:
         "text": text or "Не удалось собрать пункты дайджеста.",
         "news_count": len(news_list),
     }
+
+
+# ---------------------------------------------------------------------------
+# Дайджест Telegram-каналов (по постам SEO/AI-каналов, со ссылками на посты)
+# ---------------------------------------------------------------------------
+
+def _format_tg_sources(news_list: list[dict]) -> str:
+    """Numbered post list with hotness hints (score/viral) for the model."""
+    lines = []
+    for i, n in enumerate(news_list, 1):
+        sc = n.get("total_score", 0)
+        v = n.get("viral_score", 0)
+        vl = n.get("viral_level", "") or ""
+        src = n.get("source", "?")
+        title = (n.get("title", "?") or "").replace("\n", " ")[:160]
+        hot = f"скор {sc}, вирал {v}" + (f"/{vl}" if vl and vl != "none" else "")
+        lines.append(f"{i}. [{src}] {title} ({hot})")
+    return "\n".join(lines)
+
+
+PROMPT_TG_CHANNELS = """Ты ведёшь живой Telegram-канал с дайджестами по SEO, AI-поиску (GEO) и digital-маркетингу.
+Твоя аудитория — практикующие SEO-специалисты и маркетологи. Собери дайджест самого интересного
+из других SEO/AI Telegram-каналов {period_label}.
+
+{anti_slop}
+
+## Дополнительно про стиль
+- Пиши так, чтобы подписчику было ИНТЕРЕСНО читать: цепляющий заголовок-крючок у каждого пункта,
+  живой разговорный тон (но по делу), без сухого пересказа.
+- Покажи практическую пользу или интригу: что новенького, что попробовать, о чём спорят.
+- Не используй канцелярит и пафос.
+
+## Посты каналов ({news_count} шт.) — отсортированы по «горячести» (скор/виральность). Ссылайся по номеру:
+{numbered}
+
+## Задача
+1. Отбери {limit} самых интересных и обсуждаемых тем {period_label}. Ориентируйся на скор и виральность,
+   но выбирай то, что реально зацепит подписчика. Проходные анонсы и саморекламу каналов пропусти.
+2. Похожие посты об одном событии — объедини в один пункт (перечисли все номера).
+3. Каждый пункт: цепляющий заголовок + 1-2 живых предложения с сутью и тем, чем это полезно/интересно.
+4. В sources укажи номера постов.
+5. Расположи по убыванию интересности.
+
+Верни строго JSON без markdown:
+{{
+  "title": "Цепляющий заголовок дайджеста {period_label}",
+  "items": [{{"headline": "Заголовок-крючок", "summary": "1-2 живых предложения", "sources": [1]}}]
+}}"""
+
+
+def generate_tg_channels_digest(news_list: list[dict], period_label: str = "за сутки", limit: int = 7) -> dict:
+    """Дайджест Telegram-каналов: отбирает горячее по скору/виральности, пишет живой
+    дайджест со ссылками на сами посты (t.me)."""
+    if not news_list:
+        return {"title": "Нет данных", "text": "Нет постов TG-каналов за выбранный период.", "news_count": 0}
+
+    prompt = PROMPT_TG_CHANNELS.format(
+        anti_slop=ANTI_SLOP, period_label=period_label,
+        news_count=len(news_list), numbered=_format_tg_sources(news_list), limit=limit,
+    )
+    from apis.llm import _call_llm
+    result = _call_llm(prompt)
+    if not result:
+        logger.error("TG digest LLM call failed")
+        return {"title": "Ошибка", "text": "Не удалось сгенерировать дайджест (LLM недоступен).", "news_count": 0}
+
+    if isinstance(result.get("items"), list):
+        result["items"] = result["items"][:limit]
+
+    text = _render_detailed(result, news_list)
+    if text:
+        header = result.get("title", "Дайджест SEO-каналов")
+        text = f"📨 {header}\n📅 {_ru_date_today()} · {period_label}\n\n" + text
+        tags = _top_tags(news_list, 3)
+        if tags:
+            text += "\n\n**Темы:** " + " · ".join(tags)
+
+    return {
+        "title": result.get("title", "Дайджест SEO-каналов"),
+        "text": text or "Не удалось собрать пункты дайджеста.",
+        "news_count": len(news_list),
+    }
