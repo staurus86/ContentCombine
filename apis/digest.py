@@ -239,6 +239,8 @@ def generate_daily_digest(news_list: list[dict], style: str = "brief") -> dict:
                 text += "\n\n**Главные темы дня:** " + " · ".join(tags)
     elif style == "telegram":
         text = _render_telegram(result, news_list)
+        if text:
+            text = f"📅 {_ru_date_today()}\n\n" + text
     else:
         text = result.get("text", "")
 
