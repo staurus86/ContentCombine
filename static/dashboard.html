@@ -1083,7 +1083,7 @@ input:focus, textarea:focus, select:focus { outline:none; border-color:#1da1f2; 
     </div>
     <div id="health-recs" style="display:none;margin-bottom:15px"></div>
     <table>
-      <thead id="health-thead"><tr><th>Статус</th><th>Источник</th><th>Статей (24ч)</th><th style="min-width:120px">Активность</th><th>Последний парсинг</th><th>Минут назад</th><th>Лечение</th></tr></thead>
+      <thead id="health-thead"><tr><th>Статус</th><th>Источник</th><th>Статей (24ч)</th><th style="min-width:120px">Активность</th><th>Последний парсинг</th><th>Минут назад</th><th>Причина</th><th>Лечение</th></tr></thead>
       <tbody id="health-table"></tbody>
     </table>
   </div>
@@ -2021,6 +2021,9 @@ function jumpToNewsPage(val) {
 const STATUS_LABELS = {new:'Новая',in_review:'Проверка',approved:'Одобр.',processed:'Обогащ.',duplicate:'Дубль',rejected:'Откл.',ready:'Готова'};
 // Critical official sources — highlighted red in the feed so они не теряются (Core/Spam updates, outages).
 const CRITICAL_SOURCES = ['Google Search Status'];
+// Human-readable причина сбоя источника (из source_health.error_type).
+const ERR_LABELS = {dns:'DNS не резолвится', http_4xx:'404/410', http_5xx:'5xx сервер', timeout:'таймаут',
+  connection:'отказ соединения', ssl:'SSL', parse_error:'битый фид', auth:'401/403', rate_limit:'429 лимит', unknown:'ошибка'};
 
 function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
 function fmtDate(d) { if (!d) return '-'; return d.replace('T',' ').slice(0,16); }
@@ -2501,6 +2504,10 @@ async function loadHealth() {
     const isSick = ['warning','down','dead','low'].includes(h.status);
     const healBtn = isSick ? `<button class="btn btn-sm btn-warning" onclick="healSource('${h.source.replace(/'/g,"\\'")}')" style="padding:2px 8px;font-size:0.75em" title="Диагностика и лечение">&#128138;</button>` : '';
     const srcLink = h.url ? ` <a href="${h.url}" target="_blank" rel="noopener" title="Открыть источник — проверить вручную" style="color:#1da1f2;text-decoration:none">&#8599;</a>` : '';
+    const reason = ERR_LABELS[h.error_type] || (h.error_type ? h.error_type : '');
+    const reasonCell = reason
+      ? `<span style="color:#e0245e;font-size:0.82em" title="${esc(h.last_error||'')}">${reason}${h.consecutive_failures ? ' ×'+h.consecutive_failures : ''}</span>`
+      : '<span style="color:var(--c-faint)">—</span>';
     return `<tr>
       <td>${icon} <span style="color:${barColor}">${labels[h.status] || h.status}</span></td>
       <td>${h.source}${srcLink}</td>
@@ -2508,6 +2515,7 @@ async function loadHealth() {
       <td><div style="background:#22303c;border-radius:4px;overflow:hidden;height:18px"><div style="background:${barColor};width:${pct}%;height:100%;border-radius:4px;transition:width .5s"></div></div></td>
       <td>${fmtDate(h.last_parsed)}</td>
       <td>${h.minutes_ago >= 0 ? h.minutes_ago + ' мин' : '?'}</td>
+      <td>${reasonCell}</td>
       <td>${healBtn}</td>
     </tr>`;
   }).join('');

@@ -60,6 +60,15 @@ def get_sources_health() -> list[dict]:
     # Build lookup by source name
     db_sources = {row["source"]: row for row in rows}
 
+    # Live failure info (in-memory: error type / last error / streak) to explain WHY a
+    # source is dead — DNS/404/битый фид → удалять, таймаут → чинить.
+    sh_status = {}
+    try:
+        from core.source_health import source_health
+        sh_status = source_health.get_status()
+    except Exception:
+        pass
+
     # Include ALL configured sources
     conf_by_name = {s["name"]: s for s in config.SOURCES}
     all_source_names = [s["name"] for s in config.SOURCES]
@@ -101,6 +110,7 @@ def get_sources_health() -> list[dict]:
             except Exception:
                 pass
 
+        sh = sh_status.get(name, {})
         results.append({
             "source": name,
             "url": _source_link(conf_by_name.get(name)),
@@ -108,6 +118,10 @@ def get_sources_health() -> list[dict]:
             "last_parsed": last_parsed,
             "minutes_ago": minutes_ago,
             "status": status,
+            "error_type": sh.get("error_type", "") or "",
+            "last_error": (sh.get("last_error", "") or "")[:160],
+            "consecutive_failures": sh.get("consecutive_failures", 0) or 0,
+            "auto_disabled": sh.get("disabled_at") is not None,
         })
 
     # Sort: dead first, then by count desc
