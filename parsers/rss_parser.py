@@ -7,8 +7,9 @@ from bs4 import BeautifulSoup
 
 from storage.database import insert_news, news_exists
 from parsers.proxy import fetch_with_retry, _get_random_ua
+import config
 
-MAX_AGE_DAYS = 7
+MAX_AGE_DAYS = config.RSS_POST_MAX_AGE_DAYS
 
 logger = logging.getLogger(__name__)
 

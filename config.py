@@ -86,6 +86,10 @@ VK_POST_MAX_AGE_DAYS = _int_env("VK_POST_MAX_AGE_DAYS", 7)
 VK_POSTS_BATCH_SIZE = _int_env("VK_POSTS_BATCH_SIZE", 20)
 TELEGRAM_POST_MAX_AGE_DAYS = _int_env("TELEGRAM_POST_MAX_AGE_DAYS", 7)
 TELEGRAM_MESSAGES_BATCH_SIZE = _int_env("TELEGRAM_MESSAGES_BATCH_SIZE", 20)
+# RSS freshness window. Was hardcoded 7d — too tight for low-cadence feeds (Moz,
+# Yoast, Backlinko publish every 2-4 weeks), which then never delivered while
+# homepage sources at the same cadence did (their window is 30-45d). Aligned to 30.
+RSS_POST_MAX_AGE_DAYS = _int_env("RSS_POST_MAX_AGE_DAYS", 30)
 
 # System health
 WATCHDOG_STALE_TIMEOUT = _int_env("WATCHDOG_STALE_TIMEOUT", 300)
