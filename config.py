@@ -34,6 +34,8 @@ LLM_MODEL = os.getenv("LLM_MODEL", "openai/gpt-4o-mini")
 # Fallback models tried in order if the primary times out / errors (e.g. Cloudflare
 # flaps on the gateway). Comma-separated env override.
 LLM_FALLBACK_MODELS = [m.strip() for m in os.getenv("LLM_FALLBACK_MODELS", "gpt-4o,gpt-4.1").split(",") if m.strip()]
+# Daily LLM spend cap in USD for the full-auto pipeline. 0 = disabled (no cap).
+LLM_DAILY_CAP_USD = float(os.getenv("LLM_DAILY_CAP_USD", "0"))
 
 # Automation thresholds
 AUTO_APPROVE_THRESHOLD = _int_env("AUTO_APPROVE_THRESHOLD", 0)  # 0 = disabled, use pipeline buttons

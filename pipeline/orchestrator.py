@@ -179,7 +179,7 @@ def _auto_approve_high_score(results: list):
         try:
             record_decision(nid, "auto_approved")
         except Exception:
-            pass
+            logger.debug("record_decision(auto_approved) failed for %s", nid, exc_info=True)
     logger.info("Auto-approved %d news (threshold=%d)", len(auto_ids), threshold)
 
     import threading
@@ -541,7 +541,7 @@ def _calc_final_score(analysis: dict) -> int:
         elif freq > 0:
             keyso_bonus = 20
     except Exception:
-        pass
+        logger.debug("keyso_bonus scoring failed, defaulting to 0", exc_info=True)
 
     # Trends bonus
     trends_bonus = 0
@@ -560,7 +560,7 @@ def _calc_final_score(analysis: dict) -> int:
         elif max_t > 0:
             trends_bonus = 20
     except Exception:
-        pass
+        logger.debug("trends_bonus scoring failed, defaulting to 0", exc_info=True)
 
     return round(
         internal * config.SCORE_WEIGHT_INTERNAL
@@ -631,11 +631,21 @@ def retry_sheets_exports():
 
 def run_full_auto_pipeline(news_ids: list[str], task_ids: list[str]):
     """Mode 1: Full auto — score → enrich → rewrite → Sheets/Ready."""
-    # TODO: Add LLM daily cost cap when api_cost_tracking is fully implemented
-    # daily_cap = float(get_flag_value("llm_daily_cap", "5.0"))
-    # if get_daily_llm_cost() >= daily_cap:
-    #     logger.warning("LLM daily cost cap ($%.2f) reached, skipping full-auto pipeline", daily_cap)
-    #     return {"status": "error", "message": f"LLM daily cost cap (${daily_cap}) reached"}
+    # LLM daily cost cap (opt-in via config.LLM_DAILY_CAP_USD; 0 = disabled).
+    # Fail-open: any error in the check must NOT block the pipeline.
+    try:
+        cap = float(getattr(config, "LLM_DAILY_CAP_USD", 0) or 0)
+        if cap > 0:
+            from core.observability import get_cost_summary
+            spent = float(get_cost_summary(days=1).get("total_cost_usd", 0) or 0)
+            if spent >= cap:
+                logger.warning("LLM daily cost cap reached: $%.2f >= $%.2f — skipping full-auto for %d news",
+                               spent, cap, len(news_ids))
+                for tid in task_ids:
+                    _update_task(tid, "skipped", {"stage": "init", "reason": "llm_daily_cap", "cap_usd": cap})
+                return
+    except Exception:
+        logger.debug("LLM cost cap check failed, proceeding", exc_info=True)
     pipeline_reset()
     from checks.pipeline import run_review_pipeline
     from apis.llm import rewrite_news
@@ -646,7 +656,7 @@ def run_full_auto_pipeline(news_ids: list[str], task_ids: list[str]):
             from core.observability import log_decision
             log_decision(nid, step, decision, reason, details, s_before, s_after)
         except Exception:
-            pass
+            logger.debug("log_decision trace failed for %s (%s)", nid, step, exc_info=True)
 
     for i, (news_id, task_id) in enumerate(zip(news_ids, task_ids)):
         if is_pipeline_stopped():
@@ -780,7 +790,6 @@ def run_full_auto_pipeline(news_ids: list[str], task_ids: list[str]):
                     _update_task(task_id, "error", {"stage": "not_ready_fallback", "error": f"NotReady fallback failed: {e}"})
                 continue  # skip to next news item
 
-            import config
             style = getattr(config, "AUTO_REWRITE_STYLE", "news")
             rewrite = None
             for rewrite_attempt in range(2):
@@ -815,7 +824,7 @@ def run_full_auto_pipeline(news_ids: list[str], task_ids: list[str]):
                 try:
                     _create_task("sheets_retry", news_id, news.get("title", ""), "")
                 except Exception:
-                    pass
+                    logger.warning("Failed to queue sheets_retry task for %s — retry lost", news_id, exc_info=True)
                 time.sleep(10)
 
             if sheet_row:
