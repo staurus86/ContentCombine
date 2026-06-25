@@ -29,12 +29,16 @@ def _row_to_dict(cur, row):
 # ---------------------------------------------------------------------------
 
 def get_articles(limit: int = 500):
-    """Return articles ordered by updated_at DESC, with limit."""
+    """Return articles ordered by created_at DESC, with limit.
+
+    Sorted by creation time (not updated_at) so editing an article does not
+    bump it back to the top of the listing as if it were new.
+    """
     conn = get_connection()
     cur = conn.cursor()
     ph = "%s" if _is_postgres() else "?"
     try:
-        cur.execute(f"SELECT * FROM articles WHERE COALESCE(is_deleted, 0) = 0 ORDER BY updated_at DESC LIMIT {ph}", (limit,))
+        cur.execute(f"SELECT * FROM articles WHERE COALESCE(is_deleted, 0) = 0 ORDER BY COALESCE(created_at, updated_at) DESC LIMIT {ph}", (limit,))
         if _is_postgres():
             columns = [desc[0] for desc in cur.description]
             return [dict(zip(columns, row)) for row in cur.fetchall()]
