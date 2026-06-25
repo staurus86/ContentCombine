@@ -45,6 +45,7 @@ header { background:linear-gradient(135deg,#192734 0%,#1a3a4a 100%); padding:10p
 /* Buttons */
 .btn { padding:8px 16px; border:none; border-radius:6px; cursor:pointer; font-size:0.85em; transition:all .2s; }
 .btn:active { transform:scale(0.96); }
+.btn:focus-visible { outline:2px solid #1da1f2; outline-offset:2px; }
 .btn-primary { background:#1da1f2; color:#fff; }
 .btn-primary:hover { background:#1a91da; box-shadow:0 2px 8px rgba(29,161,242,0.3); }
 .btn-success { background:#17bf63; color:#fff; }
@@ -166,6 +167,9 @@ input:focus, textarea:focus, select:focus { outline:none; border-color:#1da1f2; 
 .tip-box .tip-copy-all { background:none; border:none; color:#1da1f2; cursor:pointer; font-size:0.8em; padding:2px 6px; }
 .tip-box .tip-copy-all:hover { text-decoration:underline; }
 
+/* Horizontal scroll wrapper for wide tables on narrow screens */
+.table-scroll { overflow-x:auto; -webkit-overflow-scrolling:touch; }
+
 /* Table counter */
 .table-info { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; color:var(--c-muted); font-size:0.82em; }
 
@@ -207,6 +211,16 @@ input:focus, textarea:focus, select:focus { outline:none; border-color:#1da1f2; 
   .btn { padding:6px 12px; min-height:36px; }
   .btn-group { flex-direction:column; }
   header { flex-direction:column; gap:8px; }
+  /* Лента: увеличить тач-зону чекбоксов до WCAG AA (2.5.8, 24px) */
+  #news-main-table input[type=checkbox] { width:24px; height:24px; }
+  /* Лента: скрыть некритичные аналитические колонки, остальное скроллится по горизонтали */
+  #news-main-table { min-width:640px; }
+  #news-main-table th:nth-child(6), #news-main-table td:nth-child(6),   /* Биграммы */
+  #news-main-table th:nth-child(7), #news-main-table td:nth-child(7),   /* Keys.so */
+  #news-main-table th:nth-child(8), #news-main-table td:nth-child(8),   /* Похожие */
+  #news-main-table th:nth-child(9), #news-main-table td:nth-child(9),   /* Trends */
+  #news-main-table th:nth-child(12), #news-main-table td:nth-child(12)  /* Дата */
+  { display:none; }
 }
 @media(max-width:480px) {
   .container { padding:6px; }
@@ -1276,6 +1290,7 @@ input:focus, textarea:focus, select:focus { outline:none; border-color:#1da1f2; 
       <span id="news-selected-count" style="color:#1da1f2;font-size:0.85em;margin-left:8px"></span>
       <span id="news-count" style="color:var(--c-muted);font-size:0.85em;margin-left:auto"></span>
     </div>
+    <div class="table-scroll">
     <table id="news-main-table">
       <thead><tr>
         <th style="width:30px"><input type="checkbox" id="news-check-all" onchange="toggleAllNews(this)"></th>
@@ -1294,6 +1309,7 @@ input:focus, textarea:focus, select:focus { outline:none; border-color:#1da1f2; 
       </tr></thead>
       <tbody id="news-table"></tbody>
     </table>
+    </div>
     <div id="news-pagination"></div>
   </div>
 
@@ -1988,13 +2004,19 @@ async function loadNewsPage(offset) {
   if (llmFilter) url += `&llm=${encodeURIComponent(llmFilter)}`;
   if (dateFrom) url += `&date_from=${dateFrom}`;
   if (dateTo) url += `&date_to=${dateTo}`;
-  const resp = await api(url);
-  const news = resp.news || resp;
-  _allNews = news;
-  _newsTotal = resp.total || news.length;
-  _newsPageSize = limit;
-  renderNewsFiltered();
-  renderNewsPagination();
+  const newsTb = document.getElementById('news-table');
+  if (newsTb) newsTb.innerHTML = `<tr><td colspan="13"><div class="empty-state"><div class="pipeline-spinner" style="margin:0 auto 12px"></div>Загрузка ленты…</div></td></tr>`;
+  try {
+    const resp = await api(url);
+    const news = resp.news || resp;
+    _allNews = news;
+    _newsTotal = resp.total || news.length;
+    _newsPageSize = limit;
+    renderNewsFiltered();
+    renderNewsPagination();
+  } catch (e) {
+    if (newsTb) newsTb.innerHTML = `<tr><td colspan="13"><div class="empty-state"><div class="empty-icon">&#9888;</div>Не удалось загрузить ленту. Нажмите «Обновить».</div></td></tr>`;
+  }
 }
 
 function renderNewsPagination() {
@@ -2669,6 +2691,12 @@ function renderNewsFiltered() {
   const sorted = sortNews(filtered, _newsSortField, _newsSortDir).slice(0, limit);
   const newsTb = document.getElementById('news-table');
   if (!newsTb) return;
+  if (!sorted.length) {
+    const hasFilter = search || status || source || llmFilter || document.getElementById('news-date-from')?.value || document.getElementById('news-date-to')?.value;
+    newsTb.innerHTML = `<tr><td colspan="13"><div class="empty-state"><div class="empty-icon">&#128235;</div>${hasFilter ? 'Ничего не найдено по выбранным фильтрам' : 'Лента пуста'}</div></td></tr>`;
+    document.getElementById('news-count').textContent = '0 из ' + filtered.length;
+    return;
+  }
   newsTb.innerHTML = sorted.map(n => {
     let bigrams = '';
     try { bigrams = JSON.parse(n.bigrams||'[]').map(b=>b[0]).join(', '); } catch(e){}
