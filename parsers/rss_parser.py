@@ -130,10 +130,11 @@ def parse_rss_source(source: dict):
             # Fallback: let feedparser fetch directly (no proxy)
             logger.debug("Proxy fetch failed for RSS %s, falling back to direct feedparser", name)
             feed = feedparser.parse(url, request_headers={"User-Agent": _get_random_ua()})
-        if feed.bozo and not feed.entries:
-            # Some feeds (Sterling Sky, SEO Notebook) 403 browser UAs but serve
-            # a feed-fetcher UA. Retry once before giving up.
-            logger.debug("Empty/bozo feed for %s, retrying with feed-fetcher UA", name)
+        if not feed.entries:
+            # No entries can mean the proxy returned a 403 block page that parses
+            # as an empty (non-bozo) feed. Feeds like Sterling Sky / SEO Notebook
+            # 403 browser UAs but serve a feed-fetcher UA — retry direct once.
+            logger.debug("Empty feed for %s, retrying direct with feed-fetcher UA", name)
             try:
                 feed = feedparser.parse(url, request_headers={"User-Agent": "Feedfetcher-Google"})
             except Exception:
