@@ -563,6 +563,30 @@ def _pull_segment_news(seg, from_h, limit=40):
         cur.close()
 
 
+def _filter_recurring_stories(items):
+    """Drop candidates whose story was already covered in digests over the last 2 days.
+
+    The same evolving story (e.g. a Google update) is covered by new articles daily —
+    different ids/urls — so id-based exclusion misses it. Match by meaning instead,
+    reusing the existing tfidf+entity similarity. Near-identical rehashes are dropped;
+    a genuinely new development on the story still passes. Fails open on any error."""
+    if not items:
+        return items
+    try:
+        from storage.database import get_recent_digest_titles
+        from checks.deduplication import recurring_indices
+        prior = get_recent_digest_titles(days=2)
+        if not prior:
+            return items
+        dup = recurring_indices([it.get("title", "") for it in items], prior)
+        if dup:
+            logger.info("Digest cross-day dedup: dropped %d/%d recurring items", len(dup), len(items))
+        return [it for k, it in enumerate(items) if k not in dup]
+    except Exception as e:
+        logger.warning("Cross-day digest dedup skipped: %s", e)
+        return items
+
+
 def compose_digest(dtype="feed", period="day"):
     """Compose a digest for a content type and period, save it to history, return it.
 
@@ -577,9 +601,10 @@ def compose_digest(dtype="feed", period="day"):
     period_label = "за сутки" if period == "day" else "за неделю"
 
     if dtype == "general":
-        feed_news = _pull_segment_news("n.source NOT LIKE 'TG:%' AND COALESCE(n.is_case, 0) = 0", from_h, 14)
-        cases_news = _pull_segment_news("COALESCE(n.is_case, 0) = 1", from_h, 14)
-        tg_news = _pull_segment_news("n.source LIKE 'TG:%'", from_h, 14)
+        feed_news = _filter_recurring_stories(_pull_segment_news("n.source NOT LIKE 'TG:%' AND COALESCE(n.is_case, 0) = 0", from_h, 14))
+        cases_news = _filter_recurring_stories(_pull_segment_news("COALESCE(n.is_case, 0) = 1", from_h, 14))
+        tg_news = _filter_recurring_stories(_pull_segment_news("n.source LIKE 'TG:%'", from_h, 14))
+        used_items = feed_news + cases_news + tg_news
         from apis.digest import generate_general_digest
         result = generate_general_digest(feed_news, cases_news, tg_news, period_label)
         style_tag = "gen_" + period
@@ -589,14 +614,15 @@ def compose_digest(dtype="feed", period="day"):
         else:  # feed: main feed excludes TG channels and bookmarked cases
             dtype = "feed"
             seg, style_tag = "n.source NOT LIKE 'TG:%' AND COALESCE(n.is_case, 0) = 0", "feed_" + period
-        news_list = _pull_segment_news(seg, from_h, 40)
+        news_list = _filter_recurring_stories(_pull_segment_news(seg, from_h, 40))
+        used_items = news_list
         from apis.digest import generate_daily_digest
         result = generate_daily_digest(news_list, style="detailed", period_label=period_label, max_items=7)
 
     try:
         import uuid
         from datetime import datetime, timezone
-        from storage.database import save_digest
+        from storage.database import save_digest, record_digest_news
         if result.get("news_count", 0) > 0:
             save_digest(
                 digest_id=str(uuid.uuid4())[:12],
@@ -606,6 +632,8 @@ def compose_digest(dtype="feed", period="day"):
                 text=result.get("text", ""),
                 news_count=result.get("news_count", 0),
             )
+            # Remember covered stories so tomorrow's digest can skip the repeats.
+            record_digest_news(used_items)
     except Exception as e:
         logger.warning("Compose digest save failed: %s", e)
 

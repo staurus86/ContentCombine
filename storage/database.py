@@ -236,6 +236,17 @@ def _init_db_impl(conn, cur):
         )
     """
 
+    # Records which news went into each published digest, for cross-day story dedup
+    # (the same story is covered by new articles daily; id-based exclusion misses them).
+    digest_history_sql = """
+        CREATE TABLE IF NOT EXISTS digest_history (
+            news_id TEXT,
+            title TEXT,
+            digest_date TEXT,
+            created_at TEXT
+        )
+    """
+
     viral_triggers_sql = """
         CREATE TABLE IF NOT EXISTS viral_triggers_config (
             trigger_id TEXT PRIMARY KEY,
@@ -285,6 +296,7 @@ def _init_db_impl(conn, cur):
         cur.execute(feedback_sql)
         cur.execute(prompt_versions_sql)
         cur.execute(digests_sql)
+        cur.execute(digest_history_sql)
         cur.execute(viral_triggers_sql)
     else:
         cur.execute(news_sql)
@@ -294,6 +306,7 @@ def _init_db_impl(conn, cur):
         cur.execute(feedback_sql)
         cur.execute(prompt_versions_sql)
         cur.execute(digests_sql)
+        cur.execute(digest_history_sql)
         cur.execute(viral_triggers_sql)
         conn.commit()
 
@@ -824,6 +837,49 @@ def save_digest(digest_id: str, digest_date: str, style: str,
     finally:
         cur.close()
     logger.info("Saved digest: %s (%s)", title[:60], style)
+
+
+def record_digest_news(items, digest_date: str = None):
+    """Запоминает новости, вошедшие в опубликованный дайджест, для сквозной
+    (междневной) дедупликации историй. items: iterable dict'ов с 'id' и 'title'."""
+    items = [it for it in (items or []) if (it.get("title") or "").strip()]
+    if not items:
+        return
+    conn = get_connection()
+    cur = conn.cursor()
+    now = datetime.now(timezone.utc).isoformat()
+    digest_date = digest_date or datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    ph = "%s" if _is_postgres() else "?"
+    try:
+        for it in items:
+            cur.execute(
+                f"INSERT INTO digest_history (news_id, title, digest_date, created_at) VALUES ({ph},{ph},{ph},{ph})",
+                (it.get("id"), (it.get("title") or "").strip(), digest_date, now)
+            )
+        if not _is_postgres():
+            conn.commit()
+    finally:
+        cur.close()
+
+
+def get_recent_digest_titles(days: int = 2) -> list:
+    """Заголовки новостей из дайджестов за последние `days` КАЛЕНДАРНЫХ дней,
+    ИСКЛЮЧАЯ сегодня — чтобы душить именно повторы «день в день», а не
+    переборки одного дня. Источник для сквозной дедупликации."""
+    from datetime import timedelta
+    conn = get_connection()
+    cur = conn.cursor()
+    ph = "%s" if _is_postgres() else "?"
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    since = (datetime.now(timezone.utc) - timedelta(days=days)).strftime("%Y-%m-%d")
+    try:
+        cur.execute(
+            f"SELECT title FROM digest_history WHERE digest_date >= {ph} AND digest_date < {ph}",
+            (since, today)
+        )
+        return [r[0] for r in cur.fetchall() if r[0]]
+    finally:
+        cur.close()
 
 
 def get_digests(limit: int = 10) -> list[dict]:

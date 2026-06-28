@@ -83,6 +83,30 @@ def tfidf_similarity(titles: list[str], texts: list[str] | None = None) -> list[
     return pairs
 
 
+def recurring_indices(candidate_titles: list[str], prior_titles: list[str]) -> set:
+    """Индексы кандидатов, дублирующих УЖЕ опубликованную (prior) историю.
+
+    Для сквозной дедупликации дайджеста между днями: одна и та же история
+    (напр. «June 2026 Spam Update») каждый день освещается новыми статьями с
+    разными id/url — исключение по id её не ловит, нужна похожесть по смыслу.
+    Переиспользует tfidf+entity (tfidf_similarity) + точное совпадение.
+    """
+    if not prior_titles or not candidate_titles:
+        return set()
+    n_prior = len(prior_titles)
+    out = set()
+    # tfidf+entity: пара считается только если пересекает границу prior|candidate
+    for i, j, _ in tfidf_similarity(list(prior_titles) + list(candidate_titles)):
+        lo, hi = (i, j) if i < j else (j, i)
+        if lo < n_prior <= hi:
+            out.add(hi - n_prior)
+    # короткие заголовки могут не пройти лексический пол — добиваем точным матчем
+    for ci, ct in enumerate(candidate_titles):
+        if any(exact_duplicate(ct, pt) for pt in prior_titles):
+            out.add(ci)
+    return out
+
+
 DUPLICATE_STATUSES = {
     "unique": "unique",
     "popular": "popular",
