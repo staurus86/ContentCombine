@@ -7,6 +7,7 @@ Business logic lives in:
 
 import gc
 import logging
+import threading
 
 from apscheduler.schedulers.blocking import BlockingScheduler
 
@@ -38,18 +39,44 @@ RUNNING_SCHEDULER = None
 # a parser returning None, which means "I already recorded a specific failure").
 _PARSE_FAILED = object()
 
+# Guard against concurrent full-parse cycles. Three paths can launch parsing at once:
+# the background initial-parse thread, the scheduled adaptive_parse job, and the
+# watchdog recovery action. Overlapping cycles thrash the proxy pool/CPU so no cycle
+# ever traverses the full source list — starving most sources. Only one runs at a time;
+# any overlapping call returns immediately.
+_PARSE_LOCK = threading.Lock()
+
 
 def _parse_source_list(sources, label: str):
-    """Parse the given list of sources. Error-isolated per source."""
+    """Parse the given list of sources. Error-isolated per source.
+
+    Serialized: if a parse cycle is already running, this call is skipped so
+    concurrent cycles can't pile up (see _PARSE_LOCK)."""
     from core.watchdog import watchdog
     from core.source_health import source_health
     from core.timeouts import run_with_timeout
 
+    if not _PARSE_LOCK.acquire(blocking=False):
+        logger.info("[%s] Parse cycle already running — skipping overlapping run", label)
+        return 0
+    try:
+        return _parse_source_list_locked(sources, label, watchdog, source_health, run_with_timeout)
+    finally:
+        _PARSE_LOCK.release()
+
+
+def _parse_source_list_locked(sources, label, watchdog, source_health, run_with_timeout):
     total = 0
     failed = 0
 
-    for source in sources:
+    for idx, source in enumerate(sources):
         name = source.get("name", source.get("url", "unknown"))
+
+        # Heartbeat mid-cycle: a full traversal takes longer than the watchdog stale
+        # timeout (300s), so without this the watchdog would treat a healthy long cycle
+        # as dead and fire recovery — spawning the very overlap _PARSE_LOCK prevents.
+        if idx % 10 == 0:
+            watchdog.heartbeat("scheduler", f"parsing {idx}/{len(sources)} [{label}]")
 
         # Skip unhealthy sources (auto-disabled after consecutive failures)
         if not source_health.is_healthy(name):
