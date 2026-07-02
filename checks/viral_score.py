@@ -1,6 +1,3 @@
-from datetime import datetime, timezone
-from typing import Optional
-
 import config
 
 VIRAL_TRIGGERS = {
@@ -240,18 +237,6 @@ def reload_viral_triggers():
 # Initial build
 _rebuild_trigger_index()
 
-GAMING_EVENTS_CALENDAR = []
-
-
-def get_calendar_boost(dt: Optional[datetime] = None) -> tuple[int, str]:
-    if dt is None:
-        dt = datetime.now(timezone.utc)
-    for month, day_start, day_end, name, boost in GAMING_EVENTS_CALENDAR:
-        if dt.month == month and day_start <= dt.day <= day_end:
-            return boost, name
-    return 0, ""
-
-
 def viral_score(news: dict, precomputed_entities: list = None) -> dict:
     title = news.get("title", "").lower()
     plain = news.get("plain_text", "") or news.get("description", "") or ""
@@ -315,13 +300,6 @@ def viral_score(news: dict, precomputed_entities: list = None) -> dict:
         score += 45
         triggered.append({"id": "leak_big_title", "label": "Утечка + крупная сущность", "weight": 45})
 
-    # Lawsuit + Big company combo
-    has_lawsuit = any(kw in text for kw in ["lawsuit", "судебный иск", "court", "sued"])
-    has_big_company = any(e.get("type") == "studio" and e.get("tier") in ("S", "A", "B") for e in entities)
-    if has_lawsuit and has_big_company:
-        score += 20
-        triggered.append({"id": "lawsuit_big_company", "label": "Судебный иск + крупная компания", "weight": 20})
-
     # Scandal/controversy + big entity combo
     has_scandal = any(kw in text for kw in [
         "скандал", "controversy", "backlash", "outrage", "бойкот", "boycott",
@@ -329,12 +307,6 @@ def viral_score(news: dict, precomputed_entities: list = None) -> dict:
     if has_scandal and has_big_title:
         score += 25
         triggered.append({"id": "scandal_big_title", "label": "Скандал + крупная сущность", "weight": 25})
-
-    # Calendar boost
-    cal_boost, event_name = get_calendar_boost()
-    if cal_boost > 0:
-        score += cal_boost
-        triggered.append({"id": "calendar_event", "label": f"Event: {event_name}", "weight": cal_boost})
 
     score = min(100, score)
 

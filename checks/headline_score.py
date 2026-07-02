@@ -39,9 +39,9 @@ HEADLINE_PATTERNS = {
         "label": "Breaking news",
     },
     "first": {
-        "pattern": r'впервые|first ever|first look|первый взгляд|мировая премьера|world premiere',
+        "pattern": r'впервые|first ever|первым|первая в|впервые в истории',
         "bonus": 15,
-        "label": "First/Premiere",
+        "label": "First/Впервые",
     },
     "list": {
         "pattern": r'^\d+ (лучших|причин|способов|ошибок|инструментов|трендов|фактор|tips|best|reasons|ways|tools|mistakes|trends|things)',

@@ -7,7 +7,6 @@ from checks.viral_score import viral_score
 from checks.tags import auto_tag
 from checks.sentiment import analyze_sentiment
 from checks.momentum import get_momentum, invalidate_cache
-from checks.ner import extract_entities
 from checks.headline_score import headline_score
 from checks.source_weight import get_source_weight
 from checks.feedback import get_feedback_adjustments
@@ -91,7 +90,6 @@ def _check_single(news: dict) -> dict:
         result["tags"] = []
         result["sentiment"] = {"label": "neutral", "score": 0}
         result["momentum"] = {"score": 0, "level": "none"}
-        result["entities"] = {"studios": [], "games": [], "platforms": [], "numbers": [], "events": [], "total_entities": 0}
         result["headline"] = {"score": 0}
         result["source_weight"] = 1.0
         result["game_entities"] = []
@@ -131,7 +129,6 @@ def _check_single(news: dict) -> dict:
         logger.debug("auto is_case skip: %s", _e)
     result["sentiment"] = analyze_sentiment(news)
     result["momentum"] = get_momentum(news)
-    result["entities"] = extract_entities(news)
     result["headline"] = headline_score(news)
     result["source_weight"] = get_source_weight(news.get("source", ""))
 

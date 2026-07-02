@@ -2,32 +2,35 @@
 
 # Русские сентимент-слова
 POSITIVE_RU = [
-    "отлично", "великолепно", "шедевр", "лучший", "лучшая", "рекорд",
-    "победа", "успех", "хвалят", "восторг", "потрясающий", "прорыв",
-    "идеальный", "замечательный", "топ", "супер", "феноменальный",
-    "бесплатно", "раздача", "награда", "goty", "платина",
+    "отлично", "великолепно", "лучший", "лучшая", "рекорд",
+    "победа", "успех", "хвалят", "прорыв",
+    "идеальный", "замечательный", "топ", "супер",
+    "бесплатно", "награда", "рост трафика", "рост позиций",
+    "в топе выдачи", "восстановление трафика",
 ]
 
 NEGATIVE_RU = [
     "провал", "разочарование", "ужасный", "худший", "худшая", "баги",
-    "вылеты", "сломано", "критика", "скандал", "бойкот", "увольнения",
-    "закрыли", "отменили", "перенос", "проблемы", "неоптимизировано",
-    "мусор", "треш", "позор", "крах", "убытки", "иск", "обман",
+    "сломано", "критика", "скандал", "бойкот", "увольнения",
+    "закрыли", "отменили", "проблемы",
+    "мусор", "позор", "крах", "убытки", "иск", "обман",
+    "падение трафика", "просадка позиций", "фильтр", "санкции",
+    "деиндексация", "выпал из индекса",
 ]
 
 POSITIVE_EN = [
-    "excellent", "amazing", "masterpiece", "best", "record", "goty",
+    "excellent", "amazing", "best", "record",
     "award", "praised", "stunning", "breakthrough", "perfect", "top",
-    "phenomenal", "free", "giveaway", "platinum", "incredible",
-    "outstanding", "brilliant", "must-play",
+    "free", "incredible", "outstanding", "brilliant",
+    "traffic growth", "ranking boost", "recovery",
 ]
 
 NEGATIVE_EN = [
-    "flop", "disappointing", "terrible", "worst", "bugs", "crashes",
+    "flop", "disappointing", "terrible", "worst", "bugs",
     "broken", "backlash", "controversy", "boycott", "layoffs",
-    "canceled", "cancelled", "delayed", "problems", "unoptimized",
-    "trash", "disaster", "lawsuit", "fraud", "scam", "refund",
-    "overwhelmingly negative", "mostly negative",
+    "canceled", "cancelled", "problems",
+    "trash", "disaster", "lawsuit", "fraud", "scam",
+    "traffic drop", "ranking drop", "penalty", "deindexed",
 ]
 
 # Pre-concatenated lists (built once at import)
