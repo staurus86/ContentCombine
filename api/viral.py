@@ -70,16 +70,16 @@ def get_viral(query_params):
         sentiment_counts = {"positive": 0, "negative": 0, "neutral": 0}
         source_scores = {}
 
-        # Category mapping from trigger_id prefix (SEO/GEO). Includes combo-triggers
-        # (leak/closure/lawsuit/scandal/calendar) so they don't fall into «Прочее».
+        # Category mapping from trigger_id prefix (SEO/GEO). Includes the surviving
+        # combo-triggers (leak_big_title, scandal_big_title) so they don't fall into
+        # «Прочее». closure/lawsuit/calendar combos were removed — no entries for them.
         CATEGORY_MAP = {
             "aisearch": "AI-поиск", "agentic": "AI-агенты", "crawler": "AI-краулеры",
             "modelrelease": "Релизы моделей", "protocol": "Протоколы", "zeroclick": "Zero-click",
             "regulation": "Регуляции", "algoupd": "Апдейты", "penalty": "Санкции",
             "volatility": "Волатильность", "ranking": "Ранжирование", "technical": "Техничка",
             "link": "Ссылки", "content": "Контент", "measure": "Метрики", "urgency": "Срочное",
-            "leak": "Утечки", "closure": "Индустрия", "lawsuit": "Регуляции",
-            "scandal": "Скандалы", "calendar": "События",
+            "leak": "Утечки", "scandal": "Скандалы",
         }
         # Pure scoring signals — not topical, excluded from category/trigger stats.
         SCORING_ONLY = {"dedup", "entity_boost"}

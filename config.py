@@ -42,6 +42,16 @@ AUTO_APPROVE_THRESHOLD = _int_env("AUTO_APPROVE_THRESHOLD", 0)  # 0 = disabled, 
 AUTO_REWRITE_ON_PUBLISH_NOW = os.getenv("AUTO_REWRITE_ON_PUBLISH_NOW", "true").lower() == "true"
 AUTO_REWRITE_STYLE = os.getenv("AUTO_REWRITE_STYLE", "news")
 
+# Веса 4 чеков в total_score (сумма = 1.0). Раньше был плоский //4 (по 25%),
+# и сильный тематический сигнал размывался. Ниша — тематический новостной поток,
+# поэтому важность темы (relevance+viral=65%) весит больше механики текста
+# (quality+freshness=35%). Возраст отдельно фильтруется на уровне запросов
+# (окна дайджеста), поэтому freshness в скоре можно не переоценивать.
+CHECK_WEIGHT_QUALITY = float(os.getenv("CHECK_WEIGHT_QUALITY", "0.20"))
+CHECK_WEIGHT_RELEVANCE = float(os.getenv("CHECK_WEIGHT_RELEVANCE", "0.30"))
+CHECK_WEIGHT_FRESHNESS = float(os.getenv("CHECK_WEIGHT_FRESHNESS", "0.15"))
+CHECK_WEIGHT_VIRAL = float(os.getenv("CHECK_WEIGHT_VIRAL", "0.35"))
+
 # Scoring formula weights (must sum to 1.0).
 # Viral снижен с 0.2 до 0.05: виральность уже входит в internal (total_score —
 # среднее 4 чеков, включая viral), с 0.2 она учитывалась дважды.
@@ -445,6 +455,8 @@ def load_persistent_settings():
         # Float settings
         for key in ("SCORE_WEIGHT_INTERNAL", "SCORE_WEIGHT_VIRAL", "SCORE_WEIGHT_KEYSO",
                      "SCORE_WEIGHT_TRENDS", "SCORE_WEIGHT_HEADLINE",
+                     "CHECK_WEIGHT_QUALITY", "CHECK_WEIGHT_RELEVANCE",
+                     "CHECK_WEIGHT_FRESHNESS", "CHECK_WEIGHT_VIRAL",
                      "LLM_TEMPERATURE", "SHEETS_MIN_API_INTERVAL"):
             if key in settings:
                 try:

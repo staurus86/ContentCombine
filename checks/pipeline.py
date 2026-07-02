@@ -135,7 +135,18 @@ def _check_single(news: dict) -> dict:
     result["entities"] = game_ents
 
     all_pass = all(c["pass"] for c in result["checks"].values())
-    total_score = sum(c["score"] for c in result["checks"].values()) // 4
+
+    # Взвешенное среднее 4 чеков (раньше плоское //4). Важность темы весит больше
+    # механики текста — см. config.CHECK_WEIGHT_*.
+    import config as _cfg
+    _cw = {
+        "quality": _cfg.CHECK_WEIGHT_QUALITY,
+        "relevance": _cfg.CHECK_WEIGHT_RELEVANCE,
+        "freshness": _cfg.CHECK_WEIGHT_FRESHNESS,
+        "viral": _cfg.CHECK_WEIGHT_VIRAL,
+    }
+    base_weighted = round(sum(result["checks"][k]["score"] * w for k, w in _cw.items()))
+    total_score = base_weighted
 
     # Momentum бустит score
     momentum_bonus = result["momentum"]["score"] // 5
@@ -190,7 +201,7 @@ def _check_single(news: dict) -> dict:
         "headline_bonus": headline_bonus,
         "source_weight": sw,
         "feedback_adj": round(feedback_adj, 2),
-        "base_avg": sum(c["score"] for c in result["checks"].values()) // 4,
+        "base_weighted": base_weighted,
         "final_total": total_score,
     }
 
