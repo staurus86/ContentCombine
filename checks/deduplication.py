@@ -17,7 +17,7 @@ def exact_duplicate(title1: str, title2: str) -> bool:
 
 
 def entity_overlap(text1: str, text2: str) -> float:
-    """Пересечение игровых сущностей между двумя текстами (через единую базу)."""
+    """Пересечение известных сущностей между двумя текстами (через единую базу)."""
     ents1 = set(e["name"] for e in find_entities(text1))
     ents2 = set(e["name"] for e in find_entities(text2))
     if not ents1 and not ents2:
@@ -149,11 +149,14 @@ def build_groups(results: list[dict], pairs: list[tuple]) -> list[dict]:
         else:
             dup_status = "unique"
 
-        # Помечаем дубликаты (score > 0.85)
+        # Помечаем дубликаты (score > 0.85): каноном остаётся член пары с бóльшим
+        # total_score, а не просто более ранний по индексу
         duplicates = set()
         for i, j, score in pairs:
             if i in group and j in group and score > 0.85:
-                duplicates.add(j)
+                si = results[i].get("total_score", 0)
+                sj = results[j].get("total_score", 0)
+                duplicates.add(j if sj <= si else i)
 
         groups.append({
             "status": dup_status,

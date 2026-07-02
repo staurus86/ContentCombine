@@ -45,7 +45,7 @@ def _get_recent_news() -> list[dict]:
             SELECT id, source, title, parsed_at FROM news
             WHERE parsed_at > {ph}
             ORDER BY parsed_at DESC
-            LIMIT 100
+            LIMIT 1000
         """, (cutoff,))
 
         if _is_postgres():

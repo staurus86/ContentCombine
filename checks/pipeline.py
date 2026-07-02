@@ -17,6 +17,57 @@ from storage.database import get_connection, _is_postgres, update_news_status, s
 logger = logging.getLogger(__name__)
 
 
+def _mark_cross_batch_duplicates(results: list[dict]):
+    """Помечает кандидатов, дублирующих уже обработанные новости (за 48ч).
+
+    Внутрибатчевый дедуп не видит историю: батчи по 20-100 штук, а один сюжет
+    с разных доменов приходит в разных циклах парсинга. Переиспользует
+    recurring_indices (tfidf+entity по заголовкам)."""
+    from checks.deduplication import recurring_indices
+
+    candidates = [r for r in results if not r.get("is_duplicate")]
+    if not candidates:
+        return
+
+    batch_ids = {r["id"] for r in results}
+    conn = get_connection()
+    cur = conn.cursor()
+    try:
+        if _is_postgres():
+            cur.execute("""
+                SELECT id, title FROM news
+                WHERE status IN ('in_review', 'moderation', 'approved', 'processed', 'ready', 'not_ready')
+                  AND COALESCE(is_deleted, 0) = 0
+                  AND parsed_at::timestamptz > (NOW() - INTERVAL '48 hours')
+                ORDER BY parsed_at DESC LIMIT 1000
+            """)
+            prior_rows = cur.fetchall()
+        else:
+            cur.execute("""
+                SELECT id, title FROM news
+                WHERE status IN ('in_review', 'moderation', 'approved', 'processed', 'ready', 'not_ready')
+                  AND COALESCE(is_deleted, 0) = 0
+                  AND parsed_at > datetime('now', '-2 days')
+                ORDER BY parsed_at DESC LIMIT 1000
+            """)
+            prior_rows = [(row["id"], row["title"]) for row in cur.fetchall()]
+    finally:
+        cur.close()
+
+    prior_titles = [t for pid, t in prior_rows if pid not in batch_ids and t]
+    if not prior_titles:
+        return
+
+    dup_idx = recurring_indices([c.get("title", "") for c in candidates], prior_titles)
+    for k in dup_idx:
+        candidates[k]["overall_pass"] = False
+        candidates[k]["is_duplicate"] = True
+        candidates[k]["dedup_status"] = "duplicate"
+    if dup_idx:
+        logger.info("Cross-batch dedup: %d/%d marked duplicate against 48h history",
+                    len(dup_idx), len(candidates))
+
+
 def _check_single(news: dict) -> dict:
     """Проверяет одну новость. Возвращает результат без изменения статуса."""
     result = {
@@ -191,6 +242,14 @@ def run_review_pipeline(news_list: list[dict], update_status: bool = True) -> di
         for member in group["members"]:
             member["dedup_status"] = group["status"]
 
+    # Cross-batch dedup: батчи маленькие (20-100), та же история из следующего
+    # цикла парсинга не встречалась с уже обработанной. Сравниваем кандидатов
+    # с новостями за 48ч, прошедшими ревью ранее.
+    try:
+        _mark_cross_batch_duplicates(results)
+    except Exception as e:
+        logger.warning("Cross-batch dedup skipped: %s", e)
+
     # Decision trace helper (best-effort, non-blocking)
     def _trace(news_id, step, decision, reason="", details=None, s_before=0, s_after=0):
         try:
@@ -200,7 +259,10 @@ def run_review_pipeline(news_list: list[dict], update_status: bool = True) -> di
             pass
 
     # Save check results in DB (always) + update statuses (optional)
-    AUTO_REJECT_SCORE = 15
+    # Порог из config: раньше здесь был захардкожен 15, и настройка
+    # AUTO_REJECT_SCORE_THRESHOLD меняла только оркестратор, но не это место.
+    import config
+    AUTO_REJECT_SCORE = config.AUTO_REJECT_SCORE_THRESHOLD
     text_by_id = {n.get("id"): ((n.get("title") or "") + " " + (n.get("plain_text") or n.get("description") or "")) for n in news_list}
     for r in results:
         if update_status:
