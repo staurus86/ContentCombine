@@ -1054,8 +1054,9 @@ def run_no_llm_pipeline(news_ids: list[str], task_ids: list[str]):
 # ─── Scheduled jobs ───
 
 # NB: the daily digest published to Telegram is auto_publish_telegram_digest
-# (20:00 MSK) → compose_digest("general","day"), which records covered stories
-# via record_digest_news for cross-day dedup. An older generate_auto_digest()
+# (config.AUTO_DIGEST_CRON_HOUR:00 MSK, default 20:00) → compose_digest("general",
+# "day"), which records covered stories via record_digest_news for cross-day
+# dedup. An older generate_auto_digest()
 # (top-20 "brief", saved but never published, never scheduled) was removed as
 # dead code — it duplicated the pull without recording history.
 
@@ -1107,18 +1108,21 @@ def auto_publish_telegram_digest():
 
 
 def catchup_tg_digest():
-    """Self-heal: if the 20:00 cron was missed (e.g. a deploy restarted the in-memory
-    scheduler right at 20:00), publish once it's past 20:00 MSK and not yet sent today.
-    Runs on a short interval; a no-op before 20:00 or after the day is already sent."""
+    """Self-heal: if the daily cron was missed (e.g. a deploy restarted the in-memory
+    scheduler right at the slot), publish once it's past the configured hour (MSK) and
+    not yet sent today. Runs on a short interval; a no-op before the slot or after the
+    day is already sent. Same hour as the cron: config.AUTO_DIGEST_CRON_HOUR."""
     try:
         from datetime import datetime, timezone, timedelta
+        slot_hour = config.AUTO_DIGEST_CRON_HOUR
         msk = datetime.now(timezone.utc) + timedelta(hours=3)
-        if msk.hour < 20:
+        if msk.hour < slot_hour:
             return  # before the slot — the daily cron will handle it
         from storage.database import get_app_setting
         if get_app_setting(AUTO_TG_PUBLISH_MARKER) == _today_msk():
             return  # already published today
-        logger.warning("Catch-up: 20:00 digest not sent yet (now %s MSK) — publishing now", msk.strftime("%H:%M"))
+        logger.warning("Catch-up: %02d:00 digest not sent yet (now %s MSK) — publishing now",
+                       slot_hour, msk.strftime("%H:%M"))
         auto_publish_telegram_digest()
     except Exception as e:
         logger.error("Catch-up TG digest error: %s", e)

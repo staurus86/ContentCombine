@@ -259,9 +259,11 @@ def start_scheduler():
     # Auto-rescore news with score=0: daily at 04:00
     scheduler.add_job(_auto_rescore_zero, "cron", hour=4, minute=0, id="auto_rescore_zero")
 
-    # Auto digest → Telegram channel: daily at 20:00 Moscow time.
-    # Builds the GENERAL digest (best of feed + cases + telegram, 24h) and publishes it.
-    scheduler.add_job(auto_publish_telegram_digest, "cron", hour=20, minute=0, id="auto_tg_digest")
+    # Auto digest → Telegram channel: daily at AUTO_DIGEST_CRON_HOUR:00 Moscow time
+    # (scheduler tz = Europe/Moscow). Builds the GENERAL digest (best of feed + cases
+    # + telegram, 24h) and publishes it. Changing the setting takes effect on restart.
+    scheduler.add_job(auto_publish_telegram_digest, "cron",
+                      hour=config.AUTO_DIGEST_CRON_HOUR, minute=0, id="auto_tg_digest")
 
     # Self-heal: if a deploy restarted the in-memory scheduler right at 20:00 and the
     # cron run was lost, this catch-up republishes once (idempotent via the date marker).
