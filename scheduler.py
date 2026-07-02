@@ -27,7 +27,7 @@ from pipeline.orchestrator import (  # noqa: F401
     _update_task, _create_task, _fetch_news_by_id, _fetch_analysis_by_id,
     _calc_final_score, run_full_auto_pipeline, run_no_llm_pipeline,
     _save_rewrite_article, _build_check_result_from_analysis,
-    generate_auto_digest, auto_publish_telegram_digest, catchup_tg_digest,
+    auto_publish_telegram_digest, catchup_tg_digest,
     check_critical_alerts, publish_scheduled_articles,
     FULL_AUTO_SCORE_THRESHOLD, FULL_AUTO_FINAL_THRESHOLD,
 )

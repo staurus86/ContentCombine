@@ -1053,92 +1053,11 @@ def run_no_llm_pipeline(news_ids: list[str], task_ids: list[str]):
 
 # ─── Scheduled jobs ───
 
-def generate_auto_digest():
-    """Generate daily auto-digest: top-20 news from last 24 hours."""
-    try:
-        from storage.database import get_connection, _is_postgres, save_digest
-        from apis.digest import generate_daily_digest
-        import uuid
-        from datetime import datetime, timezone
-
-        conn = get_connection()
-        cur = conn.cursor()
-        try:
-            # Берём 40 кандидатов с запасом: после дедупа и кросс-дневного
-            # фильтра останется топ-20
-            if _is_postgres():
-                cur.execute("""
-                    SELECT n.id, n.title, n.source, n.url,
-                           COALESCE(a.total_score, 0) as total_score
-                    FROM news n
-                    LEFT JOIN news_analysis a ON a.news_id = n.id
-                    WHERE n.status IN ('approved', 'processed', 'in_review', 'ready')
-                      AND n.parsed_at::timestamptz > (NOW() - INTERVAL '24 hours')
-                    ORDER BY COALESCE(a.total_score, 0) DESC
-                    LIMIT 40
-                """)
-                columns = [desc[0] for desc in cur.description]
-                news_list = [dict(zip(columns, row)) for row in cur.fetchall()]
-            else:
-                cur.execute("""
-                    SELECT n.id, n.title, n.source, n.url,
-                           COALESCE(a.total_score, 0) as total_score
-                    FROM news n
-                    LEFT JOIN news_analysis a ON a.news_id = n.id
-                    WHERE n.status IN ('approved', 'processed', 'in_review', 'ready')
-                      AND n.parsed_at > datetime('now', '-1 day')
-                    ORDER BY COALESCE(a.total_score, 0) DESC
-                    LIMIT 40
-                """)
-                news_list = [dict(row) for row in cur.fetchall()]
-        finally:
-            cur.close()
-
-        if not news_list:
-            logger.info("Auto-digest: no news in last 24h, skipping")
-            return
-
-        # Дедуп внутри выборки: раньше топ-20 по скору мог состоять из пересказов
-        # одной истории. Список отсортирован по скору DESC, из пары похожих
-        # выбрасывается более поздний (слабый). Fails open.
-        try:
-            from checks.deduplication import tfidf_similarity
-            drop = {j for _i, j, _s in tfidf_similarity([n["title"] for n in news_list])}
-            if drop:
-                logger.info("Auto-digest dedup: dropped %d/%d similar items", len(drop), len(news_list))
-                news_list = [n for k, n in enumerate(news_list) if k not in drop]
-        except Exception as e:
-            logger.warning("Auto-digest intra-list dedup skipped: %s", e)
-
-        # Кросс-дневной фильтр: те же истории, уже покрытые дайджестами за 2 дня
-        try:
-            from api.news import _filter_recurring_stories
-            news_list = _filter_recurring_stories(news_list)
-        except Exception as e:
-            logger.warning("Auto-digest cross-day dedup skipped: %s", e)
-
-        news_list = news_list[:20]
-        if not news_list:
-            logger.info("Auto-digest: all candidates deduplicated, skipping")
-            return
-
-        result = generate_daily_digest(news_list, style="brief")
-
-        digest_id = str(uuid.uuid4())[:12]
-        digest_date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-        save_digest(
-            digest_id=digest_id,
-            digest_date=digest_date,
-            style="brief",
-            title=result.get("title", ""),
-            text=result.get("text", ""),
-            news_count=result.get("news_count", 0),
-        )
-        logger.info("Auto-digest generated: %s (%d news)", result.get("title", "")[:60], len(news_list))
-
-    except Exception as e:
-        logger.error("Auto-digest error: %s", e)
-
+# NB: the daily digest published to Telegram is auto_publish_telegram_digest
+# (20:00 MSK) → compose_digest("general","day"), which records covered stories
+# via record_digest_news for cross-day dedup. An older generate_auto_digest()
+# (top-20 "brief", saved but never published, never scheduled) was removed as
+# dead code — it duplicated the pull without recording history.
 
 AUTO_TG_PUBLISH_MARKER = "auto_tg_publish_date"  # idempotency: date of last successful auto-publish (MSK)
 
