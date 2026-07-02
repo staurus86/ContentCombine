@@ -470,7 +470,7 @@ def write_not_ready_row(news: dict, check_results: dict) -> int | None:
         tags_str = ", ".join(filter(None, tags_parts))
 
         # Entities: list[dict], list[str], or JSON string
-        entities_raw = check_results.get("game_entities") or []
+        entities_raw = check_results.get("entities") or []
         if isinstance(entities_raw, str):
             entities_raw = _safe_json_loads(entities_raw, [])
         ent_names = []
@@ -529,7 +529,7 @@ def _build_not_ready_row(news: dict, check_results: dict) -> tuple[list, str]:
             tags_parts.append(t)
     tags_str = ", ".join(filter(None, tags_parts))
 
-    entities_raw = check_results.get("game_entities") or []
+    entities_raw = check_results.get("entities") or []
     if isinstance(entities_raw, str):
         entities_raw = _safe_json_loads(entities_raw, [])
     ent_names = []
@@ -657,7 +657,7 @@ def write_storylines(storylines: list[dict]) -> dict:
         cluster_name = f"Сюжет #{idx}"
         phase = phase_labels.get(s.get("phase", ""), s.get("phase", ""))
         sources = ", ".join(s.get("sources", []))
-        games = ", ".join(s.get("top_games", []))
+        games = ", ".join(s.get("top_entities", []))
         triggers = ", ".join(s.get("top_triggers", []))
         count = s.get("count", 0)
         avg_score = s.get("avg_score", 0)

@@ -78,7 +78,7 @@ def _auto_review_new():
                         "tags": r.get("tags"),
                         "headline": r.get("headline"),
                         "momentum": r.get("momentum"),
-                        "game_entities": r.get("game_entities"),
+                        "entities": r.get("entities"),
                     }
                     high_score_items.append((news_dict, check_results))
             if high_score_items:
@@ -762,7 +762,7 @@ def run_full_auto_pipeline(news_ids: list[str], task_ids: list[str]):
                                 "viral": {"score": analysis.get("viral_score", 0), "triggers": []},
                             },
                             "tags": analysis.get("tags", []),
-                            "game_entities": [],
+                            "entities": [],
                             "sentiment": {"label": "neutral"},
                             "headline": {"score": 0},
                             "momentum": {"score": 0},
@@ -923,7 +923,7 @@ def _build_check_result_from_analysis(analysis: dict) -> dict:
     sentiment = {"label": analysis.get("sentiment_label", "neutral") or "neutral", "score": 0}
     momentum = {"score": analysis.get("momentum_score", 0) or 0, "level": "none"}
     headline = {"score": analysis.get("headline_score", 0) or 0}
-    game_entities = _safe_loads(analysis.get("entity_names") or analysis.get("entities"), [])
+    entities = _safe_loads(analysis.get("entity_names") or analysis.get("entities"), [])
 
     return {
         "checks": checks,
@@ -931,7 +931,7 @@ def _build_check_result_from_analysis(analysis: dict) -> dict:
         "sentiment": sentiment,
         "momentum": momentum,
         "headline": headline,
-        "game_entities": game_entities,
+        "entities": entities,
         "total_score": analysis.get("total_score", 0) or 0,
     }
 

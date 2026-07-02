@@ -21,7 +21,7 @@ def build_check_result_from_analysis(analysis: dict | None) -> dict:
     analysis = analysis or {}
     viral_triggers = _safe_json_loads(analysis.get("viral_data"), [])
     tags = _safe_json_loads(analysis.get("tags_data") or analysis.get("tags"), [])
-    game_entities = _safe_json_loads(analysis.get("entity_names") or analysis.get("entities"), [])
+    entities = _safe_json_loads(analysis.get("entity_names") or analysis.get("entities"), [])
 
     return {
         "checks": {
@@ -44,7 +44,7 @@ def build_check_result_from_analysis(analysis: dict | None) -> dict:
         "sentiment": {"label": analysis.get("sentiment_label", "neutral") or "neutral", "score": 0},
         "momentum": {"score": analysis.get("momentum_score", 0) or 0, "level": "none"},
         "headline": {"score": analysis.get("headline_score", 0) or 0},
-        "game_entities": game_entities,
+        "entities": entities,
         "total_score": analysis.get("total_score", 0) or 0,
     }
 

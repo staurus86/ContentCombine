@@ -94,7 +94,7 @@ def _parse_source_list_locked(sources, label, watchdog, source_health, run_with_
             def _parse_one(src=source):
                 if src["type"] == "rss":
                     return parse_rss_source(src)
-                elif src["type"] in ("html", "dtf", "gamesradar", "homepage"):
+                elif src["type"] in ("html", "homepage"):
                     return parse_html_source(src)
                 elif src["type"] == "sitemap":
                     from parsers.html_parser import parse_sitemap_source

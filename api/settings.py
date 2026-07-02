@@ -683,7 +683,7 @@ def heal_source(body):
             steps.append({"action": "reparse", "status": "fail", "detail": str(e)[:200]})
 
         # Step 3b: If HTML source failed — try alternative selectors
-        if not healed and source["type"] in ("html", "dtf"):
+        if not healed and source["type"] == "html":
             alt_selectors = ["article", "div.article", ".news-item", ".post", "a[href*='news']", "a[href*='article']",
                              ".card", ".feed-item", "h2 a", "h3 a"]
             original_sel = source.get("selector", "article")

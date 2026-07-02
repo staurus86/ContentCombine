@@ -92,7 +92,7 @@ def _check_single(news: dict) -> dict:
         result["momentum"] = {"score": 0, "level": "none"}
         result["headline"] = {"score": 0}
         result["source_weight"] = 1.0
-        result["game_entities"] = []
+        result["entities"] = []
         result["overall_pass"] = False
         result["total_score"] = max(0, q_score // 5)  # scale 0-100 quality to ~0-20 total
         result["feedback_adjustment"] = 0.0
@@ -132,7 +132,7 @@ def _check_single(news: dict) -> dict:
     result["headline"] = headline_score(news)
     result["source_weight"] = get_source_weight(news.get("source", ""))
 
-    result["game_entities"] = game_ents
+    result["entities"] = game_ents
 
     all_pass = all(c["pass"] for c in result["checks"].values())
     total_score = sum(c["score"] for c in result["checks"].values()) // 4
@@ -286,7 +286,7 @@ def run_review_pipeline(news_list: list[dict], update_status: bool = True) -> di
                 momentum=r.get("momentum"),
                 headline=r.get("headline"),
                 total_score=r.get("total_score", 0),
-                entities=r.get("game_entities"),
+                entities=r.get("entities"),
                 score_breakdown=r.get("score_breakdown"),
             )
         except Exception as e:

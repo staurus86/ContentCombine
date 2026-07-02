@@ -328,7 +328,7 @@ input:focus, textarea:focus, select:focus { outline:none; border-color:#1da1f2; 
 .storyline-tags { display:flex; flex-wrap:wrap; gap:6px; align-items:center; margin-bottom:8px; }
 .stl-label { font-size:0.8em; color:var(--c-muted); margin-right:2px; }
 .stl-tag { display:inline-block; padding:2px 10px; border-radius:12px; font-size:0.78em; font-weight:500; }
-.stl-tag.game { background:#1a3a2a; color:#17bf63; border:1px solid #22503a; }
+.stl-tag.entity { background:#1a3a2a; color:#17bf63; border:1px solid #22503a; }
 .stl-tag.trigger { background:#3a2a1a; color:#ffad1f; border:1px solid #504022; }
 
 /* Health plus */
@@ -1561,7 +1561,7 @@ input:focus, textarea:focus, select:focus { outline:none; border-color:#1da1f2; 
           <div class="form-group"><label>Имя</label><input id="src-name" autocomplete="off"></div>
           <div class="form-group"><label>Тип</label>
             <select id="src-type" onchange="toggleSrcFields()">
-              <option value="rss">RSS</option><option value="html">HTML</option><option value="dtf">DTF (SPA)</option><option value="sitemap">Sitemap XML</option>
+              <option value="rss">RSS</option><option value="html">HTML</option><option value="sitemap">Sitemap XML</option>
             </select>
           </div>
           <div class="form-group"><label>URL</label><input id="src-url" autocomplete="off"></div>
@@ -1821,8 +1821,8 @@ input:focus, textarea:focus, select:focus { outline:none; border-color:#1da1f2; 
     <input type="hidden" id="edit-old-name">
     <div class="form-group"><label>Имя</label><input id="edit-name"></div>
     <div class="form-group"><label>Type</label>
-      <select id="edit-type" onchange="document.getElementById('edit-selector-group').style.display=['html','dtf'].includes(this.value)?'block':'none'">
-        <option value="rss">RSS</option><option value="html">HTML</option><option value="dtf">DTF</option><option value="vk">VK</option><option value="telegram">Telegram</option><option value="bluesky">Bluesky</option><option value="homepage">Homepage</option><option value="gamesradar">GamesRadar</option>
+      <select id="edit-type" onchange="document.getElementById('edit-selector-group').style.display=this.value==='html'?'block':'none'">
+        <option value="rss">RSS</option><option value="html">HTML</option><option value="vk">VK</option><option value="telegram">Telegram</option><option value="bluesky">Bluesky</option><option value="homepage">Homepage</option>
       </select>
     </div>
     <div class="form-group"><label>URL</label><input id="edit-url"></div>
@@ -2147,7 +2147,7 @@ function openEditModal(name) {
   document.getElementById('edit-url').value = s.url || s.channel || s.group_id || s.screen_name || s.handle || '';
   document.getElementById('edit-interval').value = s.interval;
   document.getElementById('edit-selector').value = s.selector || '';
-  document.getElementById('edit-selector-group').style.display = ['html','dtf'].includes(s.type) ? 'block' : 'none';
+  document.getElementById('edit-selector-group').style.display = s.type === 'html' ? 'block' : 'none';
   document.getElementById('edit-modal').classList.add('show');
 }
 
@@ -6535,9 +6535,9 @@ async function loadStorylines() {
           '<span style="color:var(--c-muted);font-size:0.75em">' + fmtDate(m.published_ts || m.published_at) + '</span>' +
         '</div>';
       }).join('');
-      const gamesHtml = (s.top_games||[]).length
+      const entitiesHtml = (s.top_entities||[]).length
         ? '<div class="storyline-tags"><span class="stl-label">Сущности:</span>' +
-          s.top_games.map(g => '<span class="stl-tag game">' + esc(g) + '</span>').join('') + '</div>'
+          s.top_entities.map(g => '<span class="stl-tag entity">' + esc(g) + '</span>').join('') + '</div>'
         : '';
       const triggersHtml = (s.top_triggers||[]).length
         ? '<div class="storyline-tags"><span class="stl-label">\uD83D\uDD25 Триггеры:</span>' +
@@ -6560,7 +6560,7 @@ async function loadStorylines() {
           '<button class="sl-action" onclick="slPin(\'' + ids + '\')" title="Сохранить весь сюжет в Кейсы">&#128204; В кейсы</button>' +
           '<button class="sl-action tg" onclick="openTgModal(\'' + topId + '\')" title="Топ-новость сюжета в Telegram">&#128228; В Telegram</button>' +
         '</div>' +
-        gamesHtml + triggersHtml +
+        entitiesHtml + triggersHtml +
         '<div class="storyline-members">' + membersHtml + '</div>' +
       '</div>';
     }).join('');

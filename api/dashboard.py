@@ -290,7 +290,7 @@ def get_storylines(days: int = 3):
                 except Exception:
                     pass
             ent_counts = Counter(all_entities)
-            top_games = [name for name, _ in ent_counts.most_common(10)]
+            top_entities = [name for name, _ in ent_counts.most_common(10)]
 
             # Aggregate viral triggers across cluster
             all_triggers = []
@@ -318,7 +318,7 @@ def get_storylines(days: int = 3):
                 "sources": sources,
                 "avg_score": avg_score,
                 "max_viral": max_viral,
-                "top_games": top_games,
+                "top_entities": top_entities,
                 "top_triggers": top_triggers,
                 "members": [{
                     "id": m.get("id", ""),
