@@ -5,9 +5,10 @@ signal → higher relevance. A small noise list lightly penalises clearly off-to
 posts (crypto pumps, gambling, unrelated politics).
 """
 
-# Тематические ключевые слова. Подстроки подобраны так, чтобы ловить словоформы
+# Узкие тематические ключи (вес 12): однозначно про SEO / AI-поиск / digital.
+# Подстроки подобраны так, чтобы ловить словоформы
 # («ранжирован» → ранжирование/ранжируется), избегая совсем коротких неоднозначных.
-TOPIC_KEYWORDS = [
+NARROW_KEYWORDS = [
     # SEO core
     "seo", "поисковая оптимизация", "оптимизац сайт", "продвижение сайт",
     "ранжирован", "ranking", "индексац", "indexing", "переобход", "краулинг", "crawl",
@@ -19,19 +20,26 @@ TOPIC_KEYWORDS = [
     "core update", "broad core", "апдейт", "обновление алгоритма", "алгоритм google",
     "e-e-a-t", "eeat", "поведенческ фактор", "трафик сайта",
     # Search platforms / tools
-    "google", "гугл", "яндекс", "yandex", "вебмастер", "search console", "вордстат",
+    "вебмастер", "search console", "вордстат",
     "ga4", "веб-аналитик", "метрика", "ahrefs", "semrush", "keys.so", "topvisor",
     # AI / GEO / AEO
-    "нейросет", "нейронн сет", "искусственн интеллект", "machine learning",
     "chatgpt", "gpt", "claude", "gemini", "perplexity", "llm", "ии-поиск", "ai-поиск",
     "ai overviews", "нейроответ", "нейро яндекс", "генеративн", "generative", "yandexgpt",
-    "geo", "aeo", "llms.txt", "ии-агент", "ai agent", "цитируемость в ии", "видимость в ии",
-    # Content & digital marketing
+    "aeo", "llms.txt", "ии-агент", "ai agent", "цитируемость в ии", "видимость в ии",
+    # Digital marketing: специфичные термины
     "контент-маркетинг", "контент-план", "контент-стратег", "копирайтинг", "тексты для сайта",
     "контекстн реклам", "контекстная реклама", "google ads", "яндекс директ", "ppc", "рся",
-    "конверси", "ctr", "лендинг", "воронк", "smm", "email-рассылк", "digital-маркетинг",
-    "интернет-маркетинг", "маркетинг", "маркетолог", "реклам", "продвижени", "трафик",
-    "веб-аналитик", "соцсет", "вконтакте", "telegram-канал", "телеграм-канал", "блогер", "контент",
+    "email-рассылк", "digital-маркетинг", "интернет-маркетинг", "smm",
+]
+
+# Широкие ключи (вес 3): тематический фон, сам по себе тему не подтверждает.
+# Раньше они весили как узкие, и почти любой пост набирал 100.
+BROAD_KEYWORDS = [
+    "google", "гугл", "яндекс", "yandex", "нейросет", "нейронн сет",
+    "искусственн интеллект", "machine learning", "geo",
+    "конверси", "ctr", "лендинг", "воронк", "маркетинг", "маркетолог",
+    "реклам", "продвижени", "трафик", "соцсет", "вконтакте",
+    "telegram-канал", "телеграм-канал", "блогер", "контент",
 ]
 
 # Лёгкий штраф за явно нетематический контент.
@@ -43,16 +51,19 @@ NOISE_KEYWORDS = [
 def check_relevance(news: dict) -> dict:
     text = (news.get("title", "") + " " + news.get("description", "") + " " + news.get("plain_text", "")).lower()
 
-    topic_hits = sum(1 for kw in TOPIC_KEYWORDS if kw in text)
+    narrow_hits = sum(1 for kw in NARROW_KEYWORDS if kw in text)
+    broad_hits = sum(1 for kw in BROAD_KEYWORDS if kw in text)
     noise_hits = sum(1 for kw in NOISE_KEYWORDS if kw in text)
 
-    # 2 тематических совпадения → 24, 5 → 60, 8+ → ~100. Заголовок весит как и тело
-    # (заголовок учтён в text). Off-topic шум немного снижает балл.
-    score = min(100, topic_hits * 12) - noise_hits * 15
-    passes = topic_hits >= 2 and (noise_hits == 0 or topic_hits >= noise_hits * 3)
+    # Узкий хит — 12, широкий — 3: 2 узких + 3 широких → 33, 5 узких → 60,
+    # 8+ узких → 100. Пост без единого узкого термина не проходит,
+    # сколько бы фоновых слов («маркетинг», «трафик») в нём ни было.
+    score = min(100, narrow_hits * 12 + broad_hits * 3) - noise_hits * 15
+    passes = narrow_hits >= 1 and (noise_hits == 0 or (narrow_hits + broad_hits) >= noise_hits * 3)
     return {
         "score": max(0, score),
-        "topic_hits": topic_hits,
+        "topic_hits": narrow_hits + broad_hits,
+        "narrow_hits": narrow_hits,
         "noise_hits": noise_hits,
         "pass": passes,
     }

@@ -44,7 +44,7 @@ HEADLINE_PATTERNS = {
         "label": "First/Premiere",
     },
     "list": {
-        "pattern": r'^\d+ (лучших|причин|игр|вещей|способов|tips|best|reasons|games|things)',
+        "pattern": r'^\d+ (лучших|причин|способов|ошибок|инструментов|трендов|фактор|tips|best|reasons|ways|tools|mistakes|trends|things)',
         "bonus": 8,
         "label": "List format",
     },
@@ -53,8 +53,10 @@ HEADLINE_PATTERNS = {
         "bonus": 12,
         "label": "Strong negative",
     },
+    # «шок»/«невероятно» убраны: quality.py штрафует их как кликбейт (-15),
+    # бустить те же слова здесь — противоречие внутри системы.
     "emotional": {
-        "pattern": r'шок|невероятно|incredible|amazing|insane|stunning|epic',
+        "pattern": r'incredible|amazing|insane|stunning|epic',
         "bonus": 7,
         "label": "Emotional word",
     },
@@ -75,22 +77,17 @@ HEADLINE_PATTERNS = {
         "label": "Скандал",
     },
     "free_ru": {
-        "pattern": r'бесплатно|раздают|даром|free-to-play',
+        "pattern": r'бесплатн',
         "bonus": 10,
         "label": "Бесплатно",
     },
-    "russian_game": {
-        "pattern": r'русск|отечественн|российск|от\s+русских',
-        "bonus": 8,
-        "label": "Русская игра",
-    },
     "release_ru": {
-        "pattern": r'вышла|релиз|уже доступн|стартовал',
+        "pattern": r'вышла|вышел|релиз|уже доступн|стартовал',
         "bonus": 8,
         "label": "Релиз",
     },
     "record_ru": {
-        "pattern": r'рекорд|побила|миллион\s+игроков|пик\s+онлайн',
+        "pattern": r'рекорд|побил',
         "bonus": 10,
         "label": "Рекорд",
     },

@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 # --- Constants ---
 
-# Стоп-слова для игровых новостей (рус + англ)
+# Стоп-слова для новостей ниши SEO/AI/маркетинг (рус + англ)
 STOP_WORDS = {
     # Русские — местоимения, предлоги, союзы, частицы, вспомогательные
     "это", "как", "что", "для", "при", "все", "они", "его", "она", "мне",
@@ -64,45 +64,47 @@ STOP_WORDS = {
     "any", "how", "now", "way", "get", "got", "going", "come",
 }
 
-# Фоновый корпус: типичные фразы из игровых новостей (рус + англ, сбалансировано).
+# Фоновый корпус: типичные фразы SEO/AI-поиск-новостей (рус + англ, сбалансировано).
+# TF-IDF гасит эти обороты как фон, чтобы ключевыми словами становилась
+# специфика статьи, а не жанровые штампы ниши.
 BACKGROUND_CORPUS = [
-    # Русские — общие игровые новости
-    "новая игра вышла на pc и консоли с большим обновлением",
-    "разработчики выпустили патч обновление для игры",
-    "трейлер новой игры показали на презентации",
-    "студия анонсировала продолжение популярной серии",
-    "релиз игры перенесли на следующий год",
-    "компания представила новый геймплей на выставке",
-    "обзор игры показал высокие оценки критиков",
-    "игроки обнаружили баг в последнем обновлении",
-    "дополнение к игре выйдет в следующем месяце",
-    "бесплатное обновление добавляет новый контент и режимы",
-    "киберспортивный турнир собрал рекордный призовой фонд",
-    "издатель закрыл студию разработчиков после провала",
-    "эксклюзив консоли выходит на другие платформы",
-    "ремейк классической игры получил дату релиза",
-    "утечка раскрыла подробности неанонсированного проекта",
-    "сервис подписки пополнился новыми играми",
-    "ранний доступ стартовал в steam и epic games store",
-    "разработчики рассказали о планах на будущее игры",
-    "сиквел получил первый геймплейный трейлер",
-    "мобильная версия игры выходит на ios и android",
-    # Английские — общие игровые новости
-    "new game announced with release date trailer",
-    "developer studio released major update patch",
-    "upcoming game revealed gameplay trailer first look",
-    "publisher announced new title coming to platforms",
-    "early access launch available on steam epic store",
-    "game review scores metacritic opencritic rating",
-    "esports tournament championship prize pool winner",
-    "dlc expansion season pass new content update",
-    "free to play battle royale shooter open world",
-    "console exclusive port remaster remake collection",
-    "studio shut down after layoffs restructuring",
-    "leak reveals unannounced game sequel project",
-    "subscription service adds new games this month",
-    "remake remaster classic game gets release date",
-    "mobile version launches on ios android devices",
+    # Русские — типовые SEO-новости
+    "google выпустил обновление основного алгоритма поиска",
+    "яндекс объявил об изменениях в ранжировании сайтов",
+    "вебмастеры отмечают волатильность выдачи после апдейта",
+    "как оптимизировать сайт для поисковых систем руководство",
+    "эксперты назвали главные факторы ранжирования в поиске",
+    "search console получил новые отчёты для вебмастеров",
+    "нейросети меняют подход к поисковой оптимизации",
+    "компания представила новый инструмент для seo-специалистов",
+    "кейс продвижения сайта в конкурентной нише",
+    "исследование показало снижение кликабельности из-за ии-ответов",
+    "советы по улучшению видимости сайта в поиске",
+    "разбор изменений в поисковой выдаче за месяц",
+    "специалисты обсуждают влияние ии на поисковый трафик",
+    "апдейт завершил раскатку сайты видят изменения позиций",
+    "чек-лист технического аудита сайта для новичков",
+    "стратегия контент-маркетинга для роста органического трафика",
+    "обновление правил для рекламы и монетизации сайтов",
+    "интервью с экспертом о будущем поисковой оптимизации",
+    "сравнение инструментов для анализа ключевых слов",
+    "дайджест новостей интернет-маркетинга за неделю",
+    # Английские — типовые SEO-новости
+    "google announces core algorithm update rolling out",
+    "search console adds new report for webmasters",
+    "study shows ai overviews impact on organic traffic",
+    "how to optimize your website for search engines guide",
+    "seo experts share ranking factors analysis",
+    "new tool helps track keyword rankings and visibility",
+    "case study organic traffic growth after content update",
+    "tips to improve click through rate in search results",
+    "ai search changes how users find websites",
+    "conference recap latest trends in digital marketing",
+    "chatgpt and perplexity cite websites in answers",
+    "site recovered traffic after core update rollout",
+    "structured data schema markup best practices guide",
+    "link building strategies that still work this year",
+    "algorithm update volatility reported by rank tracking tools",
 ]
 
 _STOP_WORDS_LIST = list(STOP_WORDS)
@@ -169,12 +171,17 @@ def _get_vectorizer(ngram_range: tuple, force_refit: bool = False) -> TfidfVecto
         cache_data = _load_vocab_cache()
         if cache_data is not None:
             vocab = cache_data["vocabulary"]
-            # Filter vocabulary by ngram_range (check word count in each term)
+            # Filter vocabulary by ngram_range (check word count in each term).
+            # Reindex to a contiguous 0..n-1 range: cache stores bi- and trigrams
+            # in one shared index space, so a plain filter leaves gaps (trigrams
+            # start at B, not 0) and sklearn rejects it with «doesn't contain
+            # index 0» after a restart — silently killing trigram/bigram extraction.
             n_min, n_max = ngram_range
-            filtered_vocab = {
-                term: idx for term, idx in vocab.items()
-                if n_min <= len(term.split()) <= n_max
-            }
+            filtered_terms = sorted(
+                (term for term in vocab if n_min <= len(term.split()) <= n_max),
+                key=lambda t: vocab[t],
+            )
+            filtered_vocab = {term: i for i, term in enumerate(filtered_terms)}
             if filtered_vocab:
                 vectorizer = TfidfVectorizer(
                     ngram_range=ngram_range,
@@ -255,7 +262,7 @@ def _tfidf_with_background(text: str, ngram_range: tuple, top_n: int,
 
     Uses cached vectorizer (from disk or memory) when available.
     Falls back to full fit_transform on corpus+text for new terms.
-    Background corpus provides IDF dampening for common gaming phrases.
+    Background corpus provides IDF dampening for common SEO/marketing phrases.
     """
     try:
         cached = _get_vectorizer(ngram_range, force_refit=force_refit)
