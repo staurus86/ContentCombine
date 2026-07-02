@@ -313,13 +313,7 @@ def viral_score(news: dict, precomputed_entities: list = None) -> dict:
     has_leak = any(kw in text for kw in ["leak", "leaked", "утечка", "слив", "инсайдер"])
     if has_leak and has_big_title:
         score += 45
-        triggered.append({"id": "leak_big_title", "label": "Утечка + крупный тайтл", "weight": 45})
-
-    # Big title + studio closure combo
-    has_closure = any(kw in text for kw in ["закрытие студии", "studio closure", "shut down", "студию закрыли"])
-    if has_closure and has_big_title:
-        score += 30
-        triggered.append({"id": "closure_big_title", "label": "Закрытие крупной студии", "weight": 30})
+        triggered.append({"id": "leak_big_title", "label": "Утечка + крупная сущность", "weight": 45})
 
     # Lawsuit + Big company combo
     has_lawsuit = any(kw in text for kw in ["lawsuit", "судебный иск", "court", "sued"])
@@ -328,14 +322,13 @@ def viral_score(news: dict, precomputed_entities: list = None) -> dict:
         score += 20
         triggered.append({"id": "lawsuit_big_company", "label": "Судебный иск + крупная компания", "weight": 20})
 
-    # Scandal/controversy + big title/company combo
+    # Scandal/controversy + big entity combo
     has_scandal = any(kw in text for kw in [
         "скандал", "controversy", "backlash", "outrage", "бойкот", "boycott",
-        "скандальный", "сатанист", "шокирующее", "домогательства", "harassment",
     ])
     if has_scandal and has_big_title:
         score += 25
-        triggered.append({"id": "scandal_big_title", "label": "Скандал + крупный тайтл/студия", "weight": 25})
+        triggered.append({"id": "scandal_big_title", "label": "Скандал + крупная сущность", "weight": 25})
 
     # Calendar boost
     cal_boost, event_name = get_calendar_boost()
@@ -354,33 +347,8 @@ def viral_score(news: dict, precomputed_entities: list = None) -> dict:
     else:
         level = "none"
 
-    # Time-decay: fresh news gets full score, older news gets penalized
-    age_hours = -1
-    pub = news.get("published_at") or news.get("parsed_at") or ""
-    if pub:
-        try:
-            from datetime import datetime, timezone
-            if pub.endswith("Z"):
-                pub = pub[:-1] + "+00:00"
-            pub_dt = datetime.fromisoformat(pub)
-            if pub_dt.tzinfo is None:
-                pub_dt = pub_dt.replace(tzinfo=timezone.utc)
-            age_hours = (datetime.now(timezone.utc) - pub_dt).total_seconds() / 3600
-        except Exception:
-            pass
-
-    if age_hours >= 0:
-        if age_hours < 3:
-            decay = 1.0
-        elif age_hours < 12:
-            decay = 0.9
-        elif age_hours < 24:
-            decay = 0.75
-        elif age_hours < 48:
-            decay = 0.5
-        else:
-            decay = 0.3
-        score = round(score * decay)
-        # decay влияет на score, но в списке триггеров его не показываем (скрытый)
+    # Time-decay убран: за возраст отвечает единственный механизм — checks/freshness.py.
+    # Раньше возраст штрафовался дважды (freshness-чек + decay здесь), и старая,
+    # но важная новость наказывалась квадратично.
 
     return {"score": score, "level": level, "triggers": triggered, "pass": score >= config.VIRAL_LOW_THRESHOLD}

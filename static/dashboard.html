@@ -2313,8 +2313,8 @@ async function loadSettings() {
   document.getElementById('set-auto-rewrite').checked = s.auto_rewrite_on_publish_now !== false;
   document.getElementById('set-auto-rewrite-style').value = s.auto_rewrite_style || 'news';
   // Scoring weights
-  document.getElementById('set-sw-internal').value = s.score_weight_internal ?? 0.4;
-  document.getElementById('set-sw-viral').value = s.score_weight_viral ?? 0.2;
+  document.getElementById('set-sw-internal').value = s.score_weight_internal ?? 0.55;
+  document.getElementById('set-sw-viral').value = s.score_weight_viral ?? 0.05;
   document.getElementById('set-sw-keyso').value = s.score_weight_keyso ?? 0.15;
   document.getElementById('set-sw-trends').value = s.score_weight_trends ?? 0.1;
   document.getElementById('set-sw-headline').value = s.score_weight_headline ?? 0.15;
@@ -4505,7 +4505,9 @@ function calcFinalScore(n) {
     else if (maxT >= 20) trendsBonus = 40;
     else if (maxT > 0) trendsBonus = 20;
   } catch(e){}
-  return Math.round(internal * 0.4 + viral * 0.2 + keysoBonus * 0.15 + trendsBonus * 0.1 + headline * 0.15);
+  // Веса синхронизированы с config.SCORE_WEIGHT_* (бэкенд _calc_final_score):
+  // viral снижен 0.2→0.05, internal поднят 0.4→0.55 — виральность уже входит в internal.
+  return Math.round(internal * 0.55 + viral * 0.05 + keysoBonus * 0.15 + trendsBonus * 0.1 + headline * 0.15);
 }
 
 async function loadFinal(page) {

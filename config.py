@@ -42,9 +42,11 @@ AUTO_APPROVE_THRESHOLD = _int_env("AUTO_APPROVE_THRESHOLD", 0)  # 0 = disabled, 
 AUTO_REWRITE_ON_PUBLISH_NOW = os.getenv("AUTO_REWRITE_ON_PUBLISH_NOW", "true").lower() == "true"
 AUTO_REWRITE_STYLE = os.getenv("AUTO_REWRITE_STYLE", "news")
 
-# Scoring formula weights (must sum to 1.0)
-SCORE_WEIGHT_INTERNAL = float(os.getenv("SCORE_WEIGHT_INTERNAL", "0.4"))
-SCORE_WEIGHT_VIRAL = float(os.getenv("SCORE_WEIGHT_VIRAL", "0.2"))
+# Scoring formula weights (must sum to 1.0).
+# Viral снижен с 0.2 до 0.05: виральность уже входит в internal (total_score —
+# среднее 4 чеков, включая viral), с 0.2 она учитывалась дважды.
+SCORE_WEIGHT_INTERNAL = float(os.getenv("SCORE_WEIGHT_INTERNAL", "0.55"))
+SCORE_WEIGHT_VIRAL = float(os.getenv("SCORE_WEIGHT_VIRAL", "0.05"))
 SCORE_WEIGHT_KEYSO = float(os.getenv("SCORE_WEIGHT_KEYSO", "0.15"))
 SCORE_WEIGHT_TRENDS = float(os.getenv("SCORE_WEIGHT_TRENDS", "0.1"))
 SCORE_WEIGHT_HEADLINE = float(os.getenv("SCORE_WEIGHT_HEADLINE", "0.15"))

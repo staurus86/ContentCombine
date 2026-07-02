@@ -5,75 +5,78 @@ from storage.database import get_connection, _is_postgres
 
 logger = logging.getLogger(__name__)
 
-# Базовые веса (по умолчанию, до обучения на данных)
+# Базовые веса под нишу SEO / AI-поиск. Имена должны совпадать с config.SOURCES.
+# Не перечисленные источники получают 1.0. Обучаемая часть (решения редактора)
+# применяется отдельно через checks/feedback.py — здесь только априорный авторитет.
 DEFAULT_WEIGHTS = {
-    "IGN": 1.3,
-    "GameSpot": 1.2,
-    "PCGamer": 1.2,
-    "Eurogamer": 1.1,
-    "GamesRadar": 1.1,
-    "Polygon": 1.1,
-    "RockPaperShotgun": 1.0,
-    "GameRant": 1.0,
-    "Kotaku": 1.1,
-    "Destructoid": 1.0,
-    "StopGame": 1.1,
-    "Cybersport": 0.9,
-    "Playground": 1.0,
-    "Metacritic": 1.2,
-    "DTF": 1.1,
-    "iXBT.games": 1.0,
-    "VGTimes": 0.9,
+    # Первоисточники поисковых систем
+    "Google Search Central": 1.3,
+    "Google Search Status": 1.3,
+    "Google Keyword Search": 1.2,
+    "The Keyword (Google)": 1.1,
+    "Google Search Central YouTube": 1.1,
+    "Yandex Webmaster RU": 1.3,
+    "TG:Яндекс Вебмастер": 1.3,
+    "Bing Webmaster Blog": 1.2,
+    "Bing Search Blog": 1.1,
+    # Официальные блоги AI-платформ
+    "OpenAI News": 1.2,
+    "Anthropic News": 1.2,
+    "Google AI blog.google": 1.2,
+    "Google Gemini blog": 1.1,
+    "Google DeepMind Blog": 1.1,
+    "Mistral AI News": 1.1,
+    # Отраслевые издания
+    "Search Engine Land": 1.2,
+    "Search Engine Roundtable": 1.2,
+    "Search Engine Journal": 1.1,
+    "RU: SEOnews": 1.1,
+    # Признанные эксперты и аналитика
+    "Marie Haynes": 1.1,
+    "Lily Ray": 1.1,
+    "Lily Ray Substack": 1.1,
+    "GSQi": 1.1,
+    "Aleyda SEO Blog": 1.1,
+    "iPullRank": 1.1,
+    "SparkToro": 1.1,
+    "Growth Memo": 1.1,
+    "Ahrefs Blog": 1.1,
+    "Semrush Blog": 1.1,
+    "TG:Devaka Talk": 1.1,
+    # Bluesky: гуглеры и топ-эксперты
+    "BS:searchliaison": 1.2,
+    "BS:dannysullivan": 1.2,
+    "BS:garyillyes": 1.2,
+    "BS:lilyray": 1.1,
+    "BS:glenngabe": 1.1,
+    "BS:mariehaynes": 1.1,
+    "BS:seroundtable": 1.1,
+    "BS:aleyda": 1.1,
+    "BS:cyrusshepard": 1.1,
+    "BS:kevinindig": 1.1,
+    "BS:randfish": 1.1,
+    "BS:mordy": 1.1,
+    # Смежные/шумные источники — слегка ниже
+    "TechCrunch AI": 0.9,
+    "VentureBeat AI": 0.9,
+    "MarTech": 0.9,
+    "Press Gazette": 0.9,
+    "The Neuron": 0.9,
+    "TLDR Marketing": 0.9,
+    "Niche Pursuits": 0.9,
+    "Neil Patel Blog": 0.9,
+    "Search Engine Watch": 0.9,
+    "DE: t3n SEO/Digital": 0.9,
 }
 
 
 def get_source_weight(source: str) -> float:
-    """Возвращает вес источника: базовый + корректировка по истории."""
+    """Возвращает априорный вес источника.
+
+    История одобрений сюда больше не подмешивается: авто-статусы (processed/ready)
+    самоусиливали вес, а человеческие решения уже учитываются отдельным механизмом
+    feedback_adjustment в checks/pipeline.py — двойной учёт убран."""
     base = DEFAULT_WEIGHTS.get(source, 1.0)
-
-    try:
-        conn = get_connection()
-        cur = conn.cursor()
-        try:
-            ph = "%s" if _is_postgres() else "?"
-
-            if _is_postgres():
-                cur.execute("""
-                    SELECT status, COUNT(*) as cnt FROM news
-                    WHERE source = %s
-                    AND parsed_at::timestamptz > (NOW() - INTERVAL '30 days')
-                    GROUP BY status
-                """, (source,))
-                rows = cur.fetchall()
-                stats = {row[0]: row[1] for row in rows}
-            else:
-                cur.execute(f"""
-                    SELECT status, COUNT(*) as cnt FROM news
-                    WHERE source = {ph}
-                    AND parsed_at > datetime('now', '-30 days')
-                    GROUP BY status
-                """, (source,))
-                stats = {row["status"]: row["cnt"] for row in cur.fetchall()}
-        finally:
-            cur.close()
-
-        approved = stats.get("approved", 0) + stats.get("processed", 0) + stats.get("ready", 0)
-        rejected = stats.get("rejected", 0)
-        total = approved + rejected
-
-        if total >= 10:
-            approval_rate = approved / total
-            if approval_rate >= 0.8:
-                base += 0.2
-            elif approval_rate >= 0.6:
-                base += 0.1
-            elif approval_rate < 0.3:
-                base -= 0.2
-            elif approval_rate < 0.5:
-                base -= 0.1
-    except Exception as e:
-        logger.debug("Source weight DB error: %s", e)
-
     return round(max(0.5, min(2.0, base)), 2)
 
 
