@@ -397,7 +397,6 @@ input:focus, textarea:focus, select:focus { outline:none; border-color:#1da1f2; 
       <span onclick="document.getElementById('hotkeys-modal').style.display='none'" style="cursor:pointer;font-size:1.2em;opacity:0.6">✕</span>
     </div>
     <table style="width:100%;font-size:0.9em">
-      <tr><td style="padding:4px 0"><kbd style="background:#253341;padding:2px 8px;border-radius:4px;font-family:monospace">A</kbd></td><td>Одобрить (в режиме Triage)</td></tr>
       <tr><td style="padding:4px 0"><kbd style="background:#253341;padding:2px 8px;border-radius:4px;font-family:monospace">R</kbd></td><td>Отклонить (в режиме Triage)</td></tr>
       <tr><td style="padding:4px 0"><kbd style="background:#253341;padding:2px 8px;border-radius:4px;font-family:monospace">S</kbd></td><td>Пропустить (в режиме Triage)</td></tr>
       <tr><td style="padding:4px 0"><kbd style="background:#253341;padding:2px 8px;border-radius:4px;font-family:monospace">?</kbd></td><td>Объяснить скор (Explain Drawer)</td></tr>
@@ -479,7 +478,6 @@ input:focus, textarea:focus, select:focus { outline:none; border-color:#1da1f2; 
         <div class="tc-text" id="tc-text"></div>
         <div class="tc-scores" id="tc-scores"></div>
         <div class="tc-actions">
-          <button class="btn btn-success" onclick="triageApprove()" title="Одобрить">&#10003; Одобрить <span class="hotkey-hint">A</span></button>
           <button class="btn btn-danger" onclick="triageReject()" title="Отклонить">&#10007; Отклонить <span class="hotkey-hint">R</span></button>
           <button class="btn btn-secondary" onclick="triageSkip()" title="Пропустить">&#10140; Далее <span class="hotkey-hint">S</span></button>
           <button class="btn btn-secondary" onclick="openExplainDrawer(_triageCurrent?.id, _triageCurrent?.title)" title="Почему?">? Почему</button>
@@ -1389,7 +1387,6 @@ input:focus, textarea:focus, select:focus { outline:none; border-color:#1da1f2; 
     <div class="settings-nav">
       <div class="settings-tab active" data-stab="general">Общие</div>
       <div class="settings-tab" data-stab="sources">Источники</div>
-      <div class="settings-tab" data-stab="prompts">Промпты</div>
       <div class="settings-tab" data-stab="viral_cfg">Виральность</div>
       <div class="settings-tab" data-stab="simulator">Симулятор</div>
       <div class="settings-tab" data-stab="tools">Инструменты</div>
@@ -1430,19 +1427,6 @@ input:focus, textarea:focus, select:focus { outline:none; border-color:#1da1f2; 
           </div>
           <div id="sheets-test-result" style="color:var(--c-muted);font-size:0.85em;margin-top:6px"></div>
           <hr style="border-color:#38444d;margin:15px 0">
-          <h3 style="margin-bottom:10px">Автоматизация</h3>
-          <div class="form-group"><label>Порог авто-одобрения (0 = выкл)</label><input type="number" id="set-auto-approve" min="0" max="100" value="70"></div>
-          <div class="form-group"><label style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="set-auto-rewrite" checked> Авто-рерайт при LLM "publish_now"</label></div>
-          <div class="form-group"><label>Стиль авто-рерайта</label>
-            <select id="set-auto-rewrite-style">
-              <option value="news">news</option>
-              <option value="review">review</option>
-              <option value="guide">guide</option>
-              <option value="editorial">editorial</option>
-            </select>
-          </div>
-          <button class="btn btn-primary" onclick="saveSettings()">Сохранить</button>
-          <hr style="border-color:#38444d;margin:15px 0">
           <h3 style="margin-bottom:10px">Очистка</h3>
           <div class="btn-group">
             <button class="btn btn-warning btn-sm" onclick="cleanupShortNews()">Удалить короткие (&lt; 100 символов)</button>
@@ -1469,11 +1453,8 @@ input:focus, textarea:focus, select:focus { outline:none; border-color:#1da1f2; 
         <div class="card">
           <h2>Быстрые действия</h2>
           <div style="display:flex;flex-direction:column;gap:8px">
-            <button class="btn btn-primary" onclick="runProcess()">&#9654; Обогатить одобренные</button>
             <button class="btn btn-warning" onclick="reparseAll()">Парсить все источники</button>
             <button class="btn btn-secondary" onclick="setupHeaders()">Создать заголовки Sheets</button>
-            <button class="btn btn-secondary" onclick="exportAllProcessed()">&#128196; Экспорт обработанных в Лист1</button>
-            <button class="btn btn-primary" onclick="exportReadyAll()">&#128196; Экспорт переписанных в Ready</button>
           </div>
         </div>
       </div>
@@ -1494,8 +1475,6 @@ input:focus, textarea:focus, select:focus { outline:none; border-color:#1da1f2; 
         </div>
         <div class="card">
           <h2>Пороги пайплайна</h2>
-          <div class="form-group"><label>Мин. скор для LLM анализа</label><input type="number" id="set-fas-threshold" min="0" max="100"></div>
-          <div class="form-group"><label>Мин. скор для рерайта</label><input type="number" id="set-faf-threshold" min="0" max="100"></div>
           <div class="form-group"><label>Мин. скор для авто-экспорта</label><input type="number" id="set-ae-threshold" min="0" max="100"></div>
           <div class="form-group"><label>Порог авто-отклонения</label><input type="number" id="set-ar-threshold" min="0" max="100"></div>
           <div class="form-group"><label>Интервал публикаций (мин)</label><input type="number" id="set-pub-spacing" min="1" max="120"></div>
@@ -2325,9 +2304,6 @@ async function loadSettings() {
   document.getElementById('set-sheets-tab-ready').value = s.sheets_tab_ready || 'Ready';
   document.getElementById('set-sheets-tab-not-ready').value = s.sheets_tab_not_ready || 'NotReady';
   document.getElementById('set-openai-base-url').value = s.openai_base_url || '';
-  document.getElementById('set-auto-approve').value = s.auto_approve_threshold ?? 0;
-  document.getElementById('set-auto-rewrite').checked = s.auto_rewrite_on_publish_now !== false;
-  document.getElementById('set-auto-rewrite-style').value = s.auto_rewrite_style || 'news';
   // Scoring weights
   document.getElementById('set-sw-internal').value = s.score_weight_internal ?? 0.55;
   document.getElementById('set-sw-viral').value = s.score_weight_viral ?? 0.05;
@@ -2336,8 +2312,6 @@ async function loadSettings() {
   document.getElementById('set-sw-headline').value = s.score_weight_headline ?? 0.15;
   updateScoreWeightSum();
   // Pipeline
-  document.getElementById('set-fas-threshold').value = s.full_auto_score_threshold ?? 70;
-  document.getElementById('set-faf-threshold').value = s.full_auto_final_threshold ?? 60;
   document.getElementById('set-ae-threshold').value = s.auto_export_threshold ?? 60;
   document.getElementById('set-ar-threshold').value = s.auto_reject_score_threshold ?? 15;
   document.getElementById('set-pub-spacing').value = s.publish_spacing_minutes ?? 15;
@@ -2402,15 +2376,11 @@ async function saveSettings() {
     sheets_tab: v('set-sheets-tab'), sheets_id: v('set-sheets-id'),
     sheets_tab_ready: v('set-sheets-tab-ready'), sheets_tab_not_ready: v('set-sheets-tab-not-ready'),
     openai_base_url: v('set-openai-base-url'),
-    auto_approve_threshold: i('set-auto-approve'),
-    auto_rewrite_on_publish_now: document.getElementById('set-auto-rewrite').checked,
-    auto_rewrite_style: v('set-auto-rewrite-style'),
     // Scoring weights
     score_weight_internal: n('set-sw-internal'), score_weight_viral: n('set-sw-viral'),
     score_weight_keyso: n('set-sw-keyso'), score_weight_trends: n('set-sw-trends'),
     score_weight_headline: n('set-sw-headline'),
     // Pipeline
-    full_auto_score_threshold: i('set-fas-threshold'), full_auto_final_threshold: i('set-faf-threshold'),
     auto_export_threshold: i('set-ae-threshold'), auto_reject_score_threshold: i('set-ar-threshold'),
     publish_spacing_minutes: i('set-pub-spacing'),
     // Viral
@@ -6311,7 +6281,6 @@ document.addEventListener('keydown', function(e) {
 
   // Triage flow hotkeys
   if (_triageMode === 'flow' && ffEnabled('newsroom_triage_v1')) {
-    if (e.key === 'a' || e.key === 'A' || e.key === 'ф' || e.key === 'Ф') { e.preventDefault(); triageApprove(); }
     if (e.key === 'r' || e.key === 'R' || e.key === 'к' || e.key === 'К') { e.preventDefault(); triageReject(); }
     if (e.key === 's' || e.key === 'S' || e.key === 'ы' || e.key === 'Ы') { e.preventDefault(); triageSkip(); }
   }
