@@ -53,10 +53,17 @@ def _parse_via_telethon(source: dict) -> int:
 
         try:
             messages = client.get_messages(channel_clean, limit=config.TELEGRAM_MESSAGES_BATCH_SIZE)
+            cutoff = datetime.now(timezone.utc) - timedelta(days=config.TELEGRAM_POST_MAX_AGE_DAYS)
 
             for message in messages:
-                # Пропуск пустых / сервисных сообщений
-                if not message.text:
+                # Пропуск пустых / сервисных / слишком коротких сообщений
+                # (порог 20 симв. — как в web-preview-пути)
+                if not message.text or len(message.text.strip()) < 20:
+                    continue
+
+                # Пропуск старых постов: раньше Telethon-путь не проверял возраст
+                # и заносил в базу посты любой давности
+                if message.date and message.date.astimezone(timezone.utc) < cutoff:
                     continue
 
                 # Пропуск пересланных, если не разрешено

@@ -60,13 +60,20 @@ def _parse_date(date_str: str) -> datetime | None:
 
 
 def check_freshness(news: dict) -> dict:
-    # Try published_at first, then parsed_at as fallback
+    # Приоритет — реальная дата публикации. Раньше при её отсутствии брался
+    # parsed_at, и старая недатированная статья, скачанная сейчас, выглядела
+    # «горячей» (score 100). Теперь: нет published_at → используем parsed_at, но
+    # с потолком «today»/50 — момент парсинга не доказывает свежесть материала,
+    # однако легитимно-свежий недатированный пост (RSS/TG/homepage) не должен
+    # проваливаться в unknown/30.
     published_at = news.get("published_at", "")
     parsed_at = news.get("parsed_at", "")
 
     pub = _parse_date(published_at)
+    capped = False
     if pub is None:
         pub = _parse_date(parsed_at)
+        capped = True
     if pub is None:
         return {"age_hours": -1, "status": "unknown", "score": 30, "pass": False}
 
@@ -95,6 +102,12 @@ def check_freshness(news: dict) -> dict:
     else:
         status = "old"
         score = 10
+
+    # Дата неизвестна, возраст оценён по времени парсинга — не переоцениваем:
+    # максимум «today»/50, статус помечаем как оценочный.
+    if capped and score > 50:
+        status = "today?"
+        score = 50
 
     return {
         "age_hours": round(age_hours, 1),
