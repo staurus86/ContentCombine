@@ -31,7 +31,13 @@ def init_feedback_table():
 def record_decision(news_id: str, decision: str):
     """Записывает решение редактора для будущего анализа.
     decision: 'approved' или 'rejected'
+
+    Только человеческие решения: авто-решения пайплайна ('auto_approved' и пр.)
+    игнорируются, иначе система обучается на собственных выводах (а до фикса
+    'auto_approved' и вовсе падал в ветку else и считался как rejected).
     """
+    if decision not in ("approved", "rejected"):
+        return
     conn = get_connection()
     cur = conn.cursor()
     ph = "%s" if _is_postgres() else "?"

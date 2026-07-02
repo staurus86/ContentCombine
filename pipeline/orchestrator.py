@@ -173,13 +173,7 @@ def _auto_approve_high_score(results: list):
         return
 
     from checks.pipeline import approve_for_enrichment
-    from checks.feedback import record_decision
     approve_for_enrichment(auto_ids)
-    for nid in auto_ids:
-        try:
-            record_decision(nid, "auto_approved")
-        except Exception:
-            logger.debug("record_decision(auto_approved) failed for %s", nid, exc_info=True)
     logger.info("Auto-approved %d news (threshold=%d)", len(auto_ids), threshold)
 
     import threading
@@ -515,7 +509,9 @@ def _process_auto_rewrite(task_id: str):
 def _calc_final_score(analysis: dict) -> int:
     """Calculate final composite score (mirrors JS calcFinalScore).
 
-    Formula: internal(40%) + viral(20%) + keyso_bonus(15%) + trends_bonus(10%) + headline(15%)
+    Веса берутся из config.SCORE_WEIGHT_* (по умолчанию internal 55% + viral 5% +
+    keyso_bonus 15% + trends_bonus 10% + headline 15%). Фронтенд dashboard.html
+    (calcFinalScore) должен держать те же значения.
     """
     import json as _json
 
@@ -1068,6 +1064,8 @@ def generate_auto_digest():
         conn = get_connection()
         cur = conn.cursor()
         try:
+            # Берём 40 кандидатов с запасом: после дедупа и кросс-дневного
+            # фильтра останется топ-20
             if _is_postgres():
                 cur.execute("""
                     SELECT n.id, n.title, n.source, n.url,
@@ -1077,7 +1075,7 @@ def generate_auto_digest():
                     WHERE n.status IN ('approved', 'processed', 'in_review', 'ready')
                       AND n.parsed_at::timestamptz > (NOW() - INTERVAL '24 hours')
                     ORDER BY COALESCE(a.total_score, 0) DESC
-                    LIMIT 20
+                    LIMIT 40
                 """)
                 columns = [desc[0] for desc in cur.description]
                 news_list = [dict(zip(columns, row)) for row in cur.fetchall()]
@@ -1090,7 +1088,7 @@ def generate_auto_digest():
                     WHERE n.status IN ('approved', 'processed', 'in_review', 'ready')
                       AND n.parsed_at > datetime('now', '-1 day')
                     ORDER BY COALESCE(a.total_score, 0) DESC
-                    LIMIT 20
+                    LIMIT 40
                 """)
                 news_list = [dict(row) for row in cur.fetchall()]
         finally:
@@ -1098,6 +1096,30 @@ def generate_auto_digest():
 
         if not news_list:
             logger.info("Auto-digest: no news in last 24h, skipping")
+            return
+
+        # Дедуп внутри выборки: раньше топ-20 по скору мог состоять из пересказов
+        # одной истории. Список отсортирован по скору DESC, из пары похожих
+        # выбрасывается более поздний (слабый). Fails open.
+        try:
+            from checks.deduplication import tfidf_similarity
+            drop = {j for _i, j, _s in tfidf_similarity([n["title"] for n in news_list])}
+            if drop:
+                logger.info("Auto-digest dedup: dropped %d/%d similar items", len(drop), len(news_list))
+                news_list = [n for k, n in enumerate(news_list) if k not in drop]
+        except Exception as e:
+            logger.warning("Auto-digest intra-list dedup skipped: %s", e)
+
+        # Кросс-дневной фильтр: те же истории, уже покрытые дайджестами за 2 дня
+        try:
+            from api.news import _filter_recurring_stories
+            news_list = _filter_recurring_stories(news_list)
+        except Exception as e:
+            logger.warning("Auto-digest cross-day dedup skipped: %s", e)
+
+        news_list = news_list[:20]
+        if not news_list:
+            logger.info("Auto-digest: all candidates deduplicated, skipping")
             return
 
         result = generate_daily_digest(news_list, style="brief")
