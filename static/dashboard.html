@@ -1191,6 +1191,7 @@ input:focus, textarea:focus, select:focus { outline:none; border-color:#1da1f2; 
         <button class="btn btn-sm btn-secondary" onclick="loadTop()">Обновить</button>
       </div>
     </div>
+    <div id="top-nav" style="display:none;gap:8px;flex-wrap:wrap;margin-bottom:14px;position:sticky;top:0;z-index:6;background:#0f1923;padding:8px 0;border-bottom:1px solid #22303c"></div>
     <div id="top-sections"></div>
     <div id="top-empty" style="display:none;text-align:center;padding:40px;color:var(--c-muted)">Пока нет топ-материалов. Новость попадает сюда автоматически при скоре &ge; 70.</div>
   </div>
@@ -6521,19 +6522,29 @@ async function exportStorylinesToSheets() {
 async function loadTop() {
   const cont = document.getElementById('top-sections');
   const empty = document.getElementById('top-empty');
+  const nav = document.getElementById('top-nav');
   const countEl = document.getElementById('top-count');
   if (!cont) return;
   cont.innerHTML = '<div style="color:var(--c-muted);padding:20px">Загрузка...</div>';
+  if (nav) nav.style.display = 'none';
   let data;
   try { data = await api('/api/top?limit=500'); }
   catch(e) { cont.innerHTML = '<div style="color:var(--c-muted);padding:20px">Ошибка загрузки</div>'; return; }
-  const secs = [['Новости','📰',data.feed||[]], ['Кейсы','📌',data.cases||[]], ['Телеграм','📨',data.telegram||[]]];
+  const secs = [['feed','Новости','📰',data.feed||[]], ['cases','Кейсы','📌',data.cases||[]], ['telegram','Телеграм','📨',data.telegram||[]]];
   const total = (data.counts||{}).total || 0;
   if (countEl) countEl.textContent = total ? (total + ' материалов') : '';
-  if (!total) { cont.innerHTML=''; if(empty) empty.style.display='block'; return; }
+  if (!total) { cont.innerHTML=''; if(nav) nav.style.display='none'; if(empty) empty.style.display='block'; return; }
   if (empty) empty.style.display='none';
-  cont.innerHTML = secs.filter(s => s[2].length).map(([name, emoji, items]) =>
-    '<div style="margin-bottom:20px"><h3 style="margin:0 0 10px">' + emoji + ' ' + name +
+  const filled = secs.filter(s => s[3].length);
+  if (nav) {
+    nav.innerHTML = filled.map(([key, name, emoji, items]) =>
+      '<button class="btn btn-sm btn-secondary" onclick="tgGo(\'top-sec-' + key + '\')">' + emoji + ' ' + name +
+      ' <span style="opacity:.6">' + items.length + '</span></button>'
+    ).join('');
+    nav.style.display = filled.length > 1 ? 'flex' : 'none';
+  }
+  cont.innerHTML = filled.map(([key, name, emoji, items]) =>
+    '<div id="top-sec-' + key + '" style="margin-bottom:20px;scroll-margin-top:52px"><h3 style="margin:0 0 10px">' + emoji + ' ' + name +
     ' <span style="color:var(--c-muted);font-size:0.8em;font-weight:normal">' + items.length + '</span></h3>' +
     items.map(it =>
       '<div class="storyline-card" style="padding:10px 14px;margin-bottom:8px;display:flex;justify-content:space-between;gap:12px;align-items:center">' +
