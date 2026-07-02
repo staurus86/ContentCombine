@@ -6543,17 +6543,23 @@ async function loadTop() {
     ).join('');
     nav.style.display = filled.length > 1 ? 'flex' : 'none';
   }
-  cont.innerHTML = filled.map(([key, name, emoji, items]) =>
-    '<div id="top-sec-' + key + '" style="margin-bottom:20px;scroll-margin-top:52px"><h3 style="margin:0 0 10px">' + emoji + ' ' + name +
-    ' <span style="color:var(--c-muted);font-size:0.8em;font-weight:normal">' + items.length + '</span></h3>' +
-    items.map(it =>
-      '<div class="storyline-card" style="padding:10px 14px;margin-bottom:8px;display:flex;justify-content:space-between;gap:12px;align-items:center">' +
-        '<div style="min-width:0"><a href="' + esc(it.url||'#') + '" target="_blank" rel="noopener" style="color:#e1e8ed;text-decoration:none;font-weight:500">' + esc(it.title||'') + '</a>' +
-        '<div style="color:var(--c-muted);font-size:0.78em;margin-top:2px">' + esc(it.source||'') + '</div></div>' +
-        '<div style="flex-shrink:0"><span class="stl-tag entity" title="Скор">' + (it.total_score||0) + '</span></div>' +
-      '</div>'
-    ).join('') + '</div>'
-  ).join('');
+  const TOP_VISIBLE = 10;
+  const card = it =>
+    '<div class="storyline-card" style="padding:10px 14px;margin-bottom:8px;display:flex;justify-content:space-between;gap:12px;align-items:center">' +
+      '<div style="min-width:0"><a href="' + esc(it.url||'#') + '" target="_blank" rel="noopener" style="color:#e1e8ed;text-decoration:none;font-weight:500">' + esc(it.title||'') + '</a>' +
+      '<div style="color:var(--c-muted);font-size:0.78em;margin-top:2px">' + esc(it.source||'') + '</div></div>' +
+      '<div style="flex-shrink:0"><span class="stl-tag entity" title="Скор">' + (it.total_score||0) + '</span></div>' +
+    '</div>';
+  cont.innerHTML = filled.map(([key, name, emoji, items]) => {
+    const head = emoji + ' ' + name + ' <span style="color:var(--c-muted);font-size:0.8em;font-weight:normal">' + items.length + '</span>';
+    const visible = items.slice(0, TOP_VISIBLE).map(card).join('');
+    const rest = items.slice(TOP_VISIBLE);
+    const restHtml = rest.length
+      ? '<details style="margin-top:2px"><summary style="cursor:pointer;color:#1da1f2;font-size:0.85em;padding:6px 2px;user-select:none">Показать ещё ' + rest.length + '</summary>' +
+        '<div style="margin-top:8px">' + rest.map(card).join('') + '</div></details>'
+      : '';
+    return '<div id="top-sec-' + key + '" style="margin-bottom:20px;scroll-margin-top:52px"><h3 style="margin:0 0 10px">' + head + '</h3>' + visible + restHtml + '</div>';
+  }).join('');
 }
 
 async function loadStorylines() {
