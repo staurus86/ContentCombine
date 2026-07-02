@@ -57,14 +57,42 @@ ANTI_SLOP = """## Язык
 
 
 def _format_sources(news_list: list[dict]) -> str:
-    """Numbered source list passed to the model (with date for freshness)."""
+    """Numbered source list passed to the model (with date and score hints)."""
     lines = []
     for i, n in enumerate(news_list, 1):
         date = (n.get("published_at") or n.get("parsed_at") or "")[:10]
         src = n.get("source", "?")
         title = n.get("title", "?")
-        lines.append(f"{i}. [{src}] {title}" + (f" ({date})" if date else ""))
+        sc = n.get("total_score", 0)
+        v = n.get("viral_score", 0)
+        hints = []
+        if date:
+            hints.append(date)
+        if sc:
+            hints.append(f"скор {sc}")
+        if v:
+            hints.append(f"вирал {v}")
+        lines.append(f"{i}. [{src}] {title}" + (f" ({', '.join(hints)})" if hints else ""))
     return "\n".join(lines)
+
+
+def _log_llm_selection(result: dict, news_list: list[dict], max_items: int, tag: str):
+    """Логирует, какие кандидаты выбрала LLM и какие топовые по скору пропустила.
+
+    Список кандидатов приходит отсортированным по скору DESC, поэтому индексы
+    1..max_items — это топ. Без лога отклонения LLM от скоринга невозможно
+    анализировать."""
+    try:
+        items = result.get("items") or []
+        chosen = sorted({idx for it in items for idx in (it.get("sources") or [])
+                         if isinstance(idx, int) and 1 <= idx <= len(news_list)})
+        top = set(range(1, min(max_items, len(news_list)) + 1))
+        skipped_top = sorted(top - set(chosen))
+        logger.info("Digest LLM selection [%s]: chose %s of %d candidates%s",
+                    tag, chosen, len(news_list),
+                    f"; skipped top-score {skipped_top}" if skipped_top else "")
+    except Exception:
+        logger.debug("Digest selection logging failed", exc_info=True)
 
 
 PROMPT_DETAILED = """Ты — выпускающий редактор отраслевого издания про SEO, AI и digital-маркетинг.
@@ -259,6 +287,7 @@ def generate_daily_digest(news_list: list[dict], style: str = "brief",
     # Keep the digest within one Telegram message (≤4096): cap to the top items.
     if isinstance(result.get("items"), list):
         result["items"] = result["items"][:max_items]
+        _log_llm_selection(result, news_list, max_items, style)
 
     _date_head = f"📅 {_ru_date_today()}" + (f" · {period_label}" if period_label else "")
     if style == "detailed":
@@ -351,6 +380,7 @@ def generate_tg_channels_digest(news_list: list[dict], period_label: str = "за
 
     if isinstance(result.get("items"), list):
         result["items"] = result["items"][:limit]
+        _log_llm_selection(result, news_list, limit, "tg_channels")
 
     text = _render_detailed(result, news_list)
     if text:
