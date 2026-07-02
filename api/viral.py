@@ -13,7 +13,7 @@ def get_viral(query_params):
     Args:
         query_params: dict-like from parse_qs (values are lists), e.g. {"limit": ["200"], "level": ["high"]}
     """
-    from checks.viral_score import viral_score, VIRAL_TRIGGERS, get_calendar_boost
+    from checks.viral_score import viral_score, VIRAL_TRIGGERS
     from checks.sentiment import analyze_sentiment
     from checks.tags import auto_tag
     from apis.cache import cache_get, cache_set, cache_key
@@ -170,9 +170,6 @@ def get_viral(query_params):
             source_avg.append({"source": src, "avg": round(data["sum"] / data["total"], 1), "count": data["total"]})
         source_avg.sort(key=lambda x: x["avg"], reverse=True)
 
-        # Calendar event
-        cal_boost, cal_event = get_calendar_boost()
-
         # Available triggers for filter
         all_triggers = [{"id": k, "label": v["label"], "category": CATEGORY_MAP.get(k, CATEGORY_MAP.get(k.split("_")[0], "Прочее"))} for k, v in VIRAL_TRIGGERS.items()]
 
@@ -183,7 +180,7 @@ def get_viral(query_params):
             "top_triggers": top_triggers,
             "top_categories": top_categories,
             "source_avg": source_avg[:15],
-            "calendar": {"boost": cal_boost, "event": cal_event},
+            "calendar": {"boost": 0, "event": ""},
             "all_triggers": all_triggers,
         }
 
