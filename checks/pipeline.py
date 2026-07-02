@@ -10,7 +10,7 @@ from checks.momentum import get_momentum, invalidate_cache
 from checks.headline_score import headline_score
 from checks.source_weight import get_source_weight
 from checks.feedback import get_feedback_adjustments
-from nlp.game_entities import find_entities
+from nlp.entities import find_entities
 from storage.database import get_connection, _is_postgres, update_news_status, save_check_results
 
 logger = logging.getLogger(__name__)

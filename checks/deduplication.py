@@ -2,7 +2,7 @@ import hashlib
 import re
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
-from nlp.game_entities import find_entities
+from nlp.entities import find_entities
 
 
 def normalize(text: str) -> str:

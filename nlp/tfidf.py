@@ -9,7 +9,7 @@ import logging
 import re
 
 from sklearn.feature_extraction.text import TfidfVectorizer
-from nlp.game_entities import find_entities, TIER_BOOST
+from nlp.entities import find_entities, TIER_BOOST
 
 logger = logging.getLogger(__name__)
 

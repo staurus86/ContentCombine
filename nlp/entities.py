@@ -1,20 +1,22 @@
-"""Единая база игровых сущностей с тирами и частотами.
+"""Единая база SEO/AI-сущностей с тирами и частотами.
+
+Термины ниши (GEO, core update, AI Overviews), эксперты/персоны (John Mueller,
+Danny Sullivan) и поисковые/AI-платформы (Google, ChatGPT, Яндекс).
 
 Используется в:
 - nlp/tfidf.py — буст биграмм при совпадении с известной сущностью
-- checks/viral_score.py — замена BIG_TITLES на тиры
+- checks/viral_score.py — тир-буст виральности
 - checks/deduplication.py — entity overlap с весами
-- checks/ner.py — может импортировать отсюда
 
-freq: реальная частота поиска 0-100 (log-scale, Steam API + estimates, 2026-03-11).
+freq: относительная поисковая частота 0-100 (log-scale, оценка/Keys.so).
 Обновление: python scripts/fetch_entity_freq.py (Keys.so API)
 Кэш: scripts/entity_freq_cache.json
 """
 
 # Тиры: S (мега-хайп), A (крупные), B (заметные), C (нишевые)
-# freq: реальная поисковая частота 0-100 (log-normalized, обновлена 2026-03-11)
+# freq: относительная поисковая частота 0-100 (log-normalized)
 
-GAME_ENTITIES = {
+CONCEPT_ENTITIES = {
     "aeo": {"tier": "A", "freq": 70, "aliases": []},
     "ai citation": {"tier": "A", "freq": 70, "aliases": []},
     "ai crawler": {"tier": "A", "freq": 70, "aliases": []},
@@ -79,7 +81,7 @@ GAME_ENTITIES = {
     "цитируемость в ии": {"tier": "A", "freq": 70, "aliases": []},
 }
 
-STUDIO_ENTITIES = {
+PERSON_ENTITIES = {
     "danny sullivan": {"tier": "A", "freq": 70, "aliases": []},
     "gary illyes": {"tier": "A", "freq": 70, "aliases": []},
     "google core update": {"tier": "A", "freq": 70, "aliases": []},
@@ -137,20 +139,20 @@ TIER_BOOST = {"S": 30, "A": 15, "B": 8, "C": 3}
 
 # --- Lookup index: строится при импорте для быстрого поиска ---
 
-_LOOKUP = {}  # {"gta 6": {"name": "gta 6", "type": "game", "tier": "S", "freq": 100}, ...}
+_LOOKUP = {}  # {"ai overviews": {"name": "ai overviews", "type": "concept", "tier": "S", "freq": 100}, ...}
 
 
 def _build_lookup():
     """Строит плоский индекс alias->entity для быстрого поиска в тексте."""
-    for name, data in GAME_ENTITIES.items():
-        entry = {"name": name, "type": "game", "tier": data["tier"], "freq": data["freq"]}
+    for name, data in CONCEPT_ENTITIES.items():
+        entry = {"name": name, "type": "concept", "tier": data["tier"], "freq": data["freq"]}
         _LOOKUP[name] = entry
         for alias in data.get("aliases", []):
             if alias and alias not in _LOOKUP:
                 _LOOKUP[alias] = entry
 
-    for name, data in STUDIO_ENTITIES.items():
-        entry = {"name": name, "type": "studio", "tier": data["tier"], "freq": data["freq"]}
+    for name, data in PERSON_ENTITIES.items():
+        entry = {"name": name, "type": "person", "tier": data["tier"], "freq": data["freq"]}
         _LOOKUP[name] = entry
         for alias in data.get("aliases", []):
             if alias and alias not in _LOOKUP:

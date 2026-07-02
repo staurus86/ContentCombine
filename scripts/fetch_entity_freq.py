@@ -1,4 +1,4 @@
-"""Скрипт для снятия реальной частоты из Keys.so для базы game_entities.
+"""Скрипт для снятия реальной частоты из Keys.so для базы сущностей (nlp/entities.py).
 
 Запуск: python scripts/fetch_entity_freq.py [--dry-run]
 
@@ -6,7 +6,7 @@
 1. Запрашивает ws (search volume) по каждой сущности через Keys.so API
 2. Нормализует ws -> freq (0-100)
 3. Сохраняет кеш результатов в scripts/entity_freq_cache.json
-4. Автоматически обновляет freq значения в nlp/game_entities.py (если не --dry-run)
+4. Автоматически обновляет freq значения в nlp/entities.py (если не --dry-run)
 
 ВНИМАНИЕ: тратит API Keys.so (~150 запросов). Запускать 1 раз.
 
@@ -25,11 +25,11 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import config
 from apis.keyso import get_keyword_info
-from nlp.game_entities import GAME_ENTITIES, STUDIO_ENTITIES, PLATFORM_ENTITIES
+from nlp.entities import CONCEPT_ENTITIES, PERSON_ENTITIES, PLATFORM_ENTITIES
 
 ENTITY_FILE = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-    "nlp", "game_entities.py",
+    "nlp", "entities.py",
 )
 CACHE_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "entity_freq_cache.json")
 
@@ -43,10 +43,10 @@ def fetch_all() -> dict:
     results = {}
 
     all_entities = {}
-    for k in GAME_ENTITIES:
-        all_entities[f"game:{k}"] = (k, "game")
-    for k in STUDIO_ENTITIES:
-        all_entities[f"studio:{k}"] = (k, "studio")
+    for k in CONCEPT_ENTITIES:
+        all_entities[f"concept:{k}"] = (k, "concept")
+    for k in PERSON_ENTITIES:
+        all_entities[f"person:{k}"] = (k, "person")
     for k in PLATFORM_ENTITIES:
         all_entities[f"platform:{k}"] = (k, "platform")
 
@@ -87,7 +87,7 @@ def normalize_results(results: dict) -> dict:
     # Нормализуем ws -> freq (0-100) отдельно для каждой категории
     freq_map = {}
 
-    for category in ("game", "studio", "platform"):
+    for category in ("concept", "person", "platform"):
         cat_entries = {k: v for k, v in results.items() if v["category"] == category}
         ws_values = [v["ws"] for v in cat_entries.values() if v["ws"] > 0]
         if not ws_values:
@@ -104,7 +104,7 @@ def normalize_results(results: dict) -> dict:
 
 
 def update_entity_file(freq_map: dict) -> int:
-    """Обновляет freq значения в nlp/game_entities.py.
+    """Обновляет freq значения в nlp/entities.py.
 
     Args:
         freq_map: {entity_name: new_freq_value}
@@ -163,7 +163,7 @@ def print_results(results: dict, freq_map: dict):
 def main():
     parser = argparse.ArgumentParser(description="Fetch entity frequencies from Keys.so")
     parser.add_argument("--dry-run", action="store_true",
-                        help="Only print results, don't modify game_entities.py")
+                        help="Only print results, don't modify entities.py")
     args = parser.parse_args()
 
     if not config.KEYSO_API_KEY:

@@ -173,7 +173,7 @@ VIRAL_TRIGGERS = {
     },
 }
 
-from nlp.game_entities import get_entity_boost, TIER_BOOST
+from nlp.entities import get_entity_boost, TIER_BOOST
 
 import json as _json
 import logging as _logging

@@ -1,9 +1,9 @@
 """Build SEO keyword surfaces from the multilingual lexicon and splice them into
-the engine, as a drop-in replacement for the gaming dictionaries.
+the engine.
 
 Edits (data only, engine logic untouched):
-- nlp/game_entities.py : GAME_ENTITIES / STUDIO_ENTITIES / PLATFORM_ENTITIES literals
-- checks/viral_score.py : VIRAL_TRIGGERS dict, _DEDUP_PREFIXES set, GAMING_EVENTS_CALENDAR
+- nlp/entities.py : CONCEPT_ENTITIES / PERSON_ENTITIES / PLATFORM_ENTITIES literals
+- checks/viral_score.py : VIRAL_TRIGGERS dict, _DEDUP_PREFIXES set
 
 Also writes niches/seo/keywords.yaml (the clean niche artifact).
 Run from anywhere; paths resolved relative to repo root.
@@ -145,22 +145,20 @@ def splice(path, pattern, replacement, flags=re.DOTALL):
     open(path, "w", encoding="utf-8").write(new)
 
 
-ge = os.path.join(ROOT, "nlp", "game_entities.py")
+ge = os.path.join(ROOT, "nlp", "entities.py")
 vs = os.path.join(ROOT, "checks", "viral_score.py")
 
-splice(ge, r"^GAME_ENTITIES = \{.*?\n\}", entity_literal("GAME_ENTITIES", game), re.DOTALL | re.MULTILINE)
-splice(ge, r"^STUDIO_ENTITIES = \{.*?\n\}", entity_literal("STUDIO_ENTITIES", studio), re.DOTALL | re.MULTILINE)
+splice(ge, r"^CONCEPT_ENTITIES = \{.*?\n\}", entity_literal("CONCEPT_ENTITIES", game), re.DOTALL | re.MULTILINE)
+splice(ge, r"^PERSON_ENTITIES = \{.*?\n\}", entity_literal("PERSON_ENTITIES", studio), re.DOTALL | re.MULTILINE)
 splice(ge, r"^PLATFORM_ENTITIES = \{.*?\n\}", entity_literal("PLATFORM_ENTITIES", platform), re.DOTALL | re.MULTILINE)
 
 splice(vs, r"^VIRAL_TRIGGERS = \{.*?\n\}", triggers_literal(), re.DOTALL | re.MULTILINE)
 
-# _DEDUP_PREFIXES (indented inside a function) + calendar — edit text directly
+# _DEDUP_PREFIXES (indented inside a function) — edit text directly
 set_literal = "{" + ", ".join(json.dumps(p) for p in dedup_prefixes) + "}"
 src = open(vs, encoding="utf-8").read()
 src, n1 = re.subn(r"_DEDUP_PREFIXES = \{[^}]*\}", "_DEDUP_PREFIXES = " + set_literal, src, count=1)
-src, n2 = re.subn(r"^GAMING_EVENTS_CALENDAR = \[.*?\n\]", "GAMING_EVENTS_CALENDAR = []",
-                  src, count=1, flags=re.DOTALL | re.MULTILINE)
-assert n1 == 1 and n2 == 1, f"dedup={n1} calendar={n2}"
+assert n1 == 1, f"dedup={n1}"
 open(vs, "w", encoding="utf-8").write(src)
 
 # ---- niche artifact: keywords.yaml --------------------------------------
@@ -187,4 +185,4 @@ print("ENTITIES: platform=%d studio=%d topics=%d" % (len(platform), len(studio),
 print("TRIGGERS: %d (cat,tier) groups; categories=%s" % (len(triggers), dedup_prefixes))
 tk = sum(len(v) for v in triggers.values())
 print("trigger keywords total:", tk)
-print("spliced: game_entities.py, viral_score.py ; wrote keywords.yaml")
+print("spliced: entities.py, viral_score.py ; wrote keywords.yaml")
