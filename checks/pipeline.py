@@ -260,8 +260,12 @@ def run_review_pipeline(news_list: list[dict], update_status: bool = True) -> di
     # AUTO_REJECT_SCORE_THRESHOLD меняла только оркестратор, но не это место.
     import config
     AUTO_REJECT_SCORE = config.AUTO_REJECT_SCORE_THRESHOLD
+    TOP_SCORE = config.TOP_SCORE_THRESHOLD
     text_by_id = {n.get("id"): ((n.get("title") or "") + " " + (n.get("plain_text") or n.get("description") or "")) for n in news_list}
+    top_ids = []  # non-duplicate items scoring >= threshold → sticky is_top flag
     for r in results:
+        if not r.get("is_duplicate") and r.get("total_score", 0) >= TOP_SCORE:
+            top_ids.append(r["id"])
         if update_status:
             if r.get("is_duplicate"):
                 update_news_status(r["id"], "duplicate")
@@ -302,6 +306,22 @@ def run_review_pipeline(news_list: list[dict], update_status: bool = True) -> di
                 save_analysis(r["id"], bigrams=_kw.get("bigrams", []), trigrams=_kw.get("trigrams", []))
         except Exception as e:
             logger.debug("Bigram extract skipped for %s: %s", r["id"], e)
+
+    # Sticky is_top: flag high-score items once (never unset), for the ТОП tab.
+    if top_ids:
+        try:
+            conn = get_connection()
+            cur = conn.cursor()
+            ph = "%s" if _is_postgres() else "?"
+            placeholders = ",".join([ph] * len(top_ids))
+            cur.execute(
+                f"UPDATE news SET is_top = 1 WHERE COALESCE(is_top, 0) = 0 AND id IN ({placeholders})",
+                top_ids)
+            if not _is_postgres():
+                conn.commit()
+            cur.close()
+        except Exception as e:
+            logger.warning("is_top flag update failed: %s", e)
 
     return {"results": results, "groups": groups}
 

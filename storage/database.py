@@ -104,7 +104,34 @@ def init_db():
         _init_db_impl(conn, cur)
     finally:
         cur.close()
+    try:
+        _backfill_is_top()
+    except Exception as e:
+        logger.warning("is_top backfill skipped: %s", e)
     logger.info("Database initialized")
+
+
+def _backfill_is_top():
+    """One-time: flag existing high-score news as top so the ТОП tab covers all
+    time, not only items reviewed after the feature shipped. Guarded by a marker."""
+    import config
+    if get_app_setting("is_top_backfilled") == "1":
+        return
+    threshold = getattr(config, "TOP_SCORE_THRESHOLD", 70)
+    conn = get_connection()
+    cur = conn.cursor()
+    ph = "%s" if _is_postgres() else "?"
+    try:
+        cur.execute(
+            f"UPDATE news SET is_top = 1 WHERE COALESCE(is_top, 0) = 0 "
+            f"AND id IN (SELECT news_id FROM news_analysis WHERE total_score >= {ph})",
+            (threshold,))
+        if not _is_postgres():
+            conn.commit()
+        logger.info("is_top backfill: flagged existing news with total_score >= %d", threshold)
+    finally:
+        cur.close()
+    set_app_setting("is_top_backfilled", "1")
 
 
 def get_app_setting(key: str, default: str = "") -> str:
@@ -341,6 +368,13 @@ def _init_db_impl(conn, cur):
     _add_column_if_missing(cur, "news", "image_count", "INTEGER DEFAULT 0")
     # Cases: manual bookmark / auto by research tag. Exempt from freshness purge.
     _add_column_if_missing(cur, "news", "is_case", "INTEGER DEFAULT 0")
+    # Top: auto-flagged when total_score >= TOP_SCORE_THRESHOLD. Sticky, exempt from
+    # all auto-cleanup so top items accumulate over all time.
+    _add_column_if_missing(cur, "news", "is_top", "INTEGER DEFAULT 0")
+    try:
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_news_top ON news(is_top)")
+    except Exception:
+        pass
     # Normalized article date (ISO UTC) — ЕДИНЫЙ источник истины для ВСЕХ фильтров по дате
     # (published_at бывает ISO/RFC822 → нельзя сравнивать в SQL; published_ts всегда ISO).
     _add_column_if_missing(cur, "news", "published_ts", "TEXT")
@@ -692,11 +726,23 @@ def save_analysis(news_id: str, **kwargs):
                  llm_recommendation, llm_trend_forecast, llm_merged_with, sheets_row, now)
             )
         else:
+            # ON CONFLICT DO UPDATE (not INSERT OR REPLACE): only the analysis columns
+            # are touched, so total_score / entity_names / viral_* written earlier by
+            # save_check_results survive. INSERT OR REPLACE recreated the row and reset
+            # every other column to its default — a SQLite-only data wipe (Postgres above
+            # already upserts per-column).
             cur.execute(
-                """INSERT OR REPLACE INTO news_analysis
+                """INSERT INTO news_analysis
                    (news_id, bigrams, trigrams, trends_data, keyso_data,
                     llm_recommendation, llm_trend_forecast, llm_merged_with, sheets_row, processed_at)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                   ON CONFLICT(news_id) DO UPDATE SET
+                    bigrams=excluded.bigrams, trigrams=excluded.trigrams,
+                    trends_data=excluded.trends_data, keyso_data=excluded.keyso_data,
+                    llm_recommendation=excluded.llm_recommendation,
+                    llm_trend_forecast=excluded.llm_trend_forecast,
+                    llm_merged_with=excluded.llm_merged_with,
+                    sheets_row=excluded.sheets_row, processed_at=excluded.processed_at""",
                 (news_id, bigrams, trigrams, trends_data, keyso_data,
                  llm_recommendation, llm_trend_forecast, llm_merged_with, sheets_row, now)
             )

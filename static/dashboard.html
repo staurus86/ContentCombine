@@ -414,6 +414,7 @@ input:focus, textarea:focus, select:focus { outline:none; border-color:#1da1f2; 
     <div class="tab" data-tab="editorial">&#128240; Лента</div>
     <div class="tab" data-tab="cases" id="tab-cases">&#128204; Кейсы</div>
     <div class="tab" data-tab="telegram" id="tab-telegram">&#9993; Телеграм</div>
+    <div class="tab" data-tab="top" id="tab-top">&#11088; ТОП</div>
     <div class="tab" data-tab="digests" id="tab-digests">&#128240; Дайджесты</div>
     <!-- Платные/LLM-вкладки скрыты в бесплатном режиме -->
     <div class="tab" data-tab="news" style="display:none">Обогащённые</div>
@@ -1181,6 +1182,19 @@ input:focus, textarea:focus, select:focus { outline:none; border-color:#1da1f2; 
     <div id="tg-analytics" style="margin-top:22px"></div>
   </div>
 
+  <!-- TOP (лучшее по скору за всё время) -->
+  <div class="panel" id="panel-top">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <h2>&#11088; ТОП <span style="font-size:0.72em;color:#aab4be;font-weight:normal">лучшее по скору за всё время &middot; не удаляется автоматически</span></h2>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span id="top-count" style="color:var(--c-muted);font-size:0.85em"></span>
+        <button class="btn btn-sm btn-secondary" onclick="loadTop()">Обновить</button>
+      </div>
+    </div>
+    <div id="top-sections"></div>
+    <div id="top-empty" style="display:none;text-align:center;padding:40px;color:var(--c-muted)">Пока нет топ-материалов. Новость попадает сюда автоматически при скоре &ge; 70.</div>
+  </div>
+
   <!-- TRENDS (storylines) -->
   <div class="panel active" id="panel-storylines">
     <div id="kpi-strip" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px"></div>
@@ -1882,6 +1896,7 @@ document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () =>
   if (t.dataset.tab === 'final') { loadFinal(); }
   if (t.dataset.tab === 'editor') { loadArticles(); }
   if (t.dataset.tab === 'viral') { loadViral(); }
+  if (t.dataset.tab === 'top') { loadTop(); }
   if (t.dataset.tab === 'analytics') { loadAnalytics(); loadFunnelAnalytics(); loadPromptInsights(); }
   if (t.dataset.tab === 'digests') { loadSavedDigests(); }
   if (t.dataset.tab === 'queue') { loadQueueStandalone(); }
@@ -6501,6 +6516,33 @@ async function exportStorylinesToSheets() {
       toast(r.message || 'Ошибка экспорта', true);
     }
   } catch(e) { toast('Ошибка: ' + (e.message||e), true); }
+}
+
+async function loadTop() {
+  const cont = document.getElementById('top-sections');
+  const empty = document.getElementById('top-empty');
+  const countEl = document.getElementById('top-count');
+  if (!cont) return;
+  cont.innerHTML = '<div style="color:var(--c-muted);padding:20px">Загрузка...</div>';
+  let data;
+  try { data = await api('/api/top?limit=500'); }
+  catch(e) { cont.innerHTML = '<div style="color:var(--c-muted);padding:20px">Ошибка загрузки</div>'; return; }
+  const secs = [['Новости','📰',data.feed||[]], ['Кейсы','📌',data.cases||[]], ['Телеграм','📨',data.telegram||[]]];
+  const total = (data.counts||{}).total || 0;
+  if (countEl) countEl.textContent = total ? (total + ' материалов') : '';
+  if (!total) { cont.innerHTML=''; if(empty) empty.style.display='block'; return; }
+  if (empty) empty.style.display='none';
+  cont.innerHTML = secs.filter(s => s[2].length).map(([name, emoji, items]) =>
+    '<div style="margin-bottom:20px"><h3 style="margin:0 0 10px">' + emoji + ' ' + name +
+    ' <span style="color:var(--c-muted);font-size:0.8em;font-weight:normal">' + items.length + '</span></h3>' +
+    items.map(it =>
+      '<div class="storyline-card" style="padding:10px 14px;margin-bottom:8px;display:flex;justify-content:space-between;gap:12px;align-items:center">' +
+        '<div style="min-width:0"><a href="' + esc(it.url||'#') + '" target="_blank" rel="noopener" style="color:#e1e8ed;text-decoration:none;font-weight:500">' + esc(it.title||'') + '</a>' +
+        '<div style="color:var(--c-muted);font-size:0.78em;margin-top:2px">' + esc(it.source||'') + '</div></div>' +
+        '<div style="flex-shrink:0"><span class="stl-tag entity" title="Скор">' + (it.total_score||0) + '</span></div>' +
+      '</div>'
+    ).join('') + '</div>'
+  ).join('');
 }
 
 async function loadStorylines() {

@@ -178,6 +178,7 @@ class AdminHandler(BaseHTTPRequestHandler):
             "/api/analytics": lambda: self._json(self._get_analytics()),
             "/api/prompt_versions": lambda: self._json(self._get_prompt_versions()),
             "/api/viral": lambda: self._json(self._get_viral()),
+            "/api/top": lambda: self._json(self._get_top()),
             "/api/logs": lambda: self._json(self._get_logs()),
             "/api/rate_stats": lambda: self._json(self._get_rate_stats()),
             "/api/cache_stats": lambda: self._json(self._get_cache_stats()),
@@ -1555,6 +1556,11 @@ async function login() {
         from api.viral import get_viral
         qs = parse_qs(urlparse(self.path).query)
         return get_viral(qs)
+
+    def _get_top(self):
+        from api.news import get_top
+        qs = parse_qs(urlparse(self.path).query)
+        return get_top(qs)
 
     def _get_logs(self):
         from api.settings import get_logs

@@ -56,6 +56,9 @@ FULL_AUTO_SCORE_THRESHOLD = _int_env("FULL_AUTO_SCORE_THRESHOLD", 70)
 FULL_AUTO_FINAL_THRESHOLD = _int_env("FULL_AUTO_FINAL_THRESHOLD", 60)
 AUTO_EXPORT_THRESHOLD = _int_env("AUTO_EXPORT_THRESHOLD", 60)
 AUTO_REJECT_SCORE_THRESHOLD = _int_env("AUTO_REJECT_SCORE_THRESHOLD", 15)
+# Вкладка «ТОП»: при review новость с total_score >= порога получает липкий флаг
+# is_top (не снимается) и исключается из авто-чисток — копится за всё время.
+TOP_SCORE_THRESHOLD = _int_env("TOP_SCORE_THRESHOLD", 70)
 PUBLISH_SPACING_MINUTES = _int_env("PUBLISH_SPACING_MINUTES", 15)
 
 # LLM settings

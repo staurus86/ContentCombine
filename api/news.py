@@ -563,6 +563,42 @@ def _pull_segment_news(seg, from_h, limit=40):
         cur.close()
 
 
+def get_top(query_params=None):
+    """ТОП: все is_top-новости за всё время в трёх секциях (Новости/Кейсы/Телеграм),
+    внутри каждой — сортировка по total_score DESC. TG-паттерн параметризован
+    (psycopg2 %-safety, см. [[psycopg2-literal-percent-crash]])."""
+    qp = query_params or {}
+    limit = int(qp.get("limit", [500])[0])
+    conn = get_connection()
+    cur = conn.cursor()
+    _ph = "%s" if _is_postgres() else "?"
+    cols = ["id", "title", "source", "url", "published_at", "parsed_at",
+            "total_score", "viral_score", "viral_level"]
+    try:
+        def _seg(where_extra, params):
+            cur.execute(f"""
+                SELECT n.id, n.title, n.source, n.url, n.published_at, n.parsed_at,
+                       COALESCE(a.total_score, 0), COALESCE(a.viral_score, 0),
+                       COALESCE(a.viral_level, '')
+                FROM news n LEFT JOIN news_analysis a ON a.news_id = n.id
+                WHERE COALESCE(n.is_top, 0) = 1 AND COALESCE(n.is_deleted, 0) = 0 AND {where_extra}
+                ORDER BY COALESCE(a.total_score, 0) DESC
+                LIMIT {int(limit)}
+            """, params)
+            return [dict(zip(cols, row)) for row in cur.fetchall()]
+
+        feed = _seg(f"n.source NOT LIKE {_ph} AND COALESCE(n.is_case, 0) = 0", ("TG:%",))
+        cases = _seg("COALESCE(n.is_case, 0) = 1", ())
+        telegram = _seg(f"n.source LIKE {_ph}", ("TG:%",))
+        return {
+            "feed": feed, "cases": cases, "telegram": telegram,
+            "counts": {"feed": len(feed), "cases": len(cases), "telegram": len(telegram),
+                       "total": len(feed) + len(cases) + len(telegram)},
+        }
+    finally:
+        cur.close()
+
+
 def _filter_recurring_stories(items):
     """Drop candidates whose story was already covered in digests over the last 2 days.
 
@@ -1352,7 +1388,7 @@ def auto_purge_old_deleted(days=30):
     from datetime import datetime, timezone, timedelta
     cutoff = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
     try:
-        cur.execute(f"SELECT id FROM news WHERE is_deleted = 1 AND deleted_at < {_ph}", (cutoff,))
+        cur.execute(f"SELECT id FROM news WHERE is_deleted = 1 AND COALESCE(is_top, 0) = 0 AND deleted_at < {_ph}", (cutoff,))
         if _is_postgres():
             old_ids = [row[0] for row in cur.fetchall()]
         else:
@@ -1385,6 +1421,7 @@ def cleanup_short_news(min_chars=100):
             UPDATE news SET is_deleted=1, deleted_at={_ph}
             WHERE COALESCE(is_deleted, 0) = 0
               AND COALESCE(is_case, 0) = 0
+              AND COALESCE(is_top, 0) = 0
               AND LENGTH(title) < {_ph}
               AND status NOT IN ('approved', 'ready')
         """, (now, min_chars))
@@ -1411,6 +1448,7 @@ def cleanup_old_news(days=7):
             UPDATE news SET is_deleted=1, deleted_at={_ph}
             WHERE COALESCE(is_deleted, 0) = 0
               AND COALESCE(is_case, 0) = 0
+              AND COALESCE(is_top, 0) = 0
               AND parsed_at < {_ph}
               AND status NOT IN ('approved', 'ready')
         """, (now, cutoff))
@@ -1465,6 +1503,7 @@ def soft_delete_stale_news(max_age_days=None):
             SELECT id, published_at, parsed_at FROM news
             WHERE COALESCE(is_deleted, 0) = 0
               AND COALESCE(is_case, 0) = 0
+              AND COALESCE(is_top, 0) = 0
               AND status NOT IN ('approved', 'ready')
         """)
         stale = []
@@ -1633,7 +1672,7 @@ def redate_missing_dates(limit: int = 2000):
     for r in rows:
         nid, url = r[0], r[1]
         if _is_junk_url(url):
-            cur.execute(f"UPDATE news SET is_deleted=1, deleted_at={_ph} WHERE id={_ph} AND COALESCE(is_case,0)=0", (now, nid))
+            cur.execute(f"UPDATE news SET is_deleted=1, deleted_at={_ph} WHERE id={_ph} AND COALESCE(is_case,0)=0 AND COALESCE(is_top,0)=0", (now, nid))
             junk += 1
             continue
         pub = ""
