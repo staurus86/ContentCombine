@@ -979,11 +979,11 @@ input:focus, textarea:focus, select:focus { outline:none; border-color:#1da1f2; 
         <div id="analytics-score-trend" style="display:flex;align-items:flex-end;gap:3px;height:120px"></div>
       </div>
       <div class="card">
-        <h3 style="font-size:0.95em;margin-bottom:10px">Конверсия по дням</h3>
+        <h3 style="font-size:0.95em;margin-bottom:10px">Ревью по дням</h3>
         <div id="analytics-conversion" style="display:flex;align-items:flex-end;gap:3px;height:120px"></div>
         <div style="margin-top:6px;display:flex;gap:12px;font-size:0.75em;color:var(--c-muted)">
-          <span><span style="display:inline-block;width:10px;height:10px;background:#17bf63;border-radius:2px;margin-right:3px"></span>Одобрено</span>
-          <span><span style="display:inline-block;width:10px;height:10px;background:#e0245e;border-radius:2px;margin-right:3px"></span>Отклонено</span>
+          <span><span style="display:inline-block;width:10px;height:10px;background:#17bf63;border-radius:2px;margin-right:3px"></span>Прошло</span>
+          <span><span style="display:inline-block;width:10px;height:10px;background:#e0245e;border-radius:2px;margin-right:3px"></span>Отфильтровано</span>
         </div>
       </div>
     </div>
@@ -3538,12 +3538,12 @@ async function loadAnalytics() {
     <div class="card" style="text-align:center">
       <div style="font-size:2em;font-weight:700;color:#1da1f2">${r.total_news||0}</div>
       <div style="font-size:0.82em;color:var(--c-muted)">Всего новостей</div>
-      <div style="font-size:0.82em;color:#17bf63;margin-top:4px">Конверсия: ${r.approval_rate||0}%</div>
+      <div style="font-size:0.82em;color:#17bf63;margin-top:4px">Прошло ревью: ${r.review_pass_rate||0}%</div>
     </div>
     <div class="card" style="text-align:center">
-      <div style="font-size:2em;font-weight:700;color:#17bf63">${r.total_articles||0}</div>
-      <div style="font-size:0.82em;color:var(--c-muted)">Статей</div>
-      <div style="font-size:0.82em;color:var(--c-muted);margin-top:4px">${Object.entries(r.article_stats||{}).map(([k,v])=>k+':'+v).join(' | ')}</div>
+      <div style="font-size:2em;font-weight:700;color:#ffad1f">${r.top_count||0}</div>
+      <div style="font-size:0.82em;color:var(--c-muted)">В ТОП</div>
+      <div style="font-size:0.82em;color:var(--c-muted);margin-top:4px">материалов &ge; 70 баллов</div>
     </div>
   `;
 
@@ -3598,16 +3598,16 @@ async function loadAnalytics() {
     </div>`;
   }).join('');
 
-  // Conversion daily (stacked bars)
+  // Review outcomes daily (passed vs filtered, stacked bars)
   const convDaily = r.conversion_daily || [];
-  const maxConv = Math.max(...convDaily.map(d => d.approved + d.rejected), 1);
+  const maxConv = Math.max(...convDaily.map(d => d.passed + d.filtered), 1);
   document.getElementById('analytics-conversion').innerHTML = convDaily.map(d => {
-    const total = d.approved + d.rejected;
-    const hA = Math.max(0, d.approved / maxConv * 100);
-    const hR = Math.max(0, d.rejected / maxConv * 100);
+    const total = d.passed + d.filtered;
+    const hA = Math.max(0, d.passed / maxConv * 100);
+    const hR = Math.max(0, d.filtered / maxConv * 100);
     const day = d.date ? d.date.slice(5) : '';
-    const pct = total > 0 ? Math.round(d.approved / total * 100) : 0;
-    return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:0" title="${day}: ${d.approved} одобр / ${d.rejected} откл (${pct}%)">
+    const pct = total > 0 ? Math.round(d.passed / total * 100) : 0;
+    return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:0" title="${day}: ${d.passed} прошло / ${d.filtered} отфильтровано (${pct}%)">
       <span style="font-size:0.65em;color:var(--c-muted)">${pct}%</span>
       <div style="width:100%;display:flex;flex-direction:column;gap:1px">
         <div style="width:100%;height:${hR}px;background:#e0245e;border-radius:3px 3px 0 0;opacity:0.7"></div>
@@ -3619,12 +3619,9 @@ async function loadAnalytics() {
 
   // Source weights
   document.getElementById('analytics-source-weights').innerHTML = (r.source_stats||[]).map(s => {
-    const rate = s.approval_rate||0;
-    const rateColor = rate>=70?'#17bf63':rate>=40?'#ffad1f':'#e0245e';
     return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:3px;font-size:0.82em">
       <span style="width:100px">${s.source}</span>
       <span style="color:var(--c-muted)">${s.total} шт</span>
-      <span style="color:${rateColor}">${rate}% одобр.</span>
       <span style="color:#1da1f2;font-weight:500">x${s.weight}</span>
     </div>`;
   }).join('') || '<span style="color:var(--c-muted);font-size:0.82em">Нет данных</span>';
@@ -6339,12 +6336,10 @@ async function loadFunnelAnalytics() {
   const stages = [
     {key: 'parsed', label: 'Распарсено', color: 'var(--c-muted)'},
     {key: 'reviewed', label: 'Проверено', color: '#1da1f2'},
-    {key: 'in_review', label: 'На модерации', color: '#ffad1f'},
-    {key: 'approved', label: 'Одобрено', color: '#17bf63'},
-    {key: 'processed', label: 'Обогащено', color: '#794bc4'},
-    {key: 'ready', label: 'Готово', color: '#17bf63'},
-    {key: 'rewritten', label: 'Рерайтнуто', color: '#1da1f2'},
-    {key: 'published', label: 'Опубликовано', color: '#e0245e'},
+    {key: 'in_review', label: 'Прошло ревью', color: '#17bf63'},
+    {key: 'duplicate', label: 'Дубли', color: '#794bc4'},
+    {key: 'rejected', label: 'Отклонено', color: '#e0245e'},
+    {key: 'is_top', label: 'В ТОП', color: '#ffad1f'},
   ];
 
   const maxVal = data.parsed || 1;
@@ -6364,11 +6359,11 @@ async function loadFunnelAnalytics() {
   // Source conversion table
   const srcEl = document.getElementById('funnel-sources');
   if (srcEl && data.by_source) {
-    srcEl.innerHTML = '<table style="width:100%;font-size:0.82em"><thead><tr><th style="text-align:left">Источник</th><th>Всего</th><th>Ready</th><th>Rejected</th><th>Дубли</th><th>Конверсия</th></tr></thead><tbody>' +
+    srcEl.innerHTML = '<table style="width:100%;font-size:0.82em"><thead><tr><th style="text-align:left">Источник</th><th>Всего</th><th>В ТОП</th><th>Откл.</th><th>Дубли</th><th>% в ТОП</th></tr></thead><tbody>' +
       data.by_source.map(s => {
-        const conv = s.total > 0 ? ((s.ready_count / s.total) * 100).toFixed(1) + '%' : '0%';
-        const convColor = s.ready_count / s.total > 0.1 ? '#17bf63' : s.ready_count / s.total > 0.03 ? '#ffad1f' : '#e0245e';
-        return `<tr><td>${esc(s.source)}</td><td style="text-align:center">${s.total}</td><td style="text-align:center;color:#17bf63">${s.ready_count}</td><td style="text-align:center;color:#e0245e">${s.rejected_count}</td><td style="text-align:center;color:var(--c-muted)">${s.dup_count}</td><td style="text-align:center;color:${convColor};font-weight:bold">${conv}</td></tr>`;
+        const conv = s.total > 0 ? ((s.top_count / s.total) * 100).toFixed(1) + '%' : '0%';
+        const convColor = s.top_count / s.total > 0.3 ? '#17bf63' : s.top_count / s.total > 0.1 ? '#ffad1f' : '#e0245e';
+        return `<tr><td>${esc(s.source)}</td><td style="text-align:center">${s.total}</td><td style="text-align:center;color:#ffad1f">${s.top_count}</td><td style="text-align:center;color:#e0245e">${s.rejected_count}</td><td style="text-align:center;color:var(--c-muted)">${s.dup_count}</td><td style="text-align:center;color:${convColor};font-weight:bold">${conv}</td></tr>`;
       }).join('') + '</tbody></table>';
   }
 }

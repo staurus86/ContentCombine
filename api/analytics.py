@@ -37,10 +37,17 @@ def get_analytics():
             else:
                 statuses[row["status"]] = row["cnt"]
 
-        # 3. Approval rate
-        total_decisions = statuses.get("approved", 0) + statuses.get("processed", 0) + statuses.get("rejected", 0) + statuses.get("duplicate", 0)
-        approved_total = statuses.get("approved", 0) + statuses.get("processed", 0)
-        approval_rate = round(approved_total / total_decisions * 100, 1) if total_decisions > 0 else 0
+        # 3. Review pass rate: share of reviewed items that were kept (not filtered
+        # out as rejected/duplicate). The old approve/enrich mechanic is gone.
+        passed = (statuses.get("in_review", 0) + statuses.get("approved", 0)
+                  + statuses.get("processed", 0) + statuses.get("ready", 0))
+        filtered = statuses.get("rejected", 0) + statuses.get("duplicate", 0)
+        reviewed_total = passed + filtered
+        review_pass_rate = round(passed / reviewed_total * 100, 1) if reviewed_total > 0 else 0
+
+        # Items that reached the ТОП tab (sticky is_top)
+        cur.execute("SELECT COUNT(*) FROM news WHERE COALESCE(is_top, 0) = 1")
+        top_count = cur.fetchone()[0]
 
         # 4. Top viral triggers (from review results in last 7 days of news_analysis)
         if _is_postgres():
@@ -98,15 +105,6 @@ def get_analytics():
         except Exception:
             feedback = {"sources": [], "tags": []}
 
-        # 9. Articles stats
-        cur.execute("SELECT status, COUNT(*) as cnt FROM articles GROUP BY status")
-        art_stats = {}
-        for row in cur.fetchall():
-            if _is_postgres():
-                art_stats[row[0]] = row[1]
-            else:
-                art_stats[row["status"]] = row["cnt"]
-
         # 10. Avg score per day (14 days)
         if _is_postgres():
             cur.execute("""SELECT DATE(n.parsed_at::timestamp) as d,
@@ -129,16 +127,16 @@ def get_analytics():
             else:
                 score_trend.append({"date": row["d"], "avg_score": float(row["avg_score"]), "count": row["cnt"]})
 
-        # 11. Conversion per day (approved vs rejected, 14 days)
+        # 11. Review outcomes per day (passed vs filtered, 14 days)
         if _is_postgres():
             cur.execute("""SELECT DATE(parsed_at::timestamp) as d, status, COUNT(*) as cnt FROM news
                 WHERE parsed_at::timestamptz > (NOW() - INTERVAL '14 days')
-                AND status IN ('approved','processed','ready','rejected','duplicate')
+                AND status IN ('in_review','approved','processed','ready','rejected','duplicate')
                 GROUP BY d, status ORDER BY d""")
         else:
             cur.execute("""SELECT DATE(parsed_at) as d, status, COUNT(*) as cnt FROM news
                 WHERE parsed_at > datetime('now', '-14 days')
-                AND status IN ('approved','processed','ready','rejected','duplicate')
+                AND status IN ('in_review','approved','processed','ready','rejected','duplicate')
                 GROUP BY d, status ORDER BY d""")
         conv_raw = {}
         for row in cur.fetchall():
@@ -146,26 +144,25 @@ def get_analytics():
             st = row[1] if _is_postgres() else row["status"]
             cnt = row[2] if _is_postgres() else row["cnt"]
             if d not in conv_raw:
-                conv_raw[d] = {"date": d, "approved": 0, "rejected": 0}
-            if st in ("approved", "processed", "ready"):
-                conv_raw[d]["approved"] += cnt
+                conv_raw[d] = {"date": d, "passed": 0, "filtered": 0}
+            if st in ("in_review", "approved", "processed", "ready"):
+                conv_raw[d]["passed"] += cnt
             elif st in ("rejected", "duplicate"):
-                conv_raw[d]["rejected"] += cnt
+                conv_raw[d]["filtered"] += cnt
         conversion_daily = sorted(conv_raw.values(), key=lambda x: x["date"])
 
         return {
             "status": "ok",
             "top_sources": top_sources,
             "statuses": statuses,
-            "approval_rate": approval_rate,
+            "review_pass_rate": review_pass_rate,
+            "top_count": top_count,
             "top_bigrams": top_bigrams,
             "daily": daily,
             "peak_hours": peak_hours[:5],
             "source_stats": source_stats,
             "feedback": feedback,
-            "article_stats": art_stats,
             "total_news": sum(statuses.values()),
-            "total_articles": sum(art_stats.values()),
             "score_trend": score_trend,
             "conversion_daily": conversion_daily,
         }
@@ -175,7 +172,9 @@ def get_analytics():
 
 
 def get_funnel_analytics():
-    """Full pipeline funnel: parsed -> reviewed -> approved -> enriched -> final_passed -> rewritten -> exported -> published."""
+    """News funnel for the current mechanic: parsed -> reviewed -> passed review
+    -> deduped -> rejected -> in ТОП. The old content-pipeline stages
+    (approved/enriched/rewritten/published) were dropped with the old niche."""
     conn = get_connection()
     cur = conn.cursor()
     try:
@@ -190,24 +189,20 @@ def get_funnel_analytics():
         cur.execute("SELECT COUNT(*) FROM news_analysis WHERE total_score > 0")
         funnel["reviewed"] = cur.fetchone()[0]
 
-        # By status
-        for status in ["in_review", "approved", "processed", "moderation", "ready", "rejected", "duplicate"]:
+        # By status — only the stages the current mechanic uses
+        for status in ["in_review", "rejected", "duplicate"]:
             cur.execute(f"SELECT COUNT(*) FROM news WHERE status = {ph}", (status,))
             funnel[status] = cur.fetchone()[0]
 
-        # Articles created (rewritten)
-        cur.execute("SELECT COUNT(*) FROM articles")
-        funnel["rewritten"] = cur.fetchone()[0]
+        # Reached the ТОП tab (sticky is_top flag)
+        cur.execute("SELECT COUNT(*) FROM news WHERE COALESCE(is_top, 0) = 1")
+        funnel["is_top"] = cur.fetchone()[0]
 
-        # Published articles
-        cur.execute(f"SELECT COUNT(*) FROM articles WHERE status = 'published'")
-        funnel["published"] = cur.fetchone()[0]
-
-        # Conversion by source
+        # Per-source outcomes: total, in ТОП, rejected, duplicate
         cur.execute("""
             SELECT n.source,
                    COUNT(*) as total,
-                   SUM(CASE WHEN n.status = 'ready' THEN 1 ELSE 0 END) as ready_count,
+                   SUM(CASE WHEN COALESCE(n.is_top,0) = 1 THEN 1 ELSE 0 END) as top_count,
                    SUM(CASE WHEN n.status = 'rejected' THEN 1 ELSE 0 END) as rejected_count,
                    SUM(CASE WHEN n.status = 'duplicate' THEN 1 ELSE 0 END) as dup_count
             FROM news n
