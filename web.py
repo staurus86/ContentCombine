@@ -186,6 +186,7 @@ class AdminHandler(BaseHTTPRequestHandler):
             "/api/telegram": lambda: self._json(self._get_telegram()),
             "/api/telegram/analytics": lambda: self._json(self._get_telegram_analytics()),
             "/api/cases/analytics": lambda: self._json(self._get_cases_analytics()),
+            "/api/citability/report": lambda: self._json(self._get_citability_report()),
             "/api/moderation_list": lambda: self._json(self._get_moderation_list()),
             "/api/digests": lambda: self._json(self._get_digests()),
             "/api/viral_triggers": lambda: self._json(self._get_viral_triggers()),
@@ -284,6 +285,7 @@ class AdminHandler(BaseHTTPRequestHandler):
             "/api/test_llm": lambda: self._test_llm(body),
             "/api/test_keyso": lambda: self._test_keyso(body),
             "/api/reparse": lambda: self._reparse_source(body),
+            "/api/citability/scan": lambda: self._json(self._run_citability_scan(body)),
             "/api/test_sheets": lambda: self._test_sheets(body),
             "/api/quick_tags": lambda: self._quick_tags(body),
             "/api/review": lambda: self._run_review(body),
@@ -721,6 +723,14 @@ async function login() {
     def _get_cases_analytics(self):
         from api.news import get_cases_analytics
         return get_cases_analytics()
+
+    def _get_citability_report(self):
+        from apis.ai_citability import get_citability_report
+        return get_citability_report()
+
+    def _run_citability_scan(self, body):
+        from apis.ai_citability import run_citability_scan
+        return run_citability_scan(limit_queries=int((body or {}).get("limit", 0) or 0))
 
     def _get_trash(self):
         from api.news import get_trash

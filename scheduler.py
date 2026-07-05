@@ -276,6 +276,19 @@ def start_scheduler():
     from api.news import refresh_tg_subscribers
     scheduler.add_job(refresh_tg_subscribers, "cron", hour=10, minute=30, id="tg_subs_snapshot")
 
+    # AI-цитируемость (Sprint 5): еженедельный скан — кого цитируют AI-поисковики
+    # по нашим SEO/GEO-запросам. Понедельник 07:00 МСК. Без рабочих движков
+    # (Perplexity-ключ / search-модели на гейтвее) скан честно выходит no_engine.
+    def _weekly_citability_scan():
+        try:
+            from apis.ai_citability import run_citability_scan
+            res = run_citability_scan()
+            logger.info("Weekly citability scan: %s", res.get("status"))
+        except Exception as e:
+            logger.warning("Weekly citability scan failed: %s", e)
+    scheduler.add_job(_weekly_citability_scan, "cron", day_of_week="mon",
+                      hour=7, minute=0, id="ai_citability_scan")
+
     # Operational alerts → admin Telegram: new critical incidents + mass source failure.
     scheduler.add_job(check_critical_alerts, "interval", minutes=10, id="critical_alerts")
 

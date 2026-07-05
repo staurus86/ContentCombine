@@ -274,6 +274,21 @@ def _init_db_impl(conn, cur):
         )
     """
 
+    # AI-цитируемость (Sprint 5): реальные цитаты AI-поисковиков по нашим запросам.
+    # Одна строка = один процитированный url в ответе движка на запрос в день скана.
+    ai_citations_sql = """
+        CREATE TABLE IF NOT EXISTS ai_citations (
+            scan_date TEXT,
+            engine TEXT,
+            query TEXT,
+            domain TEXT,
+            url TEXT,
+            title TEXT,
+            rank INTEGER DEFAULT 0,
+            created_at TEXT
+        )
+    """
+
     viral_triggers_sql = """
         CREATE TABLE IF NOT EXISTS viral_triggers_config (
             trigger_id TEXT PRIMARY KEY,
@@ -325,6 +340,7 @@ def _init_db_impl(conn, cur):
         cur.execute(digests_sql)
         cur.execute(digest_history_sql)
         cur.execute(viral_triggers_sql)
+        cur.execute(ai_citations_sql)
     else:
         cur.execute(news_sql)
         cur.execute(analysis_sql)
@@ -335,6 +351,7 @@ def _init_db_impl(conn, cur):
         cur.execute(digests_sql)
         cur.execute(digest_history_sql)
         cur.execute(viral_triggers_sql)
+        cur.execute(ai_citations_sql)
         conn.commit()
 
     # Add check_data columns if missing (stores viral, sentiment, freshness, tags as JSON)

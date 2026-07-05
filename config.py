@@ -37,6 +37,38 @@ LLM_FALLBACK_MODELS = [m.strip() for m in os.getenv("LLM_FALLBACK_MODELS", "gpt-
 # Daily LLM spend cap in USD for the full-auto pipeline. 0 = disabled (no cap).
 LLM_DAILY_CAP_USD = float(os.getenv("LLM_DAILY_CAP_USD", "0"))
 
+# --- AI-цитируемость (Sprint 5): кого реально цитируют AI-поисковики ---
+# Движки с НАСТОЯЩИМИ цитатами: Perplexity API (поле citations) и search-модели
+# OpenAI (web_search + url_citation аннотации), если гейтвей их проксирует.
+# Обычный gpt-4o-mini НЕ ищет в вебе — его «цитаты» галлюцинации, не используем.
+PERPLEXITY_API_KEY = os.getenv("PERPLEXITY_API_KEY", "")
+CITABILITY_SEARCH_MODELS = [m.strip() for m in os.getenv(
+    "CITABILITY_SEARCH_MODELS", "gpt-4o-mini-search-preview,gpt-4o-search-preview").split(",") if m.strip()]
+CITABILITY_QUERIES = [
+    # EN — ядро SEO/GEO
+    "best seo tools 2026",
+    "best rank tracking software",
+    "how to optimize website for ai overviews",
+    "how to get cited by chatgpt and perplexity",
+    "best seo agency for saas",
+    "technical seo audit checklist",
+    "best keyword research tools",
+    "generative engine optimization guide",
+    "llms.txt what is it and do i need one",
+    "best backlink analysis tools",
+    "google core update recovery guide",
+    "best ai content detection tools",
+    # RU — рунет-срез
+    "лучшие sео инструменты 2026",
+    "как попасть в нейроответы яндекса",
+    "как оптимизировать сайт под ai overviews",
+    "лучшие сервисы съёма позиций",
+    "технический аудит сайта чеклист",
+    "как продвигать сайт в 2026",
+    "лучшие сервисы анализа конкурентов seo",
+    "GEO оптимизация под ChatGPT",
+]
+
 # Automation thresholds
 AUTO_APPROVE_THRESHOLD = _int_env("AUTO_APPROVE_THRESHOLD", 0)  # 0 = disabled, use pipeline buttons
 AUTO_REWRITE_ON_PUBLISH_NOW = os.getenv("AUTO_REWRITE_ON_PUBLISH_NOW", "true").lower() == "true"
