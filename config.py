@@ -214,6 +214,9 @@ SOURCES = [
     {"name": "Google Search Central", "type": "rss", "url": "https://developers.google.com/search/blog/feed.xml", "interval": 60},
     {"name": "Google Search Central YouTube", "type": "rss", "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCWf2ZlNsCGDS89VBF_awNvA", "interval": 120},
     {"name": "Google Search Status", "type": "rss", "url": "https://status.search.google.com/en/feed.atom", "interval": 30},
+    # Hacker News по поисковой тематике: points>=20 отсекает шум, запрос узкий (SEO/поиск,
+    # НЕ общий "AI" — иначе тянет генерик про AI-кодинг). relevance-чек дорежет остальное.
+    {"name": "Hacker News (search)", "type": "rss", "url": "https://hnrss.org/newest?q=SEO+OR+Googlebot+OR+%22Google+Search%22+OR+%22AI+Overviews%22+OR+Perplexity+OR+%22search+ranking%22&points=20", "interval": 60},
     {"name": "Kagi Blog", "type": "rss", "url": "https://blog.kagi.com/rss.xml", "interval": 120},
     {"name": "Mojeek Blog", "type": "rss", "url": "https://blog.mojeek.com/feed.xml", "interval": 120},
     {"name": "The Keyword (Google)", "type": "rss", "url": "https://blog.google/rss/", "interval": 30},
@@ -227,6 +230,7 @@ SOURCES = [
     {"name": "BS:gfiorelli", "type": "bluesky", "handle": "gfiorelli1.bsky.social", "interval": 60},
     {"name": "BS:glenngabe", "type": "bluesky", "handle": "glenngabe.bsky.social", "interval": 60},
     {"name": "BS:jonoalderson", "type": "bluesky", "handle": "jono.id", "interval": 60},
+    {"name": "BS:johnmu", "type": "bluesky", "handle": "johnmu.com", "interval": 60},
     {"name": "BS:joost", "type": "bluesky", "handle": "joost.blog", "interval": 60},
     {"name": "BS:kevinindig", "type": "bluesky", "handle": "kevin-indig.bsky.social", "interval": 60},
     {"name": "BS:lilyray", "type": "bluesky", "handle": "lilyray.nyc", "interval": 60},
