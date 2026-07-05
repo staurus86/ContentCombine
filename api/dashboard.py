@@ -257,19 +257,42 @@ def get_storylines(days: int = 3):
         # Кросс-язычная консолидация: один мировой сюжет на EN/DE/RU/FR лексически
         # не пересекается — кластеризуем по АНГЛИЙСКОМУ пивоту (переводим только
         # заголовки не-EN источников, язык по префиксу имени). Отображаем оригиналы.
-        # Fail-open: без LLM ключи = оригиналы, поведение как раньше.
+        # ВАЖНО: вкладка НЕ ждёт LLM. Синхронно берём только уже закэшированные
+        # переводы; недостающие греет фоновый поток — кросс-язычные склейки
+        # появляются со следующего обновления вкладки. (Было: холодный кэш после
+        # редеплоя блокировал «Тренды» на минуты — «Загрузка кластеров…».)
         _NON_EN = ("RU:", "DE:", "FR:", "JA:", "ES:", "NL:", "PL:", "IT:", "PT:")
         cluster_titles = list(titles)
         try:
+            from apis.cache import cache_get, cache_key
             need = [n["title"] for n in news_list
                     if (n.get("source") or "").startswith(_NON_EN) and n.get("title")]
             if need:
-                from apis.llm import translate_titles_en
-                tr = translate_titles_en(need)
+                tr = {}
+                missing = []
+                for t in need:
+                    cached = cache_get(cache_key("tr_en", t))
+                    if cached is not None:
+                        tr[t] = cached
+                    else:
+                        missing.append(t)
                 cluster_titles = [
                     tr.get(t, t) if (n.get("source") or "").startswith(_NON_EN) else t
                     for t, n in zip(titles, news_list)
                 ]
+                if missing:
+                    import threading
+
+                    def _warm(batch=missing):
+                        try:
+                            from apis.llm import translate_titles_en
+                            translate_titles_en(batch)
+                            logger.info("Storylines translate cache warmed: %d titles", len(batch))
+                        except Exception as e:
+                            logger.debug("Storylines translate warmup failed: %s", e)
+
+                    threading.Thread(target=_warm, daemon=True,
+                                     name="storylines-translate-warm").start()
         except Exception as e:
             logger.debug("Storylines translate skipped: %s", e)
 
