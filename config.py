@@ -559,6 +559,23 @@ def load_persistent_settings():
         except Exception as e:
             logging.getLogger(__name__).debug("Prompt/style overrides load failed: %s", e)
 
+        # Дайджест-промпты (apis/digest.py), сохранённые через Настройки → Промпты
+        try:
+            import apis.digest as dg
+            digest_keys = {
+                "DIGEST_ANTI_SLOP": "ANTI_SLOP",
+                "DIGEST_PROMPT_GENERAL": "PROMPT_GENERAL",
+                "DIGEST_PROMPT_DETAILED": "PROMPT_DETAILED",
+                "DIGEST_PROMPT_BRIEF": "PROMPT_BRIEF",
+                "DIGEST_PROMPT_TELEGRAM": "PROMPT_TELEGRAM",
+                "DIGEST_PROMPT_TG_CHANNELS": "PROMPT_TG_CHANNELS",
+            }
+            for db_key, attr in digest_keys.items():
+                if db_key in settings and settings[db_key]:
+                    setattr(dg, attr, settings[db_key])
+        except Exception as e:
+            logging.getLogger(__name__).debug("Digest prompt overrides load failed: %s", e)
+
         logging.getLogger(__name__).info("Loaded %d persistent settings from DB", len(settings))
     except Exception as e:
         logging.getLogger(__name__).debug("No persistent settings loaded: %s", e)

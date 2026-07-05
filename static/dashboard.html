@@ -1634,6 +1634,33 @@ input:focus, textarea:focus, select:focus { outline:none; border-color:#1da1f2; 
         <h2>Промпт запросов Keys.so</h2>
         <textarea id="prompt-keyso" rows="8"></textarea>
       </div>
+      <hr style="border-color:#38444d">
+      <h2 style="margin:15px 0 4px">Промпты дайджестов</h2>
+      <p style="color:var(--c-faint);font-size:0.82em;margin-bottom:10px">Анти-слоп подставляется в {anti_slop} каждого шаблона. Переменные шаблонов: {numbered} — нумерованный список материалов, {news_count}, {max_items}, {period_label}, {limit}.</p>
+      <div class="card" style="margin-bottom:15px">
+        <h2>Анти-слоп (общий блок всех дайджестов)</h2>
+        <textarea id="prompt-dg-antislop" rows="14" style="font-family:monospace;font-size:0.82em"></textarea>
+      </div>
+      <div class="card" style="margin-bottom:15px">
+        <h2>Общий дайджест <span style="color:#1da1f2;font-size:0.7em">(Сводка · автопубликация 20:00 и вс 19:00)</span></h2>
+        <textarea id="prompt-dg-general" rows="12" style="font-family:monospace;font-size:0.82em"></textarea>
+      </div>
+      <div class="card" style="margin-bottom:15px">
+        <h2>Подробный дайджест (detailed)</h2>
+        <textarea id="prompt-dg-detailed" rows="10" style="font-family:monospace;font-size:0.82em"></textarea>
+      </div>
+      <div class="card" style="margin-bottom:15px">
+        <h2>Краткий дайджест (brief)</h2>
+        <textarea id="prompt-dg-brief" rows="7" style="font-family:monospace;font-size:0.82em"></textarea>
+      </div>
+      <div class="card" style="margin-bottom:15px">
+        <h2>Telegram-пост дайджеста</h2>
+        <textarea id="prompt-dg-telegram" rows="8" style="font-family:monospace;font-size:0.82em"></textarea>
+      </div>
+      <div class="card" style="margin-bottom:15px">
+        <h2>Дайджест Telegram-каналов</h2>
+        <textarea id="prompt-dg-tgchannels" rows="12" style="font-family:monospace;font-size:0.82em"></textarea>
+      </div>
       <button class="btn btn-primary" onclick="savePrompts()">Сохранить промпты</button>
     </div>
 
@@ -2216,6 +2243,12 @@ async function loadPrompts() {
   document.getElementById('prompt-merge').value = p.merge_analysis || '';
   document.getElementById('prompt-keyso').value = p.keyso_queries || '';
   document.getElementById('prompt-rewrite').value = p.rewrite || '';
+  document.getElementById('prompt-dg-antislop').value = p.digest_anti_slop || '';
+  document.getElementById('prompt-dg-general').value = p.digest_general || '';
+  document.getElementById('prompt-dg-detailed').value = p.digest_detailed || '';
+  document.getElementById('prompt-dg-brief').value = p.digest_brief || '';
+  document.getElementById('prompt-dg-telegram').value = p.digest_telegram || '';
+  document.getElementById('prompt-dg-tgchannels').value = p.digest_tg_channels || '';
   // Render rewrite styles editor
   const stylesEl = document.getElementById('rewrite-styles-editor');
   if (stylesEl && p.rewrite_styles) {
@@ -2234,6 +2267,12 @@ async function savePrompts() {
     merge_analysis: document.getElementById('prompt-merge').value,
     keyso_queries: document.getElementById('prompt-keyso').value,
     rewrite: document.getElementById('prompt-rewrite').value,
+    digest_anti_slop: document.getElementById('prompt-dg-antislop').value,
+    digest_general: document.getElementById('prompt-dg-general').value,
+    digest_detailed: document.getElementById('prompt-dg-detailed').value,
+    digest_brief: document.getElementById('prompt-dg-brief').value,
+    digest_telegram: document.getElementById('prompt-dg-telegram').value,
+    digest_tg_channels: document.getElementById('prompt-dg-tgchannels').value,
   };
   const styles = {};
   document.querySelectorAll('[id^="style-"]').forEach(el => {

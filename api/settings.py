@@ -14,15 +14,32 @@ def get_sources():
     return config.SOURCES
 
 
+# Дайджест-промпты: ключ API/UI → атрибут модуля apis.digest → ключ app_settings.
+# Раньше редактировались только llm-промпты; дайджестовые жили в apis/digest.py
+# и в Настройки подключены не были (историческое упущение).
+DIGEST_PROMPT_MAP = {
+    "digest_anti_slop": ("ANTI_SLOP", "DIGEST_ANTI_SLOP"),
+    "digest_general": ("PROMPT_GENERAL", "DIGEST_PROMPT_GENERAL"),
+    "digest_detailed": ("PROMPT_DETAILED", "DIGEST_PROMPT_DETAILED"),
+    "digest_brief": ("PROMPT_BRIEF", "DIGEST_PROMPT_BRIEF"),
+    "digest_telegram": ("PROMPT_TELEGRAM", "DIGEST_PROMPT_TELEGRAM"),
+    "digest_tg_channels": ("PROMPT_TG_CHANNELS", "DIGEST_PROMPT_TG_CHANNELS"),
+}
+
+
 def get_prompts():
     from apis.llm import PROMPT_TREND_FORECAST, PROMPT_MERGE_ANALYSIS, PROMPT_KEYSO_QUERIES, PROMPT_REWRITE, REWRITE_STYLES
-    return {
+    import apis.digest as dg
+    out = {
         "trend_forecast": PROMPT_TREND_FORECAST,
         "merge_analysis": PROMPT_MERGE_ANALYSIS,
         "keyso_queries": PROMPT_KEYSO_QUERIES,
         "rewrite": PROMPT_REWRITE,
         "rewrite_styles": {k: v["instructions"] for k, v in REWRITE_STYLES.items()},
     }
+    for body_key, (attr, _db_key) in DIGEST_PROMPT_MAP.items():
+        out[body_key] = getattr(dg, attr, "")
+    return out
 
 
 def _mask(val: str, keep: int = 8) -> str:
@@ -262,6 +279,13 @@ def save_prompts(body):
                 llm.REWRITE_STYLES[style_name]["instructions"] = instructions
         import json
         set_app_setting("REWRITE_STYLES", json.dumps({k: v["instructions"] for k, v in llm.REWRITE_STYLES.items()}, ensure_ascii=False))
+    # Дайджест-промпты (apis/digest.py) — модульные глобалы, функции дайджеста
+    # читают их в момент вызова, setattr вступает в силу сразу.
+    import apis.digest as dg
+    for body_key, (attr, db_key) in DIGEST_PROMPT_MAP.items():
+        if body_key in body and isinstance(body[body_key], str) and body[body_key].strip():
+            setattr(dg, attr, body[body_key])
+            set_app_setting(db_key, body[body_key])
     return {"status": "ok"}
 
 
