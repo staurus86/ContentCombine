@@ -253,10 +253,30 @@ def get_storylines(days: int = 3):
 
         from checks.deduplication import tfidf_similarity, build_groups
         titles = [n["title"] for n in news_list]
+
+        # Кросс-язычная консолидация: один мировой сюжет на EN/DE/RU/FR лексически
+        # не пересекается — кластеризуем по АНГЛИЙСКОМУ пивоту (переводим только
+        # заголовки не-EN источников, язык по префиксу имени). Отображаем оригиналы.
+        # Fail-open: без LLM ключи = оригиналы, поведение как раньше.
+        _NON_EN = ("RU:", "DE:", "FR:", "JA:", "ES:", "NL:", "PL:", "IT:", "PT:")
+        cluster_titles = list(titles)
+        try:
+            need = [n["title"] for n in news_list
+                    if (n.get("source") or "").startswith(_NON_EN) and n.get("title")]
+            if need:
+                from apis.llm import translate_titles_en
+                tr = translate_titles_en(need)
+                cluster_titles = [
+                    tr.get(t, t) if (n.get("source") or "").startswith(_NON_EN) else t
+                    for t, n in zip(titles, news_list)
+                ]
+        except Exception as e:
+            logger.debug("Storylines translate skipped: %s", e)
+
         # Мягче дедупа: тренд — «про один сюжет?», связь слабее, чем у дублей. С дефолтными
         # порогами короткое окно (3 дня) давало ~1 сюжет на 208 новостей; 0.15/0.28 — 3×
         # реальных сюжетов без явных ложных склеек (проверено на живом потоке).
-        pairs = tfidf_similarity(titles, floor=0.15, pair_threshold=0.28)
+        pairs = tfidf_similarity(cluster_titles, floor=0.15, pair_threshold=0.28)
         groups = build_groups(news_list, pairs)
 
         # Deduplication: each news appears in only one storyline (the largest)

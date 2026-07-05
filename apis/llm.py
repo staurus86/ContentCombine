@@ -197,6 +197,51 @@ def _call_llm_cached(namespace: str, prompt: str, ttl: int = 86400) -> dict | No
     return result
 
 
+def translate_titles_en(titles: list[str]) -> dict[str, str]:
+    """Батч-перевод заголовков на английский для кросс-язычной кластеризации трендов.
+
+    Один мировой сюжет (Google update) на EN/DE/RU/FR лексически не пересекается —
+    tfidf его не склеивает. Перевод на общий язык (EN — большинство источников)
+    решает это. Кэш на каждый заголовок (7 дней), батч 40 шт/вызов — холодное
+    3-дневное окно стоит ~2 вызова gpt-4o-mini. Fail-open: без LLM возвращает
+    оригиналы, кластеризация работает как раньше."""
+    from apis.cache import cache_get, cache_set, cache_key
+    out = {}
+    todo = []
+    for t in titles:
+        if not t:
+            continue
+        ck = cache_key("tr_en", t)
+        cached = cache_get(ck)
+        if cached is not None:
+            out[t] = cached
+        else:
+            todo.append(t)
+
+    BATCH = 40
+    for start in range(0, len(todo), BATCH):
+        chunk = todo[start:start + BATCH]
+        numbered = "\n".join(f"{i+1}. {t}" for i, t in enumerate(chunk))
+        prompt = f"""Translate each numbered headline to English. Keep product/brand names as-is.
+Return STRICT JSON without markdown, mapping the number to the English translation:
+{{"1": "English headline", "2": "..."}}
+
+Headlines:
+{numbered}"""
+        result = _call_llm(prompt)
+        if not isinstance(result, dict):
+            # fail-open: этот чанк остаётся в оригинале, кэш не травим
+            for t in chunk:
+                out[t] = t
+            continue
+        for i, t in enumerate(chunk):
+            en = result.get(str(i + 1))
+            en = en.strip() if isinstance(en, str) and en.strip() else t
+            out[t] = en
+            cache_set(cache_key("tr_en", t), en, ttl=86400 * 7)
+    return out
+
+
 def forecast_trend(title: str, text: str, bigrams: list,
                    keyso_freq: int, trends: dict) -> dict | None:
     prompt = PROMPT_TREND_FORECAST.format(
