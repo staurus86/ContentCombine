@@ -42,18 +42,27 @@ ANTI_SLOP = """## Язык
 
 ## Как писать
 - Активный залог, сильный глагол. Подлежащее — кто действует.
+- Действует человек или компания, не абстракция. «Google подтвердил», «Anthropic выкатил» —
+  не «данные показывают», «исследование утверждает». Всегда называй, кто именно сделал.
 - Конкретика: имена, числа, продукты, даты. Не «эксперты считают» — кто именно.
+- Показывай цифрой, не оценкой: «трафик упал на 40%», а не «заметно просел».
 - Каждое слово несёт смысл. Режь воду и вводные.
 - Своя позиция: что это значит для SEO-специалиста, а не пересказ заголовка.
 
 ## Запрещено
 - Канцелярит и штампы ИИ: «важно отметить», «следует учитывать», «в современном мире»,
   «на сегодняшний день», «ключевую роль играет», «таким образом», «давайте рассмотрим»,
-  «стоит отметить», «не секрет, что», «в эпоху цифровизации».
+  «стоит отметить», «не секрет, что», «в эпоху цифровизации», «подчёркивает», «демонстрирует».
+- «является», «представляет собой» — ставь тире или глагол: «X — инструмент», не «X является инструментом».
+- Расщепление сказуемого: «производит анализ» → «анализирует», «ведёт борьбу» → «борется».
 - Конструкция «Это не X. Это Y.» — пиши прямое утверждение.
 - Вводные «В этом дайджесте…», «Разберём…», «Итак,» — сразу к сути.
 - Наречия-усилители без нужды («крайне», «поистине», «несомненно»).
-- Восторженные эпитеты ради красоты («революционный», «прорывной», «бесшовный»)."""
+- Восторженные эпитеты ради красоты («революционный», «прорывной», «бесшовный»).
+
+## Формат
+- Не подгоняй под «три пункта» ради симметрии — сколько реально есть, столько и пиши.
+- Тире не вместо запятой. Жирным — только настоящий акцент, не каждая фраза."""
 
 
 def _format_sources(news_list: list[dict]) -> str:
@@ -430,12 +439,25 @@ PROMPT_GENERAL = """Ты ведёшь Telegram-канал по SEO, AI и digita
 }}"""
 
 
-def _render_general(result, news_list) -> str:
-    """Render the general digest grouped into Новости / Кейсы / Телеграм sections."""
+def _render_general(result, news_list, seg_by_idx=None) -> str:
+    """Render the general digest grouped into Новости / Кейсы / Телеграм sections.
+
+    Раздел берём по ИСХОДНОМУ сегменту материала (seg_by_idx: индекс источника →
+    «Новости»/«Кейсы»/«Телеграм»), а не по полю section из ответа LLM — иначе модель
+    перекладывала обычные новости в «Кейсы». Fallback на LLM-section, если источник
+    не восстановить."""
     from collections import OrderedDict
     buckets = OrderedDict((s, []) for s in ("Новости", "Кейсы", "Телеграм"))
     for it in result.get("items", []):
-        sec = (it.get("section") or "Новости").strip()
+        srcs = it.get("sources") or []
+        sec = None
+        if seg_by_idx:
+            for idx in srcs:
+                if isinstance(idx, int) and idx in seg_by_idx:
+                    sec = seg_by_idx[idx]
+                    break
+        if not sec:
+            sec = (it.get("section") or "Новости").strip()
         if sec not in buckets:
             buckets[sec] = []
         head = (it.get("headline") or "").strip()
@@ -460,10 +482,12 @@ def generate_general_digest(feed_news, cases_news, tg_news, period_label="за �
     разбито по разделам, в один пост Telegram."""
     groups = [("Новости", feed_news or []), ("Кейсы", cases_news or []), ("Телеграм", tg_news or [])]
     all_news, lines = [], []
+    seg_by_idx = {}  # 1-based индекс источника → раздел (жёсткая привязка, не по LLM)
     for label, lst in groups:
         for n in lst:
             all_news.append(n)
             i = len(all_news)
+            seg_by_idx[i] = label
             date = (n.get("published_at") or n.get("parsed_at") or "")[:10]
             sc = n.get("total_score", 0)
             title = (n.get("title", "?") or "").replace("\n", " ")[:140]
@@ -478,7 +502,7 @@ def generate_general_digest(feed_news, cases_news, tg_news, period_label="за �
         logger.error("General digest LLM call failed")
         return {"title": "Ошибка", "text": "Не удалось сгенерировать дайджест (LLM недоступен).", "news_count": 0}
 
-    text = _render_general(result, all_news)
+    text = _render_general(result, all_news, seg_by_idx)
     if text:
         text = f"📅 {_ru_date_today()} · {period_label}\n\n" + text
     return {
