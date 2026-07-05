@@ -3720,6 +3720,7 @@ async function composeDigest(btn) {
       <div style="font-weight:600;color:#1da1f2">${esc(d.title || 'Дайджест')}</div>
       <div style="display:flex;gap:8px;align-items:center">
         <span style="font-size:0.8em;color:var(--c-muted)">${typeLabel} · ${period === 'week' ? 'за неделю' : 'за сутки'} · ${d.news_count}</span>
+        ${tgLenBadge(tgFullText(d, '\u{1F4E8}'))}
         <button class="btn btn-sm btn-secondary" onclick="publishComposed()" title="Опубликовать в Telegram-канал">&#128228; В Telegram</button>
       </div>
     </div>
@@ -3729,8 +3730,12 @@ async function composeDigest(btn) {
 
 async function publishComposed() {
   if (!_lastComposed) return;
-  if (!confirm('Опубликовать этот дайджест в Telegram-канал?')) return;
-  const text = (_lastComposed.title ? '**\u{1F4E8} ' + _lastComposed.title + '**\n' : '') + (_lastComposed.text || '');
+  const _full = tgFullText(_lastComposed, '\u{1F4E8}');
+  const _warn = _full.length > TG_POST_LIMIT
+    ? `\n\n⚠️ Пост ${_full.length} знаков — ДЛИННЕЕ лимита ${TG_POST_LIMIT}, уйдёт ${tgPostParts(_full)} сообщениями.`
+    : '';
+  if (!confirm('Опубликовать этот дайджест в Telegram-канал?' + _warn)) return;
+  const text = _full;
   const r = await api('/api/telegram/publish', {text, markdown: true});
   if (r && r.status === 'ok') toast(`Опубликовано в Telegram ✓ (${r.parts || 1} ч.)`);
   else if (r && r.status === 'no_token') toast('Канал не подключён', true);
@@ -5659,6 +5664,20 @@ function renderSegmentAnalytics(el, r, opts) {
     </div>`;
 }
 
+// Чекер длины поста Telegram: лимит 4096, публикация режет длинное на части.
+// full = текст С заголовком (как реально уйдёт в канал).
+const TG_POST_LIMIT = 4096;
+function tgPostParts(fullText) { return Math.max(1, Math.ceil((fullText || '').length / 4000)); }
+function tgLenBadge(fullText) {
+  const n = (fullText || '').length;
+  if (n <= TG_POST_LIMIT)
+    return `<span style="font-size:0.8em;color:#17bf63" title="Лимит Telegram ${TG_POST_LIMIT}">${n} зн. · в один пост</span>`;
+  return `<span style="font-size:0.8em;color:#ffad1f;font-weight:600" title="Лимит Telegram ${TG_POST_LIMIT}">⚠️ ${n} зн. — уйдёт ${tgPostParts(fullText)} сообщениями</span>`;
+}
+function tgFullText(d, emoji) {
+  return (d && d.title ? '**' + emoji + ' ' + d.title + '**\n' : '') + ((d && d.text) || '');
+}
+
 let _lastTgDigest = null;
 async function genTgDigest(period) {
   const el = document.getElementById('tg-digest-result');
@@ -5680,6 +5699,7 @@ async function genTgDigest(period) {
       <div style="font-weight:600;color:#1da1f2">${esc(d.title || 'Дайджест')}</div>
       <div style="display:flex;gap:8px;align-items:center">
         <span style="font-size:0.8em;color:var(--c-muted)">${({day:'за сутки',prev_day:'за прошлые сутки',week:'за неделю',month:'за месяц'})[period] || 'за период'} · ${d.news_count} постов</span>
+        ${tgLenBadge(tgFullText(d, '\u{1F4E8}'))}
         <button class="btn btn-sm btn-secondary" onclick="publishTgDigest()" title="Опубликовать в Telegram-канал">&#128228; В Telegram</button>
       </div>
     </div>
@@ -5689,7 +5709,11 @@ async function genTgDigest(period) {
 
 async function publishTgDigest() {
   if (!_lastTgDigest) return;
-  if (!confirm('Опубликовать этот дайджест ТГ-каналов в Telegram-канал?')) return;
+  const _full = tgFullText(_lastTgDigest, '\u{1F4E8}');
+  const _warn = _full.length > TG_POST_LIMIT
+    ? `\n\n⚠️ Пост ${_full.length} знаков — ДЛИННЕЕ лимита ${TG_POST_LIMIT}, уйдёт ${tgPostParts(_full)} сообщениями. Сократи в промпте/тексте или публикуй как есть.`
+    : '';
+  if (!confirm('Опубликовать этот дайджест ТГ-каналов в Telegram-канал?' + _warn)) return;
   const text = (_lastTgDigest.title ? '**\u{1F4E8} ' + _lastTgDigest.title + '**\n' : '') + (_lastTgDigest.text || '');
   const r = await api('/api/telegram/publish', {text, markdown: true});
   if (r && r.status === 'ok') toast(`Опубликовано в Telegram ✓ (${r.parts || 1} ч.)`);
