@@ -415,6 +415,7 @@ input:focus, textarea:focus, select:focus { outline:none; border-color:#1da1f2; 
     <div class="tab" data-tab="telegram" id="tab-telegram">&#9993; Телеграм</div>
     <div class="tab" data-tab="top" id="tab-top">&#11088; ТОП</div>
     <div class="tab" data-tab="digests" id="tab-digests">&#128240; Дайджесты</div>
+    <div class="tab" data-tab="aicite" id="tab-aicite">&#129302; AI-цитаты</div>
     <!-- Платные/LLM-вкладки скрыты в бесплатном режиме -->
     <div class="tab" data-tab="news" style="display:none">Обогащённые</div>
     <div class="tab" data-tab="final" style="display:none">Финал</div>
@@ -1194,6 +1195,19 @@ input:focus, textarea:focus, select:focus { outline:none; border-color:#1da1f2; 
     <div id="top-empty" style="display:none;text-align:center;padding:40px;color:var(--c-muted)">Пока нет топ-материалов. Новость попадает сюда автоматически при скоре &ge; 70.</div>
   </div>
 
+  <!-- AI CITABILITY -->
+  <div class="panel" id="panel-aicite">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <h2>&#129302; AI-цитаты <span style="font-size:0.72em;color:#aab4be;font-weight:normal">кого реально цитирует AI-поиск по нашим SEO/GEO-запросам &middot; скан по понедельникам</span></h2>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span id="aicite-meta" style="color:var(--c-muted);font-size:0.85em"></span>
+        <button class="btn btn-sm btn-secondary" onclick="loadAiCite()">Обновить</button>
+        <button class="btn btn-sm" id="aicite-scan-btn" onclick="runAiCiteScan()">&#128269; Запустить скан</button>
+      </div>
+    </div>
+    <div id="aicite-body"><div style="text-align:center;padding:40px;color:var(--c-muted)">Загрузка…</div></div>
+  </div>
+
   <!-- TRENDS (storylines) -->
   <div class="panel active" id="panel-storylines">
     <div id="kpi-strip" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px"></div>
@@ -1879,6 +1893,7 @@ document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () =>
   if (t.dataset.tab === 'top') { loadTop(); }
   if (t.dataset.tab === 'analytics') { loadAnalytics(); loadFunnelAnalytics(); loadPromptInsights(); }
   if (t.dataset.tab === 'digests') { loadSavedDigests(); }
+  if (t.dataset.tab === 'aicite') { loadAiCite(); }
   if (t.dataset.tab === 'queue') { loadQueueStandalone(); }
   if (t.dataset.tab === 'health') { loadHealth(); }
   if (t.dataset.tab === 'storylines') { loadStorylines(); loadSlSettings(); loadTopicCloud(); }
@@ -6524,6 +6539,52 @@ async function loadTop() {
       : '';
     return '<div id="top-sec-' + key + '" style="margin-bottom:20px;scroll-margin-top:52px"><h3 style="margin:0 0 10px">' + head + '</h3>' + visible + restHtml + '</div>';
   }).join('');
+}
+
+// ---- AI Citability (вкладка AI-цитаты) ----
+async function loadAiCite() {
+  const body = document.getElementById('aicite-body');
+  const meta = document.getElementById('aicite-meta');
+  try {
+    const d = await api('/api/citability/report');
+    if (d.status === 'empty' || d.status === 'no_engine') {
+      meta.textContent = '';
+      body.innerHTML = '<div style="text-align:center;padding:40px;color:var(--c-muted)">' + esc(d.message || 'Сканов ещё не было.') + '</div>';
+      return;
+    }
+    const engines = (d.engines || []).map(e => esc(e.engine) + ' (' + e.citations + ' цит.)').join(', ');
+    meta.textContent = 'скан ' + (d.scan_date || '') + (d.prior_scan ? ' · сравнение с ' + d.prior_scan : ' · первый скан');
+    let rows = '';
+    (d.top_domains || []).forEach((m, i) => {
+      const delta = d.prior_scan ? (m.new ? '<span style="color:#1da1f2">новый</span>'
+        : (m.delta > 0 ? '<span style="color:#17bf63">+' + m.delta + '</span>'
+        : (m.delta < 0 ? '<span style="color:#e0245e">' + m.delta + '</span>' : '0'))) : '—';
+      rows += '<tr><td style="color:var(--c-muted)">' + (i + 1) + '</td>'
+        + '<td><a href="https://' + esc(m.domain) + '" target="_blank" rel="noopener">' + esc(m.domain) + '</a></td>'
+        + '<td>' + m.citations + '</td><td>' + m.queries + '</td><td>' + delta + '</td></tr>';
+    });
+    body.innerHTML =
+      '<div style="color:var(--c-muted);font-size:0.85em;margin-bottom:10px">Движки: ' + engines + '</div>'
+      + '<div class="table-scroll"><table><thead><tr><th>#</th><th>Домен</th><th>Цитирований</th><th>Запросов</th><th>Δ к прошлому скану</th></tr></thead>'
+      + '<tbody>' + rows + '</tbody></table></div>';
+  } catch (e) {
+    body.innerHTML = '<div style="text-align:center;padding:40px;color:#e0245e">Не удалось загрузить отчёт</div>';
+  }
+}
+
+async function runAiCiteScan() {
+  const btn = document.getElementById('aicite-scan-btn');
+  if (!confirm('Скан прогоняет ~20 запросов через AI-поиск и занимает несколько минут. Запустить?')) return;
+  btn.disabled = true; btn.textContent = '⏳ Сканирую…';
+  try {
+    const r = await api('/api/citability/scan', {});
+    if (r.status === 'ok') { await loadAiCite(); }
+    else { alert(r.message || ('Скан не выполнен: ' + r.status)); }
+  } catch (e) {
+    alert('Скан прерван (таймаут браузера) — он мог доработать на сервере, обнови отчёт через пару минут.');
+  } finally {
+    btn.disabled = false; btn.textContent = '🔍 Запустить скан';
+  }
 }
 
 async function loadStorylines() {

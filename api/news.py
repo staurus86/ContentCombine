@@ -644,6 +644,22 @@ def compose_digest(dtype="feed", period="day"):
         from apis.digest import generate_general_digest
         result = generate_general_digest(feed_news, cases_news, tg_news, period_label)
         style_tag = "gen_" + period
+        # Недельный general получает секцию «Кого цитирует AI» — строится КОДОМ из
+        # ai_citations (реальные цитаты AI-поиска), не через LLM: цифры не для галлюцинаций.
+        if period == "week" and result.get("text"):
+            try:
+                from apis.ai_citability import get_citability_report
+                rep = get_citability_report()
+                top = (rep.get("top_domains") or [])[:5]
+                if rep.get("status") == "ok" and top:
+                    lines = ["**🤖 Кого цитирует AI-поиск**"]
+                    for m in top:
+                        mark = " · новый" if m.get("new") else (
+                            f" · +{m['delta']}" if m.get("delta", 0) > 0 and rep.get("prior_scan") else "")
+                        lines.append(f"• {m['domain']} — {m['citations']} цитирований в {m['queries']} запросах{mark}")
+                    result["text"] += "\n\n" + "\n".join(lines)
+            except Exception as e:
+                logger.debug("Citability digest section skipped: %s", e)
     else:
         if dtype == "cases":
             seg, style_tag = "COALESCE(n.is_case, 0) = 1", "cs_" + period
