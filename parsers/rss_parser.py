@@ -16,7 +16,10 @@ logger = logging.getLogger(__name__)
 
 _JUNK_TAGS = ["script", "style", "nav", "footer", "header", "aside",
               "figure", "figcaption", "form", "button", "svg", "noscript", "iframe"]
-_JUNK_CLASS_KW = ["share", "social", "bookmark", "comment", "sidebar", "related", "newsletter", "promo", "ad-"]
+_JUNK_CLASS_KW = ["share", "social", "bookmark", "comment", "sidebar", "related", "newsletter", "promo", "ad-",
+                  # consent/cookie/подписные оверлеи: t3n (c-consent-overlay/consent-error/-initial)
+                  # тянул consent-баннер + targetvideo-плеер прямо в тело статьи → мусор в биграммах/quality.
+                  "consent", "cookie", "cmp", "gdpr", "paywall", "subscribe", "signup"]
 
 
 def _clean_element(el) -> str:
