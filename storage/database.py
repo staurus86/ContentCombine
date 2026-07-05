@@ -403,6 +403,10 @@ def _init_db_impl(conn, cur):
         cur.execute("CREATE INDEX IF NOT EXISTS idx_news_case ON news(is_case)")
     except Exception:
         pass
+    try:
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_ai_citations_scan ON ai_citations(scan_date)")
+    except Exception:
+        pass
     _add_column_if_missing(cur, "articles", "is_deleted", "INTEGER DEFAULT 0")
     _add_column_if_missing(cur, "articles", "deleted_at", "TEXT")
     _add_column_if_missing(cur, "articles", "feed_description", "TEXT DEFAULT ''")
