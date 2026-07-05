@@ -623,6 +623,18 @@ def _filter_recurring_stories(items):
         return items
 
 
+# In-flight дедуп compose: обрыв соединения на долгом LLM (деградация гейтвея)
+# заставляет edge/браузер НЕВИДИМО повторить POST → один клик = два LLM-прогона и
+# два сохранённых дайджеста (наблюдалось 2026-07-05: два gen_day с разницей 2м41с
+# при одном клике). Повторный запрос той же пары (dtype, period) ждёт результат
+# первого, а не запускает новый прогон.
+import threading as _threading
+import time as _time
+_COMPOSE_INFLIGHT = {}
+_COMPOSE_LOCK = _threading.Lock()
+_COMPOSE_WAIT_S = 600
+
+
 def compose_digest(dtype="feed", period="day"):
     """Compose a digest for a content type and period, save it to history, return it.
 
@@ -630,6 +642,30 @@ def compose_digest(dtype="feed", period="day"):
            | general (best 2-3 from EACH of feed/cases/telegram, grouped, one TG message).
     period: day (24h) | week (7d).
     """
+    key = (dtype, period)
+    with _COMPOSE_LOCK:
+        entry = _COMPOSE_INFLIGHT.get(key)
+        if entry and not entry["event"].is_set() and _time.time() - entry["ts"] < _COMPOSE_WAIT_S:
+            waiter = entry  # уже варится — ждём его результат, второй прогон не запускаем
+        else:
+            waiter = None
+            entry = {"event": _threading.Event(), "result": None, "ts": _time.time()}
+            _COMPOSE_INFLIGHT[key] = entry
+    if waiter:
+        logger.info("compose_digest(%s,%s): duplicate request — waiting for in-flight run", dtype, period)
+        waiter["event"].wait(timeout=_COMPOSE_WAIT_S)
+        if waiter["result"] is not None:
+            return waiter["result"]
+        return {"status": "busy", "message": "Дайджест уже собирается — обнови вкладку «Дайджесты» через минуту."}
+    try:
+        result = _compose_digest_impl(dtype, period)
+        entry["result"] = result
+        return result
+    finally:
+        entry["event"].set()
+
+
+def _compose_digest_impl(dtype="feed", period="day"):
     if dtype == "telegram":
         return get_tg_channels_digest(period)
 

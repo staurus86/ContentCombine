@@ -1024,7 +1024,7 @@ input:focus, textarea:focus, select:focus { outline:none; border-color:#1da1f2; 
           <option value="day">За сутки</option>
           <option value="week">За неделю</option>
         </select>
-        <button class="btn btn-sm btn-success" onclick="composeDigest()">Составить</button>
+        <button class="btn btn-sm btn-success" onclick="composeDigest(this)">Составить</button>
         <button class="btn btn-sm btn-secondary" onclick="loadSavedDigests()">Обновить</button>
       </div>
     </div>
@@ -3652,16 +3652,24 @@ async function activatePromptVersion(id) {
 }
 
 let _lastComposed = null;
-async function composeDigest() {
+async function composeDigest(btn) {
   const type = document.getElementById('digest-type-select').value;
   const period = document.getElementById('digest-period-select').value;
   const card = document.getElementById('digest-result');
   const content = document.getElementById('digest-content');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Составляю…'; }
   card.style.display = 'block';
-  content.innerHTML = '<div style="padding:14px;text-align:center;color:var(--c-muted)">Составляю дайджест… (LLM, до ~30 сек)</div>';
+  content.innerHTML = '<div style="padding:14px;text-align:center;color:var(--c-muted)">Составляю дайджест… При медленном LLM — до нескольких минут; при обрыве связи сервер доделает сам, готовый появится в «Сохранённых» ниже.</div>';
   let r;
   try { r = await api('/api/digest/compose', {type, period}); }
-  catch (e) { content.innerHTML = '<span style="color:#e0245e">Сеть прервалась или запрос затянулся. Попробуй ещё раз.</span>'; return; }
+  catch (e) {
+    content.innerHTML = '<span style="color:#ffad1f">Соединение оборвалось, но сервер продолжает собирать дайджест — обнови «Сохранённые» через минуту-две.</span>';
+    if (btn) { btn.disabled = false; btn.textContent = 'Составить'; }
+    setTimeout(loadSavedDigests, 90000);
+    return;
+  }
+  if (btn) { btn.disabled = false; btn.textContent = 'Составить'; }
+  if (r && r.status === 'busy') { content.innerHTML = '<span style="color:#ffad1f">' + esc(r.message || 'Уже собирается — подожди минуту.') + '</span>'; return; }
   if (!r || r.status !== 'ok' || !r.digest) { content.innerHTML = '<span style="color:#e0245e">' + ((r && r.message) || 'Ошибка генерации') + '</span>'; return; }
   const d = r.digest;
   _lastComposed = d;
