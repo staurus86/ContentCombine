@@ -156,14 +156,23 @@ def build_groups(results: list[dict], pairs: list[tuple]) -> list[dict]:
         else:
             dup_status = "unique"
 
-        # Помечаем дубликаты (score > 0.85): каноном остаётся член пары с бóльшим
-        # total_score, а не просто более ранний по индексу
+        # Помечаем дубликаты (score > 0.85). Канон — ПЕРВОИСТОЧНИК, а не тот, у кого
+        # выше total_score: иначе агрегатор с кликбейтом побивал Google Search Central.
+        # Ранг = (авторитетность источника, total_score). source_weight кодирует
+        # первичность (Google/Yandex/Bing/офиц. блоги 1.2-1.3 > перепечатки 1.0).
+        from checks.source_weight import get_source_weight
+
+        def _canon_rank(r):
+            sw = r.get("source_weight")
+            if sw is None:
+                sw = get_source_weight(r.get("source", ""))
+            return (sw, r.get("total_score", 0))
+
         duplicates = set()
         for i, j, score in pairs:
             if i in group and j in group and score > 0.85:
-                si = results[i].get("total_score", 0)
-                sj = results[j].get("total_score", 0)
-                duplicates.add(j if sj <= si else i)
+                # дубль — член с МЕНЬШИМ рангом (канон = первоисточник)
+                duplicates.add(j if _canon_rank(results[j]) <= _canon_rank(results[i]) else i)
 
         groups.append({
             "status": dup_status,
