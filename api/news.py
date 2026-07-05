@@ -470,6 +470,15 @@ def get_cases_analytics():
 
 
 def get_tg_channels_digest(period="day", send=False):
+    """In-flight-дедупленная обёртка: роут /api/telegram/digest шёл МИМО guard'а
+    compose_digest — транспортный ретрай оборванного POST запускал второй
+    LLM-прогон (наблюдалось 18:22/18:23 05.07: первый упал, второй молча сохранил,
+    UI показал пустоту)."""
+    return _run_deduped(("tg_channels", period, bool(send)),
+                        lambda: _get_tg_channels_digest_impl(period, send))
+
+
+def _get_tg_channels_digest_impl(period="day", send=False):
     """Generate a digest of Telegram channels for a period.
 
     period: day (24h) | prev_day (24-48h ago) | week (7d) | month (30d).
@@ -635,6 +644,30 @@ _COMPOSE_LOCK = _threading.Lock()
 _COMPOSE_WAIT_S = 600
 
 
+def _run_deduped(key, runner):
+    """Один прогон на ключ: конкурентный дубликат (транспортный ретрай POST после
+    обрыва) ждёт результат первого, а не запускает второй LLM-прогон."""
+    with _COMPOSE_LOCK:
+        entry = _COMPOSE_INFLIGHT.get(key)
+        if entry and not entry["event"].is_set() and _time.time() - entry["ts"] < _COMPOSE_WAIT_S:
+            waiter = entry
+        else:
+            waiter = None
+            entry = {"event": _threading.Event(), "result": None, "ts": _time.time()}
+            _COMPOSE_INFLIGHT[key] = entry
+    if waiter:
+        logger.info("digest %s: duplicate request — waiting for in-flight run", key)
+        waiter["event"].wait(timeout=_COMPOSE_WAIT_S)
+        if waiter["result"] is not None:
+            return waiter["result"]
+        return {"status": "busy", "message": "Дайджест уже собирается — обнови историю через минуту."}
+    try:
+        entry["result"] = runner()
+        return entry["result"]
+    finally:
+        entry["event"].set()
+
+
 def compose_digest(dtype="feed", period="day"):
     """Compose a digest for a content type and period, save it to history, return it.
 
@@ -642,27 +675,7 @@ def compose_digest(dtype="feed", period="day"):
            | general (best 2-3 from EACH of feed/cases/telegram, grouped, one TG message).
     period: day (24h) | week (7d).
     """
-    key = (dtype, period)
-    with _COMPOSE_LOCK:
-        entry = _COMPOSE_INFLIGHT.get(key)
-        if entry and not entry["event"].is_set() and _time.time() - entry["ts"] < _COMPOSE_WAIT_S:
-            waiter = entry  # уже варится — ждём его результат, второй прогон не запускаем
-        else:
-            waiter = None
-            entry = {"event": _threading.Event(), "result": None, "ts": _time.time()}
-            _COMPOSE_INFLIGHT[key] = entry
-    if waiter:
-        logger.info("compose_digest(%s,%s): duplicate request — waiting for in-flight run", dtype, period)
-        waiter["event"].wait(timeout=_COMPOSE_WAIT_S)
-        if waiter["result"] is not None:
-            return waiter["result"]
-        return {"status": "busy", "message": "Дайджест уже собирается — обнови вкладку «Дайджесты» через минуту."}
-    try:
-        result = _compose_digest_impl(dtype, period)
-        entry["result"] = result
-        return result
-    finally:
-        entry["event"].set()
+    return _run_deduped(("compose", dtype, period), lambda: _compose_digest_impl(dtype, period))
 
 
 def _compose_digest_impl(dtype="feed", period="day"):

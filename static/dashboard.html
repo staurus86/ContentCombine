@@ -5687,9 +5687,11 @@ async function genTgDigest(period) {
   try {
     r = await api('/api/telegram/digest', {period});
   } catch (e) {
-    el.innerHTML = '<span style="color:#e0245e">Не удалось получить дайджест (долгий запрос/сеть прервалась). Попробуй ещё раз.</span>';
+    el.innerHTML = '<span style="color:#ffad1f">Соединение оборвалось, но сервер мог доделать дайджест — история ниже обновится сама через минуту.</span>';
+    setTimeout(loadTgDigestHistory, 60000);
     return;
   }
+  if (r && r.status === 'busy') { el.innerHTML = '<span style="color:#ffad1f">' + esc(r.message || 'Уже собирается — подожди минуту.') + '</span>'; setTimeout(loadTgDigestHistory, 60000); return; }
   if (!r || r.status !== 'ok' || !r.digest) { el.innerHTML = '<span style="color:#e0245e">' + ((r && r.message) || 'Ошибка генерации') + '</span>'; return; }
   const d = r.digest;
   _lastTgDigest = d;
