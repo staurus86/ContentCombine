@@ -156,6 +156,13 @@ def _check_single(news: dict) -> dict:
     sw = result["source_weight"]
     total_score = min(100, int(total_score * sw))
 
+    # Важность события: breaking (+12) / notable (+5) / routine (0) — сводит
+    # first-party, горячий триггер, подтверждение апдейта и momentum-всплеск.
+    from checks.event_significance import event_significance
+    sig = event_significance(news, result["checks"]["viral"], result["momentum"], sw)
+    result["significance"] = sig
+    total_score = min(100, total_score + sig["score_bonus"])
+
     # Headline bonus
     headline_bonus = max(0, (result["headline"]["score"] - 50)) // 10
     total_score = min(100, total_score + headline_bonus)
@@ -199,6 +206,8 @@ def _check_single(news: dict) -> dict:
         "viral": result["checks"]["viral"]["score"],
         "momentum_bonus": momentum_bonus,
         "headline_bonus": headline_bonus,
+        "significance": sig["level"],
+        "significance_bonus": sig["score_bonus"],
         "source_weight": sw,
         "feedback_adj": round(feedback_adj, 2),
         "base_weighted": base_weighted,
