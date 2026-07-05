@@ -79,6 +79,21 @@ def _update_badge(n: dict) -> str:
         return ""
 
 
+def _render_prompt(template: str, **kw) -> str:
+    """Подстановка плейсхолдеров с защитой от битого шаблона. Промпты теперь
+    редактируются в Настройках: опечатка ({numberd}), лишний {ключ} или
+    раздвоенная JSON-скобка ломают str.format (KeyError/ValueError) — дайджест
+    падал бы целиком. Фолбэк: тупой replace известных {ключей}, остальное как есть."""
+    try:
+        return template.format(**kw)
+    except Exception as e:
+        logger.warning("Digest prompt template broken (%s) — safe-replace fallback", e)
+        out = template
+        for k, v in kw.items():
+            out = out.replace("{" + k + "}", str(v))
+        return out
+
+
 def _format_sources(news_list: list[dict]) -> str:
     """Numbered source list passed to the model (with date and score hints)."""
     lines = []
@@ -295,11 +310,11 @@ def generate_daily_digest(news_list: list[dict], style: str = "brief",
               "max_items": max_items}
 
     if style == "detailed":
-        prompt = PROMPT_DETAILED.format(**common)
+        prompt = _render_prompt(PROMPT_DETAILED, **common)
     elif style == "telegram":
-        prompt = PROMPT_TELEGRAM.format(**common)
+        prompt = _render_prompt(PROMPT_TELEGRAM, **common)
     else:
-        prompt = PROMPT_BRIEF.format(**common)
+        prompt = _render_prompt(PROMPT_BRIEF, **common)
 
     result = _call_llm_retry(prompt)
 
@@ -392,7 +407,7 @@ def generate_tg_channels_digest(news_list: list[dict], period_label: str = "за
     if not news_list:
         return {"title": "Нет данных", "text": "Нет постов TG-каналов за выбранный период.", "news_count": 0}
 
-    prompt = PROMPT_TG_CHANNELS.format(
+    prompt = _render_prompt(PROMPT_TG_CHANNELS,
         anti_slop=ANTI_SLOP, period_label=period_label,
         news_count=len(news_list), numbered=_format_tg_sources(news_list), limit=limit,
     )
@@ -511,7 +526,7 @@ def generate_general_digest(feed_news, cases_news, tg_news, period_label="за �
     if not all_news:
         return {"title": "Нет данных", "text": "Нет материалов за выбранный период.", "news_count": 0}
 
-    prompt = PROMPT_GENERAL.format(anti_slop=ANTI_SLOP, period_label=period_label, numbered="\n".join(lines))
+    prompt = _render_prompt(PROMPT_GENERAL, anti_slop=ANTI_SLOP, period_label=period_label, numbered="\n".join(lines))
     result = _call_llm_retry(prompt)
     if not result:
         logger.error("General digest LLM call failed")
