@@ -587,34 +587,42 @@ def reparse_source(body):
     if not source:
         return {"status": "error", "message": "Source not found"}
     try:
-        if source["type"] == "rss":
-            from parsers.rss_parser import parse_rss_source
-            count = parse_rss_source(source) or 0
-        elif source["type"] == "sitemap":
-            from parsers.html_parser import parse_sitemap_source
-            count = parse_sitemap_source(source) or 0
-        else:
-            from parsers.html_parser import parse_html_source
-            count = parse_html_source(source) or 0
+        count = _parse_one_source(source)
         return {"status": "ok", "new_articles": count}
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
 
+def _parse_one_source(source: dict) -> int:
+    """Диспатч источника на его парсер по type. Раньше bluesky/telegram/vk падали
+    в html-ветку → KeyError 'url' (у них handle/channel вместо url)."""
+    stype = source.get("type")
+    if stype == "rss":
+        from parsers.rss_parser import parse_rss_source
+        return parse_rss_source(source) or 0
+    if stype == "sitemap":
+        from parsers.html_parser import parse_sitemap_source
+        return parse_sitemap_source(source) or 0
+    if stype == "bluesky":
+        from parsers.bluesky_parser import parse_bluesky_source
+        return parse_bluesky_source(source) or 0
+    if stype == "telegram":
+        from parsers.telegram_parser import parse_telegram_source
+        return parse_telegram_source(source) or 0
+    if stype == "vk":
+        from parsers.vk_parser import parse_vk_source
+        return parse_vk_source(source) or 0
+    from parsers.html_parser import parse_html_source
+    return parse_html_source(source) or 0
+
+
 def reparse_all(body):
     try:
         import config
-        from parsers.rss_parser import parse_rss_source
-        from parsers.html_parser import parse_html_source, parse_sitemap_source
         total = 0
         for source in config.SOURCES:
             try:
-                if source["type"] == "rss":
-                    total += parse_rss_source(source) or 0
-                elif source["type"] == "sitemap":
-                    total += parse_sitemap_source(source) or 0
-                else:
-                    total += parse_html_source(source) or 0
+                total += _parse_one_source(source)
             except Exception as e:
                 logger.error("Reparse %s error: %s", source["name"], e)
         return {"status": "ok", "new_articles": total}
