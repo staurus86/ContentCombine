@@ -253,7 +253,10 @@ def get_storylines(days: int = 3):
 
         from checks.deduplication import tfidf_similarity, build_groups
         titles = [n["title"] for n in news_list]
-        pairs = tfidf_similarity(titles)
+        # Мягче дедупа: тренд — «про один сюжет?», связь слабее, чем у дублей. С дефолтными
+        # порогами короткое окно (3 дня) давало ~1 сюжет на 208 новостей; 0.15/0.28 — 3×
+        # реальных сюжетов без явных ложных склеек (проверено на живом потоке).
+        pairs = tfidf_similarity(titles, floor=0.15, pair_threshold=0.28)
         groups = build_groups(news_list, pairs)
 
         # Deduplication: each news appears in only one storyline (the largest)

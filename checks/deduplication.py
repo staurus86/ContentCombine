@@ -40,13 +40,20 @@ PAIR_THRESHOLD = 0.40
 COMMON_ENTITY_FRAC = 0.07
 
 
-def tfidf_similarity(titles: list[str], texts: list[str] | None = None) -> list[tuple]:
+def tfidf_similarity(titles: list[str], texts: list[str] | None = None,
+                     floor: float | None = None, pair_threshold: float | None = None) -> list[tuple]:
     """Комбинированная похожесть: TF-IDF (лексика) + entity overlap (буст).
 
     Оптимизировано: entity results кешируются, не пересчитываются в O(n²) цикле.
+
+    floor/pair_threshold — переопределяют глобальные пороги. Дедуп («та же новость?»)
+    использует дефолты (высокая точность). Сюжеты/тренды («про один сюжет?») передают
+    мягче — связь между статьями одного тренда слабее, чем между дублями.
     """
     if len(titles) < 2:
         return []
+    floor = TFIDF_FLOOR if floor is None else floor
+    pair_threshold = PAIR_THRESHOLD if pair_threshold is None else pair_threshold
 
     # TF-IDF cosine similarity по заголовкам
     vectorizer = TfidfVectorizer(ngram_range=(1, 2))
@@ -70,7 +77,7 @@ def tfidf_similarity(titles: list[str], texts: list[str] | None = None) -> list[
         for j in range(i + 1, len(titles)):
             tfidf_score = sim[i][j]
             # Лексический порог: без реального совпадения слов пары нет
-            if tfidf_score < TFIDF_FLOOR:
+            if tfidf_score < floor:
                 continue
 
             e1, e2 = ent_sets[i], ent_sets[j]
@@ -78,7 +85,7 @@ def tfidf_similarity(titles: list[str], texts: list[str] | None = None) -> list[
 
             combined = (1 - ENTITY_WEIGHT) * tfidf_score + ENTITY_WEIGHT * ent_score
 
-            if combined > PAIR_THRESHOLD:
+            if combined > pair_threshold:
                 pairs.append((i, j, round(float(combined), 2)))
     return pairs
 
