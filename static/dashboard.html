@@ -6563,10 +6563,26 @@ async function loadAiCite() {
         + '<td><a href="https://' + esc(m.domain) + '" target="_blank" rel="noopener">' + esc(m.domain) + '</a></td>'
         + '<td>' + m.citations + '</td><td>' + m.queries + '</td><td>' + delta + '</td></tr>';
     });
+    let qblock = '';
+    if (d.queries && d.queries.length) {
+      let qrows = '';
+      d.queries.forEach((q, i) => {
+        const dim = q.citations === 0 ? ';color:var(--c-muted)' : '';
+        qrows += '<tr style="' + dim.slice(1) + '"><td style="color:var(--c-muted)">' + (i + 1) + '</td>'
+          + '<td>' + esc(q.query) + '</td><td>' + q.citations + '</td><td>' + q.domains + '</td></tr>';
+      });
+      const silent = d.queries.filter(q => q.citations === 0).length;
+      qblock = '<details style="margin-top:16px"><summary style="cursor:pointer;color:#1da1f2">Запросы скана (' + d.queries.length + ')'
+        + (silent ? ' · без цитат: ' + silent : '') + '</summary>'
+        + '<div class="table-scroll" style="margin-top:8px"><table><thead><tr><th>#</th><th>Запрос</th><th>Цитат</th><th>Доменов</th></tr></thead>'
+        + '<tbody>' + qrows + '</tbody></table></div>'
+        + '<div style="color:var(--c-muted);font-size:0.8em;margin-top:6px">Список правится в config.py → CITABILITY_QUERIES. Серые строки — вопрос не активировал цитаты в последнем скане.</div></details>';
+    }
     body.innerHTML =
       '<div style="color:var(--c-muted);font-size:0.85em;margin-bottom:10px">Движки: ' + engines + '</div>'
       + '<div class="table-scroll"><table><thead><tr><th>#</th><th>Домен</th><th>Цитирований</th><th>Запросов</th><th>Δ к прошлому скану</th></tr></thead>'
-      + '<tbody>' + rows + '</tbody></table></div>';
+      + '<tbody>' + rows + '</tbody></table></div>'
+      + qblock;
   } catch (e) {
     body.innerHTML = '<div style="text-align:center;padding:40px;color:#e0245e">Не удалось загрузить отчёт</div>';
   }

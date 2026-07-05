@@ -188,10 +188,12 @@ def get_citability_report() -> dict:
             cur.execute("SELECT DISTINCT scan_date FROM ai_citations ORDER BY scan_date DESC LIMIT 2")
         except Exception:
             # таблицы ещё нет (init_db не отработал) — пустой отчёт, не 500
-            return {"status": "empty", "message": "Сканов ещё не было — запусти /api/citability/scan."}
+            return {"status": "empty", "message": "Сканов ещё не было — запусти /api/citability/scan.",
+                    "queries": [{"query": q, "citations": 0, "domains": 0} for q in config.CITABILITY_QUERIES]}
         dates = [r[0] for r in cur.fetchall()]
         if not dates:
-            return {"status": "empty", "message": "Сканов ещё не было — запусти /api/citability/scan."}
+            return {"status": "empty", "message": "Сканов ещё не было — запусти /api/citability/scan.",
+                    "queries": [{"query": q, "citations": 0, "domains": 0} for q in config.CITABILITY_QUERIES]}
         latest = dates[0]
         prior = dates[1] if len(dates) > 1 else None
 
@@ -217,7 +219,18 @@ def get_citability_report() -> dict:
         """, (latest,))
         engines = [{"engine": r[0], "citations": r[1], "queries": r[2]} for r in cur.fetchall()]
 
+        # Список запросов со статистикой последнего скана — в порядке конфига,
+        # включая «молчащие» (0 цитат): видно, какие вопросы AI не активируют.
+        cur.execute(f"""
+            SELECT query, COUNT(*), COUNT(DISTINCT domain) FROM ai_citations
+            WHERE scan_date = {ph} GROUP BY query
+        """, (latest,))
+        qstats = {r[0]: (r[1], r[2]) for r in cur.fetchall()}
+        queries = [{"query": q,
+                    "citations": qstats.get(q, (0, 0))[0],
+                    "domains": qstats.get(q, (0, 0))[1]} for q in config.CITABILITY_QUERIES]
+
         return {"status": "ok", "scan_date": latest, "prior_scan": prior,
-                "engines": engines, "top_domains": movers}
+                "engines": engines, "top_domains": movers, "queries": queries}
     finally:
         cur.close()
