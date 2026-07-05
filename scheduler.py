@@ -276,6 +276,14 @@ def start_scheduler():
     from api.news import refresh_tg_subscribers
     scheduler.add_job(refresh_tg_subscribers, "cron", hour=10, minute=30, id="tg_subs_snapshot")
 
+    # Недельный дайджест → TG-канал: воскресенье WEEKLY_DIGEST_CRON_HOUR:00 МСК
+    # (general за 7 дней + секция «Кого цитирует AI»). Идемпотентно по ISO-неделе;
+    # catch-up дошлёт в то же воскресенье, если слот задел деплой.
+    from pipeline.orchestrator import auto_publish_weekly_digest, catchup_weekly_digest
+    scheduler.add_job(auto_publish_weekly_digest, "cron", day_of_week="sun",
+                      hour=config.WEEKLY_DIGEST_CRON_HOUR, minute=0, id="auto_tg_weekly_digest")
+    scheduler.add_job(catchup_weekly_digest, "interval", minutes=15, id="catchup_weekly_digest")
+
     # AI-цитируемость (Sprint 5): еженедельный скан — кого цитируют AI-поисковики
     # по нашим SEO/GEO-запросам. Понедельник 07:00 МСК. Без рабочих движков
     # (Perplexity-ключ / search-модели на гейтвее) скан честно выходит no_engine.

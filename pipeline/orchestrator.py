@@ -1107,6 +1107,71 @@ def auto_publish_telegram_digest():
         return {"status": "error", "message": str(e)[:300]}
 
 
+AUTO_TG_WEEKLY_MARKER = "auto_tg_weekly_date"  # идемпотентность: ISO-неделя последней публикации
+
+
+def _isoweek_msk() -> str:
+    from datetime import datetime, timezone, timedelta
+    return (datetime.now(timezone.utc) + timedelta(hours=3)).strftime("%G-W%V")
+
+
+def auto_publish_weekly_digest():
+    """Воскресный вечерний недельный дайджест: general за 7 дней (лента+кейсы+
+    телеграм + секция «Кого цитирует AI») → TG-канал. Идемпотентно по ISO-неделе —
+    не больше одной публикации в неделю, что бы ни делали рестарты/catch-up."""
+    try:
+        from storage.database import get_app_setting, set_app_setting
+        week = _isoweek_msk()
+        if get_app_setting(AUTO_TG_WEEKLY_MARKER) == week:
+            logger.info("Weekly TG digest: already published this week (%s) — skip", week)
+            return {"status": "already_done", "week": week}
+        if not getattr(config, "TELEGRAM_BOT_TOKEN", "") or not getattr(config, "TELEGRAM_PUBLISH_CHANNEL", ""):
+            logger.info("Weekly TG digest: bot token/channel not set — skipping")
+            return {"status": "no_token"}
+        from api.news import compose_digest
+        from apis.tg_publish import publish
+
+        res = compose_digest("general", "week")
+        digest = (res or {}).get("digest", {})
+        if not digest or digest.get("news_count", 0) == 0:
+            logger.info("Weekly TG digest: no news — nothing to publish")
+            return {"status": "no_news"}
+
+        title = (digest.get("title") or "").strip()
+        text = digest.get("text") or ""
+        body_text = (f"**\U0001F4C6 {title}**\n" if title else "") + text
+        pub = publish({"text": body_text, "markdown": True})
+        if pub.get("status") == "ok":
+            set_app_setting(AUTO_TG_WEEKLY_MARKER, week)
+        logger.info("Weekly TG digest: %d items, publish status=%s parts=%s",
+                    digest.get("news_count", 0), pub.get("status"), pub.get("parts"))
+        return {"status": pub.get("status"), "parts": pub.get("parts"),
+                "news_count": digest.get("news_count", 0), "title": title}
+    except Exception as e:
+        logger.error("Weekly TG digest error: %s", e)
+        return {"status": "error", "message": str(e)[:300]}
+
+
+def catchup_weekly_digest():
+    """Self-heal недельного: если воскресный слот пропущен (деплой в 19:00 вс),
+    дошлёт в то же воскресенье после слота. No-op в остальные дни/до слота/после
+    успешной публикации. Пропущенное воскресенье НЕ переносится на будни —
+    «недельные итоги в среду» хуже, чем пропуск."""
+    try:
+        from datetime import datetime, timezone, timedelta
+        msk = datetime.now(timezone.utc) + timedelta(hours=3)
+        if msk.isoweekday() != 7 or msk.hour < config.WEEKLY_DIGEST_CRON_HOUR:
+            return
+        from storage.database import get_app_setting
+        if get_app_setting(AUTO_TG_WEEKLY_MARKER) == _isoweek_msk():
+            return
+        logger.warning("Catch-up: weekly digest not sent yet (Sunday %s MSK) — publishing now",
+                       msk.strftime("%H:%M"))
+        auto_publish_weekly_digest()
+    except Exception as e:
+        logger.error("Catch-up weekly digest error: %s", e)
+
+
 def catchup_tg_digest():
     """Self-heal: if the daily cron was missed (e.g. a deploy restarted the in-memory
     scheduler right at the slot), publish once it's past the configured hour (MSK) and
