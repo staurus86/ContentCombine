@@ -1556,25 +1556,33 @@ def tags_contain_case(tags_data) -> bool:
     return any(is_case_tag(t) for t in tags_data)
 
 
-# «Настоящий кейс» = статья-кейс/руководство/разбор (а не любой research-тег и не анонс).
-# Обязательные слова-индикаторы в заголовке/тексте (RU+EN). Телеграм-анонсы исключаются.
+# «Настоящий кейс» = статья-кейс/руководство/разбор ИЛИ исследование с данными
+# (label тега — «Исследование/Кейс», т.е. и how-to, и research). Слова-индикаторы в
+# заголовке (RU+EN). Телеграм-анонсы исключаются. Research-сигналы выверены на реальном
+# потоке до ~0 ложных: голое «research» и «\d% of» шумят (research copilot, 5% of equity)
+# — берём только контекстные формы (research finds/shows/from, study finds, data shows).
 _CASE_CONTENT_RE = __import__("re").compile(
     r"кейс|case stud|как мы |как я |как мне |как нам |руководств|пошагов|"
     r"чек-?лист|разбор|инструкц|гайд|how (i|we) |how to |step[ -]by[ -]step|"
-    r"walkthrough|tutorial|playbook|checklist|case study|\bguide\b",
+    r"walkthrough|tutorial|playbook|checklist|case study|\bguide\b|"
+    r"study finds|study shows|studies show|new study|a study|"
+    r"survey (of|finds|shows|reveals)|\bbenchmark\b|data shows|report finds|"
+    r"report shows|research (finds|shows|reveals|paper|from|by)|new research|"
+    r"исследовани|\bопрос\b|эксперимент",
     __import__("re").IGNORECASE,
 )
 
 
 def is_case_content(title, text=None, source="") -> bool:
-    """True только если это реальный кейс/руководство — по словам-индикаторам
+    """True только если это реальный кейс/руководство/исследование — по словам-индикаторам
     в ЗАГОЛОВКЕ (кейс обычно заявлен в тайтле; так точнее, без ложных по телу).
     Телеграм-источники (TG:*) исключены — там кейсы не пишут (только анонсы)."""
     if source and str(source).startswith("TG:"):
         return False
-    # 0-словные статьи (мёртвая ссылка/404 или не извлёкся текст) — не кейсы:
-    # «кейс» без тела бесполезен и ведёт на битую страницу.
-    if text is not None and len((text or "").strip()) < 200:
+    # Пустые статьи (мёртвая ссылка/404 или не извлёкся текст) — не кейсы. Порог 80, не 200:
+    # парсер часто не тянет plain_text, у SEJ/новостей description — короткий тизер (~100-150).
+    # Порог 200 резал ~40 настоящих исследований с валидным тизером; 80 отсекает только 404-заглушки.
+    if text is not None and len((text or "").strip()) < 80:
         return False
     return bool(_CASE_CONTENT_RE.search((title or "").lower()))
 
