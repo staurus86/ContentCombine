@@ -48,6 +48,9 @@ ANTI_SLOP = """## Язык
 - Показывай цифрой, не оценкой: «трафик упал на 40%», а не «заметно просел».
 - Каждое слово несёт смысл. Режь воду и вводные.
 - Своя позиция: что это значит для SEO-специалиста, а не пересказ заголовка.
+- Если у новости стоит метка [✓ подтверждено Google] — это апдейт, сверенный с официальным
+  Search Status Dashboard. Отрази факт подтверждения («Google официально подтвердил…») и
+  ставь такой пункт выше слухов на ту же тему. Саму метку в текст не копируй.
 
 ## Запрещено
 - Канцелярит и штампы ИИ: «важно отметить», «следует учитывать», «в современном мире»,
@@ -63,6 +66,17 @@ ANTI_SLOP = """## Язык
 ## Формат
 - Не подгоняй под «три пункта» ради симметрии — сколько реально есть, столько и пиши.
 - Тире не вместо запятой. Жирным — только настоящий акцент, не каждая фраза."""
+
+
+def _update_badge(n: dict) -> str:
+    """Метка «подтверждено Google» для новости-апдейта, сверенной с Search Status.
+    Пусто, если это не апдейт или он не подтверждён. Fails open."""
+    try:
+        from checks.update_verification import verify_update
+        v = verify_update(n.get("title", ""), n.get("plain_text", "") or n.get("description", "") or "")
+        return f" [✓ подтверждено Google: {v['name']}]" if v.get("confirmed") else ""
+    except Exception:
+        return ""
 
 
 def _format_sources(news_list: list[dict]) -> str:
@@ -81,7 +95,7 @@ def _format_sources(news_list: list[dict]) -> str:
             hints.append(f"скор {sc}")
         if v:
             hints.append(f"вирал {v}")
-        lines.append(f"{i}. [{src}] {title}" + (f" ({', '.join(hints)})" if hints else ""))
+        lines.append(f"{i}. [{src}] {title}" + (f" ({', '.join(hints)})" if hints else "") + _update_badge(n))
     return "\n".join(lines)
 
 
@@ -492,7 +506,8 @@ def generate_general_digest(feed_news, cases_news, tg_news, period_label="за �
             sc = n.get("total_score", 0)
             title = (n.get("title", "?") or "").replace("\n", " ")[:140]
             lines.append(f"{i}. [{label}] [{n.get('source', '?')}] {title}"
-                         + (f" ({date})" if date else "") + (f" · скор {sc}" if sc else ""))
+                         + (f" ({date})" if date else "") + (f" · скор {sc}" if sc else "")
+                         + _update_badge(n))
     if not all_news:
         return {"title": "Нет данных", "text": "Нет материалов за выбранный период.", "news_count": 0}
 
