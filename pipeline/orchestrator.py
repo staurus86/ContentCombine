@@ -1062,6 +1062,13 @@ def run_no_llm_pipeline(news_ids: list[str], task_ids: list[str]):
 
 AUTO_TG_PUBLISH_MARKER = "auto_tg_publish_date"  # idempotency: date of last successful auto-publish (MSK)
 
+# Публикация в TG сериализована: cron и catch-up — разные джобы APScheduler
+# (у каждой свой max_instances), могли идти ПАРАЛЛЕЛЬНО, оба видели пустой маркер
+# и постили дважды. Non-blocking лок: второй публикатор просто выходит — маркер
+# перечитается на следующем тике catch-up.
+import threading as _pub_threading
+_TG_PUBLISH_LOCK = _pub_threading.Lock()
+
 
 def _today_msk():
     from datetime import datetime, timezone, timedelta
@@ -1074,6 +1081,9 @@ def auto_publish_telegram_digest():
     Idempotent — publishes at most once per MSK day (a date marker guards against a
     second send from the catch-up job / repeated restarts). Skips quietly if no fresh
     news or no channel configured."""
+    if not _TG_PUBLISH_LOCK.acquire(blocking=False):
+        logger.info("Auto TG digest: another publisher is running — skip")
+        return {"status": "busy"}
     try:
         from storage.database import get_app_setting, set_app_setting
         today = _today_msk()
@@ -1105,6 +1115,8 @@ def auto_publish_telegram_digest():
     except Exception as e:
         logger.error("Auto TG digest error: %s", e)
         return {"status": "error", "message": str(e)[:300]}
+    finally:
+        _TG_PUBLISH_LOCK.release()
 
 
 AUTO_TG_WEEKLY_MARKER = "auto_tg_weekly_date"  # идемпотентность: ISO-неделя последней публикации
@@ -1119,6 +1131,9 @@ def auto_publish_weekly_digest():
     """Воскресный вечерний недельный дайджест: general за 7 дней (лента+кейсы+
     телеграм + секция «Кого цитирует AI») → TG-канал. Идемпотентно по ISO-неделе —
     не больше одной публикации в неделю, что бы ни делали рестарты/catch-up."""
+    if not _TG_PUBLISH_LOCK.acquire(blocking=False):
+        logger.info("Weekly TG digest: another publisher is running — skip")
+        return {"status": "busy"}
     try:
         from storage.database import get_app_setting, set_app_setting
         week = _isoweek_msk()
@@ -1150,6 +1165,8 @@ def auto_publish_weekly_digest():
     except Exception as e:
         logger.error("Weekly TG digest error: %s", e)
         return {"status": "error", "message": str(e)[:300]}
+    finally:
+        _TG_PUBLISH_LOCK.release()
 
 
 def catchup_weekly_digest():

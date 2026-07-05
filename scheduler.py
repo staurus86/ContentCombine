@@ -163,6 +163,16 @@ def adaptive_parse_tick():
     from datetime import datetime, timezone
     from core.activity import is_active
 
+    # Heartbeat КАЖДЫЙ тик, а не только внутри парса: раньше между циклами
+    # (15/60 мин) «scheduler» протухал за WATCHDOG_STALE_TIMEOUT, watchdog вечно
+    # считал его мёртвым и форсил recovery-парс каждые ~5 мин — idle-каденция не
+    # работала, WARNING-спам скрывал реальные деградации. Живой тик = живой шедулер.
+    try:
+        from core.watchdog import watchdog
+        watchdog.heartbeat("scheduler", "adaptive tick")
+    except Exception:
+        pass
+
     active = is_active(config.PARSE_ACTIVE_WINDOW_MIN * 60)
     eff_min = config.PARSE_ACTIVE_MIN if active else config.PARSE_IDLE_MIN
     now = datetime.now(timezone.utc)
@@ -172,6 +182,40 @@ def adaptive_parse_tick():
     logger.info("Adaptive parse: cadence=%dmin (active=%s)", eff_min, active)
     parse_all_sources()
     _LAST_FULL_PARSE = now
+
+
+def _cleanup_history_retention():
+    """Ретеншн накопительных таблиц — иначе растут вечно (аудит автономности
+    2026-07-05). Только удаление СТАРОГО, порогом с большим запасом к чтению:
+    digest_history читается на 2 дня — держим 30; ai_citations сравнивается
+    неделя-к-неделе — держим 365; digests (сохранённые дайджесты UI) — 180;
+    decision_trace — 30; api_cost_log — 180. config_audit/tg_subs_history не
+    трогаем — маленькие и это аудит-след. Fail-open per-table."""
+    from datetime import datetime, timezone, timedelta
+    from storage.database import get_connection, _is_postgres
+    ph = "%s" if _is_postgres() else "?"
+    plans = [
+        ("digest_history", "created_at", 30),
+        ("ai_citations", "created_at", 365),
+        ("digests", "created_at", 180),
+        ("decision_trace", "created_at", 30),
+        ("api_cost_log", "created_at", 180),
+    ]
+    conn = get_connection()
+    cur = conn.cursor()
+    try:
+        for table, col, days in plans:
+            try:
+                cutoff = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
+                cur.execute(f"DELETE FROM {table} WHERE {col} < {ph}", (cutoff,))
+                if cur.rowcount:
+                    logger.info("Retention: %s — removed %d rows older than %dd", table, cur.rowcount, days)
+            except Exception as e:
+                logger.debug("Retention skip %s: %s", table, e)
+        if not _is_postgres():
+            conn.commit()
+    finally:
+        cur.close()
 
 
 def _recover_stuck_tasks():
@@ -220,6 +264,10 @@ def start_scheduler():
 
     # Cleanup old tasks from task_queue daily
     scheduler.add_job(cleanup_old_tasks, "interval", hours=24, id="cleanup_tasks")
+
+    # Ретеншн накопительных таблиц (digest_history/ai_citations/digests/
+    # decision_trace/api_cost_log) — без него растут вечно.
+    scheduler.add_job(_cleanup_history_retention, "interval", hours=24, id="history_retention")
 
     # Auto-purge soft-deleted news older than 30 days
     from api.news import auto_purge_old_deleted
@@ -285,7 +333,9 @@ def start_scheduler():
     scheduler.add_job(catchup_weekly_digest, "interval", minutes=15, id="catchup_weekly_digest")
 
     # AI-цитируемость (Sprint 5): еженедельный скан — кого цитируют AI-поисковики
-    # по нашим SEO/GEO-запросам. Понедельник 07:00 МСК. Без рабочих движков
+    # по нашим SEO/GEO-запросам. ВОСКРЕСЕНЬЕ 07:00 МСК — до недельного дайджеста
+    # (вс 19:00), чтобы секция «Кого цитирует AI» уходила со свежими данными дня,
+    # а не 6-дневной давности (изначально стоял понедельник). Без рабочих движков
     # (Perplexity-ключ / search-модели на гейтвее) скан честно выходит no_engine.
     def _weekly_citability_scan():
         try:
@@ -294,7 +344,7 @@ def start_scheduler():
             logger.info("Weekly citability scan: %s", res.get("status"))
         except Exception as e:
             logger.warning("Weekly citability scan failed: %s", e)
-    scheduler.add_job(_weekly_citability_scan, "cron", day_of_week="mon",
+    scheduler.add_job(_weekly_citability_scan, "cron", day_of_week="sun",
                       hour=7, minute=0, id="ai_citability_scan")
 
     # Operational alerts → admin Telegram: new critical incidents + mass source failure.

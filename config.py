@@ -162,7 +162,10 @@ TELEGRAM_MESSAGES_BATCH_SIZE = _int_env("TELEGRAM_MESSAGES_BATCH_SIZE", 20)
 RSS_POST_MAX_AGE_DAYS = _int_env("RSS_POST_MAX_AGE_DAYS", 30)
 
 # System health
-WATCHDOG_STALE_TIMEOUT = _int_env("WATCHDOG_STALE_TIMEOUT", 300)
+# 1200, не 300: heartbeat «scheduler» бьётся в adaptive_parse_tick (каждые
+# PARSE_ACTIVE_MIN=15 мин) — таймаут меньше каденции давал вечный false-stale
+# и recovery-парс каждые ~5 мин. 20 мин ловит реальное зависание, не тик-паузу.
+WATCHDOG_STALE_TIMEOUT = _int_env("WATCHDOG_STALE_TIMEOUT", 1200)
 SOURCE_FAILURE_THRESHOLD = _int_env("SOURCE_FAILURE_THRESHOLD", 5)
 # Источник считается "мёртвым" по времени молчания, а не по "0 за 24ч":
 # редко публикующие официальные источники не должны висеть как dead.
