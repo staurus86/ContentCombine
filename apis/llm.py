@@ -181,6 +181,22 @@ def _call_llm(prompt: str) -> dict | None:
     return None
 
 
+def _call_llm_cached(namespace: str, prompt: str, ttl: int = 86400) -> dict | None:
+    """_call_llm с кэшем по хэшу prompt. Ключ строится из самого промпта, поэтому
+    совпадает ровно с тем, что уходит в LLM — рассинхрона ключа и запроса нет.
+    Только для детерминированных вызовов (forecast/merge), где повтор того же входа
+    должен давать тот же ответ. НЕ применять к rewrite (пользователь ждёт вариацию)."""
+    from apis.cache import cache_get, cache_set, cache_key
+    ck = cache_key(namespace, prompt)
+    cached = cache_get(ck)
+    if cached is not None:
+        return cached
+    result = _call_llm(prompt)
+    if result:
+        cache_set(ck, result, ttl=ttl)
+    return result
+
+
 def forecast_trend(title: str, text: str, bigrams: list,
                    keyso_freq: int, trends: dict) -> dict | None:
     prompt = PROMPT_TREND_FORECAST.format(
@@ -190,7 +206,7 @@ def forecast_trend(title: str, text: str, bigrams: list,
         keyso_freq=keyso_freq,
         trends=trends,
     )
-    return _call_llm(prompt)
+    return _call_llm_cached("forecast", prompt)
 
 
 def merge_news(news_list: list[dict]) -> dict | None:
@@ -199,7 +215,7 @@ def merge_news(news_list: list[dict]) -> dict | None:
         for n in news_list
     )
     prompt = PROMPT_MERGE_ANALYSIS.format(news_list=formatted)
-    return _call_llm(prompt)
+    return _call_llm_cached("merge", prompt)
 
 
 REWRITE_STYLES = {

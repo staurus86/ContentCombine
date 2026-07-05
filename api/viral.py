@@ -206,8 +206,8 @@ def get_viral_triggers():
                 import json as _j
                 kws = _j.loads(kw_json) if isinstance(kw_json, str) else (kw_json or [])
                 db_triggers[tid] = {"label": label, "weight": weight, "keywords": kws, "is_active": bool(active), "is_custom": bool(custom)}
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug("Custom viral triggers load failed, using defaults: %s", e)
 
         result = []
         # Default triggers

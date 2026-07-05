@@ -435,8 +435,8 @@ def save_settings(body, user="admin"):
         try:
             from core.observability import log_config_change
             log_config_change(setting_name, old_val, new_val, changed_by=user)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning("Config change audit log failed for %s: %s", setting_name, e)
 
     return {"status": "ok"}
 

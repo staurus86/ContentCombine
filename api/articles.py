@@ -79,8 +79,8 @@ def update_article(body, changed_by="admin"):
     # Save version snapshot before update (Phase 2)
     try:
         save_article_version(aid, body, change_type="manual", changed_by=changed_by)
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning("Article version snapshot failed for %s: %s", aid, e)
 
     now = datetime.now(timezone.utc).isoformat()
     conn = get_connection()

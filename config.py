@@ -490,8 +490,8 @@ def load_persistent_settings():
                 for style_name, instructions in saved_styles.items():
                     if style_name in llm.REWRITE_STYLES:
                         llm.REWRITE_STYLES[style_name]["instructions"] = instructions
-        except Exception:
-            pass
+        except Exception as e:
+            logging.getLogger(__name__).debug("Prompt/style overrides load failed: %s", e)
 
         logging.getLogger(__name__).info("Loaded %d persistent settings from DB", len(settings))
     except Exception as e:

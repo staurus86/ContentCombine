@@ -1023,8 +1023,8 @@ async function login() {
                 """)
                 row = cur.fetchone()
                 started_at = str(row[0]) if row and row[0] else ""
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug("Queue progress query failed: %s", e)
 
             return {
                 "running": running or pending > 0,
