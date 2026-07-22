@@ -175,6 +175,10 @@ SOURCE_DEAD_DAYS = _int_env("SOURCE_DEAD_DAYS", 14)
 PARSE_ACTIVE_MIN = _int_env("PARSE_ACTIVE_MIN", 15)          # цикл при активном логине
 PARSE_IDLE_MIN = _int_env("PARSE_IDLE_MIN", 60)             # цикл когда никто не залогинен
 PARSE_ACTIVE_WINDOW_MIN = _int_env("PARSE_ACTIVE_WINDOW_MIN", 20)  # «логин активен», если запрос был в эти минуты
+# Тихий режим: БЕЗ активного логина парсим только в окне за N часов до авто-дайджеста
+# (собрать сутки к дайджесту, не гонять процесс весь день). Активный логин будит парс
+# в любое время. 24 = окно отключено (старое поведение: idle-парс круглосуточно).
+PARSE_IDLE_WINDOW_HOURS = _int_env("PARSE_IDLE_WINDOW_HOURS", 2)
 SOURCE_PROBE_COOLDOWN = _int_env("SOURCE_PROBE_COOLDOWN", 600)
 ZOMBIE_THREADS_CRITICAL = _int_env("ZOMBIE_THREADS_CRITICAL", 5)
 

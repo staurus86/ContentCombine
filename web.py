@@ -14,6 +14,14 @@ from socketserver import ThreadingMixIn
 class ThreadingHTTPServer(ThreadingMixIn, HTTPServer):
     daemon_threads = True
     request_queue_size = 20
+    # Потолок одновременно обрабатываемых запросов. Каждый живой обработчик держит поток
+    # и (при обращении к БД) persistent PG-соединение через threading.local. Без лимита их
+    # число росло с нагрузкой — источник RSS-раздувания. Ждущие запросы стоят в backlog сокета.
+    _worker_sem = threading.BoundedSemaphore(int(os.getenv("HTTP_MAX_WORKERS", "12")))
+
+    def process_request_thread(self, request, client_address):
+        with self._worker_sem:
+            super().process_request_thread(request, client_address)
 from http.cookies import SimpleCookie
 from urllib.parse import urlparse, parse_qs
 

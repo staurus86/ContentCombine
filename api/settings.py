@@ -724,7 +724,7 @@ def heal_source(body):
                     continue
                 try:
                     from bs4 import BeautifulSoup
-                    soup = BeautifulSoup(resp.text, "lxml")
+                    soup = BeautifulSoup(resp.text[:512_000], "lxml")  # cap 500KB to prevent OOM
                     found = soup.select(alt_sel)
                     links_found = sum(1 for el in found if el.find("a", href=True) or el.name == "a")
                     if links_found >= 3:

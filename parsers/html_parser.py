@@ -93,7 +93,10 @@ def parse_html_source(source: dict):
 
     try:
         resp = fetch_with_retry(url)
-        soup = BeautifulSoup(resp.text, "lxml")
+        html_text = resp.text[:512_000]  # Limit to 500KB to prevent OOM on huge listing pages
+        del resp
+        soup = BeautifulSoup(html_text, "lxml")
+        del html_text
 
         items = soup.select(selector)
         if not items:
@@ -181,7 +184,10 @@ def _parse_homepage(source: dict) -> int:
 
     try:
         resp = fetch_with_retry(url)
-        soup = BeautifulSoup(resp.text, "lxml")
+        html_text = resp.text[:512_000]  # Limit to 500KB to prevent OOM on huge homepages
+        del resp
+        soup = BeautifulSoup(html_text, "lxml")
+        del html_text
 
         seen_urls = set()
         links_to_process = []

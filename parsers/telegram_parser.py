@@ -179,7 +179,7 @@ def _parse_via_web_preview(source: dict) -> int:
             logger.warning("Telegram web preview returned %d for %s", resp.status_code, name)
             return 0
 
-        soup = BeautifulSoup(resp.text, "lxml")
+        soup = BeautifulSoup(resp.text[:512_000], "lxml")  # cap 500KB to prevent OOM
         messages = soup.select(".tgme_widget_message")
 
         for msg_el in messages:

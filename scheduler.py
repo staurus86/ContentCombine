@@ -160,7 +160,7 @@ def adaptive_parse_tick():
     PARSE_ACTIVE_MIN минут и внутри гейтит реальный парс по времени —
     так цикл не наслаивается, а частота меняется на лету."""
     global _LAST_FULL_PARSE
-    from datetime import datetime, timezone
+    from datetime import datetime, timezone, timedelta
     from core.activity import is_active
 
     # Heartbeat КАЖДЫЙ тик, а не только внутри парса: раньше между циклами
@@ -174,6 +174,23 @@ def adaptive_parse_tick():
         pass
 
     active = is_active(config.PARSE_ACTIVE_WINDOW_MIN * 60)
+
+    # Тихий режим: без активного логина парсим ТОЛЬКО в окне PARSE_IDLE_WINDOW_HOURS часов
+    # перед авто-дайджестом (МСК) — собрать сутки к дайджесту, не гонять процесс весь день.
+    # Активный логин (заход в UI) будит парс в любое время: свежесть ленты при работе цела.
+    if not active and config.PARSE_IDLE_WINDOW_HOURS < 24:
+        msk_hour = (datetime.now(timezone.utc) + timedelta(hours=3)).hour
+        digest_hour = config.AUTO_DIGEST_CRON_HOUR
+        win_start = (digest_hour - config.PARSE_IDLE_WINDOW_HOURS) % 24
+        if win_start < digest_hour:
+            in_window = win_start <= msk_hour < digest_hour
+        else:  # окно пересекает полночь
+            in_window = msk_hour >= win_start or msk_hour < digest_hour
+        if not in_window:
+            logger.debug("Idle parse skip: вне окна %02d:00–%02d:00 МСК (сейчас %02d МСК)",
+                         win_start, digest_hour, msk_hour)
+            return
+
     eff_min = config.PARSE_ACTIVE_MIN if active else config.PARSE_IDLE_MIN
     now = datetime.now(timezone.utc)
     if _LAST_FULL_PARSE is not None and (now - _LAST_FULL_PARSE).total_seconds() < eff_min * 60 - 20:
