@@ -374,24 +374,46 @@ def _store_subs_snapshot(counts):
         cur.close()
 
 
-def _get_prev_subs(channels):
-    """Most recent snapshot strictly before today, per channel — for the delta."""
-    from datetime import datetime, timezone
-    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+def _subs_stats(channels):
+    """История подписчиков по каналам: вчерашний снимок, недельный, первый и ряд
+    для спарклайна. Раньше отдавалась только вчерашняя точка, поэтому накопленный
+    прирост нигде не было видно, хотя снимки копятся с первого дня мониторинга.
+
+    Возвращает {channel: {prev, week, first, first_date, snapshots, series}}."""
+    from datetime import datetime, timezone, timedelta
+    now = datetime.now(timezone.utc)
+    today = now.strftime("%Y-%m-%d")
+    week_ago = (now - timedelta(days=7)).strftime("%Y-%m-%d")
+    wanted = {c for c in channels if c}
     conn = get_connection()
     cur = conn.cursor()
-    _ph = "%s" if _is_postgres() else "?"
     out = {}
+    if not wanted:
+        cur.close()
+        return out
     try:
         _ensure_subs_table(cur)
-        cur.execute(f"""SELECT t.channel, t.subscribers FROM tg_subs_history t
-            WHERE t.snapshot_date = (SELECT MAX(t2.snapshot_date) FROM tg_subs_history t2
-                                     WHERE t2.channel = t.channel AND t2.snapshot_date < {_ph})""",
-                    (today,))
-        for ch, cnt in cur.fetchall():
-            out[ch] = cnt
+        # Таблица маленькая (каналы × дни), поэтому читаем ряд целиком и считаем
+        # срезы в Python — дешевле трёх отдельных агрегирующих запросов.
+        cur.execute("SELECT channel, snapshot_date, subscribers FROM tg_subs_history "
+                    "ORDER BY channel, snapshot_date")
+        rows = {}
+        for ch, date, cnt in cur.fetchall():
+            if ch in wanted and cnt is not None:
+                rows.setdefault(ch, []).append((str(date), cnt))
+        for ch, series in rows.items():
+            prior = [(d, c) for d, c in series if d < today]
+            upto_week = [(d, c) for d, c in series if d <= week_ago]
+            out[ch] = {
+                "prev": prior[-1][1] if prior else None,
+                "week": upto_week[-1][1] if upto_week else None,
+                "first": series[0][1],
+                "first_date": series[0][0],
+                "snapshots": len(series),
+                "series": [c for _, c in series[-30:]],
+            }
     except Exception as e:
-        logger.warning("Get prev subs failed: %s", e)
+        logger.warning("Subs history read failed: %s", e)
     finally:
         cur.close()
     return out
@@ -452,13 +474,26 @@ def get_telegram_analytics():
                         for s in config.SOURCES if s.get("type") == "telegram"}
         chans = [name_to_chan.get(a["source"]) for a in res.get("by_author", [])]
         subs = _tg_subscribers(chans)
-        prev = _get_prev_subs([c for c in chans if c])
+        hist = _subs_stats([c for c in chans if c])
         for a in res.get("by_author", []):
             ch = name_to_chan.get(a["source"])
-            cur_cnt = subs.get(ch) if ch else None
+            h = hist.get(ch) or {}
+            # Бот иногда не отвечает — тогда за текущее значение берём последний снимок.
+            cur_cnt = (subs.get(ch) if ch else None)
+            if cur_cnt is None and h.get("series"):
+                cur_cnt = h["series"][-1]
             a["subscribers"] = cur_cnt
-            p = prev.get(ch) if ch else None
-            a["subs_delta"] = (cur_cnt - p) if (cur_cnt is not None and p is not None) else None
+            _d = lambda base: (cur_cnt - base) if (cur_cnt is not None and base is not None) else None
+            a["subs_delta"] = _d(h.get("prev"))
+            a["subs_delta_week"] = _d(h.get("week"))
+            a["subs_delta_all"] = _d(h.get("first"))
+            first = h.get("first")
+            pct = (round(100.0 * (cur_cnt - first) / first, 1)
+                   if (cur_cnt is not None and first) else None)
+            a["subs_pct_all"] = 0.0 if pct == 0 else pct  # иначе «-0.0%» на плоском канале
+            a["subs_since"] = h.get("first_date")
+            a["subs_snapshots"] = h.get("snapshots")
+            a["subs_series"] = h.get("series") or []
     except Exception as e:
         logger.warning("Subscriber enrich failed: %s", e)
     return res

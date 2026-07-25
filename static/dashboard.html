@@ -5690,6 +5690,32 @@ async function loadCasesAnalytics() {
     {title: '📊 Аналитика кейсов', authorsTitle: '📚 Источники кейсов', authorCol: 'Источник'});
 }
 
+function _pct(v) { return (v > 0 ? '+' : '') + String(v).replace('.', ',') + '%'; }
+
+// Прирост подписчиков: цвет по знаку, прочерк когда сравнивать не с чем
+// (канал добавлен позже, снимок за период не снимался).
+function _subsDelta(v) {
+  if (v == null) return '<span style="color:var(--c-faint)">—</span>';
+  if (v === 0) return '<span style="color:var(--c-muted)">0</span>';
+  const c = v > 0 ? '#17bf63' : '#e0245e';
+  return `<b style="color:${c}">${v > 0 ? '+' : '−'}${Math.abs(v).toLocaleString('ru-RU')}</b>`;
+}
+
+// Спарклайн динамики подписчиков — SVG без внешних библиотек.
+function _sparkline(series) {
+  const s = (series || []).filter(v => typeof v === 'number');
+  if (s.length < 2) return '<span style="color:var(--c-faint)">—</span>';
+  const w = 78, h = 20, min = Math.min(...s), max = Math.max(...s);
+  // Нижняя граница масштаба — 1% от уровня канала: иначе шум в пару подписчиков
+  // растягивается во всю высоту и стабильный канал выглядит штормом.
+  const avg = s.reduce((a, b) => a + b, 0) / s.length;
+  const span = Math.max(max - min, avg * 0.01, 1);
+  const pts = s.map((v, i) => `${(i / (s.length - 1) * w).toFixed(1)},${(h - (v - min) / span * h).toFixed(1)}`).join(' ');
+  const color = s[s.length - 1] >= s[0] ? '#17bf63' : '#e0245e';
+  return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" style="display:block" title="${min.toLocaleString('ru-RU')} … ${max.toLocaleString('ru-RU')}">
+    <polyline points="${pts}" fill="none" stroke="${color}" stroke-width="1.4" stroke-linejoin="round"/></svg>`;
+}
+
 function renderSegmentAnalytics(el, r, opts) {
   if (!r || r.error) { el.innerHTML = ''; return; }
   const s = r.summary || {day:{}, all:{}};
@@ -5724,7 +5750,10 @@ function renderSegmentAnalytics(el, r, opts) {
     const tags = (a.top_tags||[]).map(t => `<span class="tag" style="font-size:0.68em;padding:1px 6px">${esc(t)}</span>`).join(' ');
     return `<tr>
       <td style="font-size:0.84em">${esc(a.source)}</td>
-      ${opts.showSubs ? `<td style="font-size:0.85em"><b style="color:#1da1f2">${a.subscribers!=null?Number(a.subscribers).toLocaleString('ru-RU'):'—'}</b>${a.subs_delta ? `<span style="color:${a.subs_delta>0?'#17bf63':'#e0245e'};font-size:0.85em"> ${a.subs_delta>0?'▲+':'▼'}${a.subs_delta>0?a.subs_delta:Math.abs(a.subs_delta)}</span>` : ''}</td>` : ''}
+      ${opts.showSubs ? `<td style="font-size:0.85em"><b style="color:#1da1f2">${a.subscribers!=null?Number(a.subscribers).toLocaleString('ru-RU'):'—'}</b>${a.subs_delta ? `<span style="color:${a.subs_delta>0?'#17bf63':'#e0245e'};font-size:0.85em"> ${a.subs_delta>0?'▲+':'▼'}${a.subs_delta>0?a.subs_delta:Math.abs(a.subs_delta)}</span>` : ''}</td>
+      <td>${_subsDelta(a.subs_delta_week)}</td>
+      <td title="${a.subs_since ? 'с ' + fmtDate(a.subs_since) + ' · снимков: ' + (a.subs_snapshots||0) : ''}">${_subsDelta(a.subs_delta_all)}${a.subs_pct_all!=null?`<div style="font-size:0.68em;color:var(--c-faint)">${_pct(a.subs_pct_all)}</div>`:''}</td>
+      <td>${_sparkline(a.subs_series)}</td>` : ''}
       <td><b style="color:#17bf63">${a.posts_week||0}</b></td>
       <td style="color:var(--c-muted)">${a.posts_day||0}</td>
       <td style="color:var(--c-muted)">${a.count}</td>
@@ -5759,7 +5788,10 @@ function renderSegmentAnalytics(el, r, opts) {
         <table style="width:100%;font-size:0.86em">
           <thead><tr>
             <th>${opts.authorCol}</th>
-            ${opts.showSubs ? '<th style="width:90px" title="Подписчиков канала">Подписчики</th>' : ''}
+            ${opts.showSubs ? `<th style="width:90px" title="Подписчиков сейчас + прирост за сутки">Подписчики</th>
+            <th style="width:78px" title="Прирост за 7 дней">+ за неделю</th>
+            <th style="width:86px" title="Прирост с первого снимка">+ за всё время</th>
+            <th style="width:86px" title="Динамика подписчиков — последние 30 снимков">Динамика</th>` : ''}
             <th style="width:74px" title="Постов за 7 дней">Постов/нед</th>
             <th style="width:60px" title="Постов за сутки">За сутки</th>
             <th style="width:54px" title="Всего постов">Всего</th>
@@ -5769,9 +5801,28 @@ function renderSegmentAnalytics(el, r, opts) {
             <th style="width:160px">Топ-теги</th>
           </tr></thead>
           <tbody>${authorRows}</tbody>
+          ${opts.showSubs ? _subsTotals(r.by_author || []) : ''}
         </table>
       </div>
     </div>`;
+}
+
+// Итоговая строка: сколько всего подписчиков во всех каналах и сколько
+// набежало за неделю / за всё наблюдение.
+function _subsTotals(authors) {
+  const sum = f => authors.reduce((acc, a) => acc + (typeof a[f] === 'number' ? a[f] : 0), 0);
+  const total = sum('subscribers');
+  if (!total) return '';
+  const week = sum('subs_delta_week'), all = sum('subs_delta_all');
+  const base = total - all;
+  const pct = base > 0 ? Math.round(100 * all / base * 10) / 10 : null;
+  return `<tfoot><tr style="border-top:1px solid #38444d">
+    <td style="font-size:0.84em;font-weight:600">Итого · каналов: ${authors.length}</td>
+    <td style="font-size:0.85em"><b style="color:#1da1f2">${total.toLocaleString('ru-RU')}</b></td>
+    <td>${_subsDelta(week)}</td>
+    <td>${_subsDelta(all)}${pct != null ? `<div style="font-size:0.68em;color:var(--c-faint)">${_pct(pct)}</div>` : ''}</td>
+    <td colspan="8"></td>
+  </tr></tfoot>`;
 }
 
 // Чекер длины поста Telegram: лимит 4096, публикация режет длинное на части.
