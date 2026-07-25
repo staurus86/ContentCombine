@@ -1148,9 +1148,29 @@ input:focus, textarea:focus, select:focus { outline:none; border-color:#1da1f2; 
       <button class="btn btn-sm btn-secondary" onclick="tgGo('tg-sec-digest')">&#128228; Дайджест</button>
       <button class="btn btn-sm btn-secondary" onclick="tgGo('tg-analytics')">&#128202; Аналитика</button>
     </div>
+    <!-- Скоринг: тот же набор, что в Ленте — фильтр по скору + ручной пересчёт -->
+    <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center">
+      <select id="tg-score-filter" onchange="loadTelegram()" style="width:auto;padding:4px 8px;background:#192734;color:#e1e8ed;border:1px solid #38444d;border-radius:6px">
+        <option value="">Скор: все</option>
+        <option value="zero">= 0</option>
+        <option value="max30">&lt; 30</option>
+        <option value="min10">&ge; 10</option>
+        <option value="min30">&ge; 30</option>
+        <option value="min50">&ge; 50</option>
+        <option value="min60">&ge; 60</option>
+        <option value="min70">&ge; 70</option>
+        <option value="min80">&ge; 80</option>
+        <option value="range30_70">30–70 (спорные)</option>
+      </select>
+      <button class="btn btn-sm btn-success" onclick="tgRunAutoReview()" id="tg-review-btn">&#9654; Проверить новые</button>
+      <button class="btn btn-sm btn-secondary" onclick="tgSelectZeroScore()" title="Выделить все посты с внутренним скором 0">&#9744; Score=0</button>
+      <button class="btn btn-sm btn-secondary" onclick="tgRescore()" title="Пересчитать скор для выбранных постов (или всех со score=0)">&#128260; Пересчитать скор</button>
+      <span id="tg-selected-count" style="color:var(--c-muted);font-size:0.85em"></span>
+    </div>
     <div id="tg-sec-posts" style="overflow-x:auto">
       <table style="width:100%;font-size:0.88em">
         <thead><tr>
+          <th style="width:30px"><input type="checkbox" onchange="tgToggleAll(this)" style="width:16px;height:16px"></th>
           <th class="sortable" onclick="tgSort('source')" style="width:95px">Источник</th>
           <th>Заголовок</th>
           <th class="sortable" onclick="tgSort('total_score')" style="width:54px">Скор <span id="tgsort-total_score" style="opacity:.5"></span></th>
@@ -5487,14 +5507,99 @@ let _tgData = [], _tgSortField = '', _tgSortDir = 'desc';
 async function loadTelegram() {
   const tb = document.getElementById('tg-table');
   if (!tb) return;
-  tb.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:20px;color:var(--c-muted)">Загрузка…</td></tr>';
-  const r = await api('/api/telegram?limit=200');
+  tb.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:20px;color:var(--c-muted)">Загрузка…</td></tr>';
+  // Фильтр скора маппится на те же параметры, что и в Ленте: /api/telegram — тот же
+  // get_news_unified, только с tg=only.
+  let url = '/api/telegram?limit=200';
+  const sf = (document.getElementById('tg-score-filter') || {}).value || '';
+  if (sf === 'zero') url += '&score_filter=zero';
+  else if (sf.startsWith('max')) url += '&max_score=' + sf.replace('max','');
+  else if (sf.startsWith('range')) { const [lo,hi] = sf.replace('range','').split('_'); url += '&min_score='+lo+'&max_score='+hi; }
+  else if (sf.startsWith('min')) url += '&min_score=' + sf.replace('min','');
+  const r = await api(url);
   _tgData = (r && r.news) || [];
   const cnt = document.getElementById('tg-count');
   if (cnt) cnt.textContent = _tgData.length + ' постов';
   renderTgTable();
+  tgUpdateSelected();
   loadTelegramAnalytics();
   loadTgDigestHistory();
+}
+
+function tgToggleAll(cb) {
+  document.querySelectorAll('.tg-cb').forEach(c => c.checked = cb.checked);
+  tgUpdateSelected();
+}
+
+function tgUpdateSelected() {
+  const el = document.getElementById('tg-selected-count');
+  if (!el) return;
+  const cnt = document.querySelectorAll('.tg-cb:checked').length;
+  el.textContent = cnt > 0 ? `Выбрано: ${cnt}` : '';
+}
+
+function _tgGetSelected() {
+  return [...document.querySelectorAll('.tg-cb:checked')].map(c => c.value);
+}
+
+document.getElementById('tg-table')?.addEventListener('change', (e) => {
+  if (e.target.classList.contains('tg-cb')) tgUpdateSelected();
+});
+
+function tgSelectZeroScore() {
+  const zeroIds = new Set(_tgData.filter(n => (n.total_score || 0) === 0).map(n => String(n.id)));
+  document.querySelectorAll('.tg-cb').forEach(cb => { cb.checked = zeroIds.has(cb.value); });
+  tgUpdateSelected();
+  toast('Выделено: ' + zeroIds.size + ' постов с score=0');
+}
+
+async function tgRescore() {
+  const ids = _tgGetSelected();
+  const btn = event && event.target ? event.target : null;
+  const origText = btn ? btn.innerHTML : '';
+  if (btn) { btn.disabled = true; btn.innerHTML = '&#9203; Пересчёт...'; }
+  try {
+    let target = ids;
+    if (!target.length) {
+      // Вкладка изолирована по TG-источникам, поэтому без выделения пересчитываем
+      // нулевые скоры этой вкладки, а не глобальный rescore_zero по всей базе.
+      target = _tgData.filter(n => (n.total_score || 0) === 0).map(n => String(n.id));
+      if (!target.length) { toast('Нет постов со score=0 — выделите нужные', true); return; }
+      toast('Пересчёт ' + target.length + ' постов со score=0...');
+    } else {
+      toast('Пересчёт скора для ' + target.length + ' постов...');
+    }
+    const r = await api('/api/rescore', {news_ids: target});
+    if (r.status === 'ok') {
+      toast('Пересчитано: ' + r.rescored);
+      loadTelegram();
+    } else {
+      toast(r.message || r.error || 'Ошибка', true);
+    }
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerHTML = origText; }
+  }
+}
+
+async function tgRunAutoReview() {
+  const btn = document.getElementById('tg-review-btn');
+  btn.disabled = true;
+  btn.innerHTML = '&#8987; Проверка...';
+  toast('Запуск проверки (батч 20)...');
+  try {
+    const r = await api('/api/run_auto_review', {});
+    if (r.status === 'ok') {
+      toast(r.message);
+      loadTelegram();
+      if (r.remaining > 0) btn.innerHTML = `&#9654; Проверить ещё (${r.remaining})`;
+    } else {
+      toast(r.message || 'Ошибка', true);
+    }
+  } catch(e) {
+    toast('Ошибка: ' + e, true);
+  }
+  btn.disabled = false;
+  if (!btn.innerHTML.includes('ещё')) btn.innerHTML = '&#9654; Проверить новые';
 }
 
 function tgSort(field) {
@@ -5517,7 +5622,7 @@ function renderTgTable() {
     if (e) e.textContent = _tgSortField === f ? (_tgSortDir === 'asc' ? '▲' : '▼') : '';
   });
   if (!_tgData.length) {
-    tb.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--c-muted)">Пока пусто. Здесь копятся посты из Telegram-источников — отдельно от ленты, кейсов, дайджестов и сюжетов.</td></tr>';
+    tb.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:30px;color:var(--c-muted)">Пока пусто. Здесь копятся посты из Telegram-источников — отдельно от ленты, кейсов, дайджестов и сюжетов.</td></tr>';
     return;
   }
   let data = [..._tgData];
@@ -5542,6 +5647,7 @@ function renderTgTable() {
       return `<span class="tag tag-${tid}" style="font-size:0.7em;padding:1px 5px">${esc(label)}</span>`;
     }).join(' ');
     return `<tr>
+      <td><input type="checkbox" class="tg-cb" value="${n.id}" style="width:15px;height:15px"></td>
       <td style="font-size:0.78em;color:var(--c-muted)">${esc(n.source)}</td>
       <td><a href="${n.url}" target="_blank" style="color:#e1e8ed;text-decoration:none">${esc(n.title)}</a></td>
       <td><b style="color:${scColor}">${sc}</b></td>
