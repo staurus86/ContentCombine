@@ -26,14 +26,38 @@ FULL_AUTO_FINAL_THRESHOLD = config.FULL_AUTO_FINAL_THRESHOLD
 # ─── Auto-review & scoring ───
 
 def _auto_review_new():
-    """Auto-review new news (free, local scoring only)."""
+    """Auto-review new news (free, local scoring only).
+
+    Разбирает очередь батчами, а не одним батчем на парс-цикл: с залповым
+    парсингом (окно PARSE_IDLE_WINDOW_HOURS) за цикл приходит 150-200 новостей,
+    и всё сверх одного батча оставалось в статусе 'new' навсегда — без скора и
+    без записи в news_analysis. Догнать было некому: _auto_rescore_zero берёт
+    только in_review/rejected, а freshness-чистка потом уносила их в корзину.
+    """
+    reviewed_total = 0
+    for _ in range(config.AUTO_REVIEW_MAX_BATCHES):
+        batch = _auto_review_batch(config.AUTO_REVIEW_BATCH_SIZE)
+        if batch == 0:
+            break
+        reviewed_total += batch
+        gc.collect()  # Railway тесен по памяти — не копим мусор между батчами
+    if reviewed_total:
+        logger.info("Auto-review: разобрано %d новостей из очереди", reviewed_total)
+
+
+def _auto_review_batch(limit: int) -> int:
+    """Проверяет один батч новостей в статусе 'new'. Возвращает число обработанных.
+
+    ORDER BY parsed_at ASC — старые первыми: при DESC хвост цикла голодал вечно,
+    свежие новости каждый раз вытесняли его из выборки.
+    """
     try:
         from storage.database import get_connection, _is_postgres
         conn = get_connection()
         cur = conn.cursor()
         try:
             ph = "%s" if _is_postgres() else "?"
-            cur.execute(f"SELECT id, source, url, title, h1, description, plain_text, published_at, parsed_at, status FROM news WHERE status = 'new' ORDER BY parsed_at DESC LIMIT {ph}", (20,))
+            cur.execute(f"SELECT id, source, url, title, h1, description, plain_text, published_at, parsed_at, status FROM news WHERE status = 'new' ORDER BY parsed_at ASC LIMIT {ph}", (limit,))
             if _is_postgres():
                 columns = [desc[0] for desc in cur.description]
                 news_list = [dict(zip(columns, row)) for row in cur.fetchall()]
@@ -43,7 +67,7 @@ def _auto_review_new():
             cur.close()
 
         if not news_list:
-            return
+            return 0
 
         from checks.pipeline import run_review_pipeline
         result = run_review_pipeline(news_list, update_status=True)
@@ -113,8 +137,11 @@ def _auto_review_new():
         except Exception as tg_err:
             logger.debug("Telegram notify skipped: %s", tg_err)
 
+        return reviewed
+
     except Exception as e:
         logger.error("Auto-review error: %s", e)
+        return 0
 
 
 def _auto_rescore_zero():

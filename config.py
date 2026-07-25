@@ -182,6 +182,12 @@ PARSE_IDLE_WINDOW_HOURS = _int_env("PARSE_IDLE_WINDOW_HOURS", 2)
 SOURCE_PROBE_COOLDOWN = _int_env("SOURCE_PROBE_COOLDOWN", 600)
 ZOMBIE_THREADS_CRITICAL = _int_env("ZOMBIE_THREADS_CRITICAL", 5)
 
+# Авто-ревью очереди 'new': батч держим маленьким ради памяти, но за один парс-цикл
+# проходим до BATCH_SIZE * MAX_BATCHES новостей — иначе хвост залпового парса
+# оставался без скора навсегда.
+AUTO_REVIEW_BATCH_SIZE = _int_env("AUTO_REVIEW_BATCH_SIZE", 20)
+AUTO_REVIEW_MAX_BATCHES = _int_env("AUTO_REVIEW_MAX_BATCHES", 15)
+
 # Sheets API tuning
 SHEETS_MIN_API_INTERVAL = float(os.getenv("SHEETS_MIN_API_INTERVAL", "1.2"))
 SHEETS_CLIENT_TTL = _int_env("SHEETS_CLIENT_TTL", 3000)
