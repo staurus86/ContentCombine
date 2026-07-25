@@ -5646,9 +5646,15 @@ function renderTgTable() {
       const tid = typeof t === 'object' ? (t.id || '') : '';
       return `<span class="tag tag-${tid}" style="font-size:0.7em;padding:1px 5px">${esc(label)}</span>`;
     }).join(' ');
+    // Канал вытаскиваем из ссылки на пост (https://t.me/<канал>/<id>) — отдельного
+    // поля в выдаче нет, а перейти в сам канал из ленты постов надо.
+    const chan = (String(n.url || '').match(/t\.me\/([A-Za-z0-9_]+)\//) || [])[1];
+    const srcCell = chan
+      ? `<a href="https://t.me/${chan}" target="_blank" rel="noopener" title="Открыть @${chan} в Telegram" style="color:var(--c-muted);text-decoration:none">${esc(n.source)}</a>`
+      : esc(n.source);
     return `<tr>
       <td><input type="checkbox" class="tg-cb" value="${n.id}" style="width:15px;height:15px"></td>
-      <td style="font-size:0.78em;color:var(--c-muted)">${esc(n.source)}</td>
+      <td style="font-size:0.78em;color:var(--c-muted)">${srcCell}</td>
       <td><a href="${n.url}" target="_blank" style="color:#e1e8ed;text-decoration:none">${esc(n.title)}</a></td>
       <td><b style="color:${scColor}">${sc}</b></td>
       <td style="font-size:0.82em;color:var(--c-muted)">${n.quality_score || 0}/${n.relevance_score || 0}</td>
@@ -5748,8 +5754,11 @@ function renderSegmentAnalytics(el, r, opts) {
     </tr>`).join('') || '<tr><td colspan="5" style="color:var(--c-faint);padding:14px;text-align:center">Нет постов за сутки</td></tr>';
   const authorRows = (r.by_author||[]).map(a => {
     const tags = (a.top_tags||[]).map(t => `<span class="tag" style="font-size:0.68em;padding:1px 6px">${esc(t)}</span>`).join(' ');
+    const srcCell = a.channel_url
+      ? `<a href="${a.channel_url}" target="_blank" rel="noopener" title="Открыть @${esc(a.channel)} в Telegram" style="color:#1da1f2;text-decoration:none">${esc(a.source)} ↗</a>`
+      : esc(a.source);
     return `<tr>
-      <td style="font-size:0.84em">${esc(a.source)}</td>
+      <td style="font-size:0.84em">${srcCell}</td>
       ${opts.showSubs ? `<td style="font-size:0.85em"><b style="color:#1da1f2">${a.subscribers!=null?Number(a.subscribers).toLocaleString('ru-RU'):'—'}</b>${a.subs_delta ? `<span style="color:${a.subs_delta>0?'#17bf63':'#e0245e'};font-size:0.85em"> ${a.subs_delta>0?'▲+':'▼'}${a.subs_delta>0?a.subs_delta:Math.abs(a.subs_delta)}</span>` : ''}</td>
       <td>${_subsDelta(a.subs_delta_week)}</td>
       <td title="${a.subs_since ? 'с ' + fmtDate(a.subs_since) + ' · снимков: ' + (a.subs_snapshots||0) : ''}">${_subsDelta(a.subs_delta_all)}${a.subs_pct_all!=null?`<div style="font-size:0.68em;color:var(--c-faint)">${_pct(a.subs_pct_all)}</div>`:''}</td>

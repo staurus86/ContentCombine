@@ -478,6 +478,9 @@ def get_telegram_analytics():
         for a in res.get("by_author", []):
             ch = name_to_chan.get(a["source"])
             h = hist.get(ch) or {}
+            # Ссылка на сам канал — из таблицы в аналитике перейти было некуда.
+            a["channel"] = ch
+            a["channel_url"] = f"https://t.me/{ch}" if ch else None
             # Бот иногда не отвечает — тогда за текущее значение берём последний снимок.
             cur_cnt = (subs.get(ch) if ch else None)
             if cur_cnt is None and h.get("series"):
