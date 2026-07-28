@@ -1106,7 +1106,7 @@ input:focus, textarea:focus, select:focus { outline:none; border-color:#1da1f2; 
     </div>
     <div id="health-recs" style="display:none;margin-bottom:15px"></div>
     <table>
-      <thead id="health-thead"><tr><th>Статус</th><th>Источник</th><th>Статей (24ч)</th><th style="min-width:120px">Активность</th><th>Последний парсинг</th><th>Минут назад</th><th>Причина</th><th>Лечение</th></tr></thead>
+      <thead id="health-thead"><tr><th>Статус</th><th>Источник</th><th>Статей (24ч)</th><th style="min-width:120px">Активность</th><th>Последняя новость</th><th>Прошло</th><th title="Когда последний раз дозвонились до площадки">Опрошен</th><th>Причина</th><th>Лечение</th></tr></thead>
       <tbody id="health-table"></tbody>
     </table>
   </div>
@@ -2581,18 +2581,20 @@ async function loadHealth() {
   const data = await api('/api/health');
   _healthData = data;
   const maxCount = Math.max(...data.map(h => h.count_24h), 1);
-  let healthy=0, low=0, warn=0, down=0, dead=0;
+  let healthy=0, low=0, warn=0, down=0, dead=0, silent=0;
   document.getElementById('health-table').innerHTML = data.map(h => {
-    const icons = {healthy:'&#9989;',low:'&#128993;',warning:'&#9888;&#65039;',down:'&#128308;',dead:'&#10060;'};
-    const labels = {healthy:'healthy',low:'low',warning:'warning',down:'down',dead:'dead'};
+    // silent — площадка отвечает, но давно не публикует; dead — до неё не достучались
+    const icons = {healthy:'&#9989;',low:'&#128993;',warning:'&#9888;&#65039;',down:'&#128308;',dead:'&#10060;',silent:'&#128164;'};
+    const labels = {healthy:'healthy',low:'low',warning:'warning',down:'down',dead:'не отвечает',silent:'молчит'};
     const icon = icons[h.status] || '&#10067;';
     if (h.status==='healthy') healthy++;
     else if (h.status==='low') low++;
     else if (h.status==='warning') warn++;
     else if (h.status==='down') down++;
+    else if (h.status==='silent') silent++;
     else dead++;
     const pct = Math.round((h.count_24h / maxCount) * 100);
-    const barColor = h.status==='healthy'?'#17bf63':h.status==='low'?'#ffad1f':h.status==='warning'?'#f5a623':'#e0245e';
+    const barColor = h.status==='healthy'?'#17bf63':h.status==='low'?'#ffad1f':h.status==='warning'?'#f5a623':h.status==='silent'?'#8899a6':'#e0245e';
     const isSick = ['warning','down','dead','low'].includes(h.status);
     const healBtn = isSick ? `<button class="btn btn-sm btn-warning" onclick="healSource('${h.source.replace(/'/g,"\\'")}')" style="padding:2px 8px;font-size:0.75em" title="Диагностика и лечение">&#128138;</button>` : '';
     const srcLink = h.url ? ` <a href="${h.url}" target="_blank" rel="noopener" title="Открыть источник — проверить вручную" style="color:#1da1f2;text-decoration:none">&#8599;</a>` : '';
@@ -2607,6 +2609,7 @@ async function loadHealth() {
       <td><div style="background:#22303c;border-radius:4px;overflow:hidden;height:18px"><div style="background:${barColor};width:${pct}%;height:100%;border-radius:4px;transition:width .5s"></div></div></td>
       <td>${fmtDate(h.last_parsed)}</td>
       <td>${h.minutes_ago >= 0 ? h.minutes_ago + ' мин' : '?'}</td>
+      <td title="Когда последний раз дозвонились до площадки">${h.probe_minutes_ago == null ? '—' : (h.probe_minutes_ago < 90 ? h.probe_minutes_ago + ' мин' : Math.round(h.probe_minutes_ago/60) + ' ч')}</td>
       <td>${reasonCell}</td>
       <td>${healBtn}</td>
     </tr>`;
@@ -2617,7 +2620,8 @@ async function loadHealth() {
   if (low) parts.push(`<span style="color:#ffad1f">${low} low</span>`);
   if (warn) parts.push(`<span style="color:#f5a623">${warn} warning</span>`);
   if (down) parts.push(`<span style="color:#e0245e">${down} down</span>`);
-  if (dead) parts.push(`<span style="color:#e0245e">${dead} dead</span>`);
+  if (silent) parts.push(`<span style="color:#8899a6">${silent} молчат</span>`);
+  if (dead) parts.push(`<span style="color:#e0245e">${dead} не отвечают</span>`);
   const el = document.getElementById('health-summary');
   if (el) el.innerHTML = parts.join(' / ');
   // Show heal-all button if any sick

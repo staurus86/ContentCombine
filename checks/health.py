@@ -87,11 +87,18 @@ def get_sources_health() -> list[dict]:
             last_parsed = ""
             count = 0
 
-        # Determine health status (мёртвость — по времени молчания, не по 0 за 24ч)
+        # Опрашиваем мы источник или нет — отдельный вопрос от того, публикует ли он.
+        # Раньше статус считался только по появлению новых записей, и площадка с
+        # публикацией раз в месяц была неотличима от сломанного парсера: панель
+        # показывала 104 «dead» при 38 реально молчащих (аудит 2026-07-28).
+        sh_pre = sh_status.get(name, {})
+        probe_min = sh_pre.get("probe_minutes_ago")
+        probed_recently = probe_min is not None and probe_min <= 24 * 60
+
         if not last_parsed:
-            status = "dead"          # никогда ничего не публиковал
+            status = "silent" if probed_recently else "dead"
         elif last_parsed <= cutoff_dead:
-            status = "dead"          # молчит дольше порога SOURCE_DEAD_DAYS
+            status = "silent" if probed_recently else "dead"
         elif last_parsed > cutoff_3h:
             status = "healthy" if count >= 10 else "low"
         elif last_parsed > cutoff_24h:
@@ -122,9 +129,13 @@ def get_sources_health() -> list[dict]:
             "last_error": (sh.get("last_error", "") or "")[:160],
             "consecutive_failures": sh.get("consecutive_failures", 0) or 0,
             "auto_disabled": sh.get("disabled_at") is not None,
+            # Когда мы в последний раз ДОЗВОНИЛИСЬ до источника (в минутах назад).
+            # None — с перезапуска процесса опроса ещё не было.
+            "probe_minutes_ago": sh.get("probe_minutes_ago"),
         })
 
     # Sort: dead first, then by count desc
-    results.sort(key=lambda x: (0 if x["status"] == "dead" else 1, -x["count_24h"]))
+    _ORDER = {"dead": 0, "silent": 1, "down": 2, "warning": 3, "low": 4, "healthy": 5}
+    results.sort(key=lambda x: (_ORDER.get(x["status"], 9), -x["count_24h"]))
 
     return results

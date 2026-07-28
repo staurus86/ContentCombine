@@ -229,6 +229,17 @@ def _parse_homepage(source: dict) -> int:
                     if len(links_to_process) >= 30:
                         break
 
+        # Фильтр раздела (как в sitemap-парсере). Без него вторая стратегия тянет
+        # с сайта что попало: у BrightEdge в базе оказались /enterprise-seo и
+        # /win-in-ai-search — страницы услуг, а посты блога не забирались вовсе.
+        url_filter = source.get("url_filter", "")
+        if url_filter:
+            before = len(links_to_process)
+            links_to_process = [(l, t) for l, t in links_to_process if url_filter in l]
+            if before != len(links_to_process):
+                logger.info("%s: url_filter '%s' оставил %d из %d ссылок",
+                            name, url_filter, len(links_to_process), before)
+
         logger.info("%s: found %d article links on homepage", name, len(links_to_process))
 
         for link, title in links_to_process[:30]:

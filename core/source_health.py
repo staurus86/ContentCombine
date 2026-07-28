@@ -56,6 +56,7 @@ class SourceHealth:
             self._sources[source] = {
                 "failures": 0, "total_failures": 0, "total_success": 0,
                 "disabled_at": None, "last_error": "", "error_type": "",
+                "last_probe": None,
             }
 
     def record_success(self, source: str, latency_ms: float = 0):
@@ -67,6 +68,10 @@ class SourceHealth:
             s["total_success"] += 1
             s["disabled_at"] = None
             s["last_error"] = ""
+            # Время удачного ОПРОСА, а не появления новой записи. Панель здоровья
+            # считала «мёртвым» любой источник без свежих новостей, поэтому редкий
+            # блог с публикацией раз в месяц был неотличим от сломанного парсера.
+            s["last_probe"] = time.time()
             if latency_ms > 0:
                 if source not in self._latencies:
                     self._latencies[source] = deque(maxlen=5)
@@ -82,6 +87,7 @@ class SourceHealth:
             s["total_failures"] += 1
             s["last_error"] = str(error)[:200]
             s["error_type"] = classify_error(error)
+            s["last_probe"] = time.time()  # опрос был, просто неудачный
             if s["failures"] >= self._threshold:
                 if s["disabled_at"] is None:
                     logger.warning("Source DISABLED: %s after %d consecutive failures: %s",
@@ -127,6 +133,9 @@ class SourceHealth:
                     "error_type": s["error_type"],
                     "disabled_at": s["disabled_at"],
                     "avg_latency_ms": self.avg_latency(name),
+                    "last_probe": s.get("last_probe"),
+                    "probe_minutes_ago": (round((time.time() - s["last_probe"]) / 60)
+                                          if s.get("last_probe") else None),
                 }
                 for name, s in self._sources.items()
             }

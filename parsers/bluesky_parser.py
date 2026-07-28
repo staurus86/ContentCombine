@@ -95,7 +95,16 @@ def parse_bluesky_source(source: dict) -> int:
         feed = data.get("feed", [])
 
         for item in feed:
+            # Репост чужого поста приходит в ленте автора наравне с его собственными.
+            # Раньше он сохранялся как материал источника: у BS:johnmu так набралось
+            # 21 чужой пост из 33 записей — под именем эксперта в ленту шло случайное.
+            reason = item.get("reason") or {}
+            if str(reason.get("$type", "")).endswith("reasonRepost"):
+                continue
             post = item.get("post", {})
+            author_handle = (post.get("author") or {}).get("handle", "")
+            if author_handle and handle and author_handle.lower() != handle.lower():
+                continue
             record = post.get("record", {})
             text = record.get("text", "").strip()
 
