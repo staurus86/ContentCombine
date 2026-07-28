@@ -742,16 +742,20 @@ def _compose_digest_impl(dtype="feed", period="day"):
     period_label = "за сутки" if period == "day" else "за неделю"
 
     if dtype == "general":
-        feed_news = _filter_recurring_stories(_pull_segment_news("n.source NOT LIKE 'TG:%' AND COALESCE(n.is_case, 0) = 0", from_h, 14))
-        cases_news = _filter_recurring_stories(_pull_segment_news("COALESCE(n.is_case, 0) = 1", from_h, 14))
-        tg_news = _filter_recurring_stories(_pull_segment_news("n.source LIKE 'TG:%'", from_h, 14))
+        # Берём с запасом (35 вместо 14) и режем ПОСЛЕ отсева уже опубликованного:
+        # иначе весь топ-14 мог состоять из материалов вчерашнего дайджеста, и до
+        # модели доходили единицы кандидатов.
+        SEG_LIMIT, SEG_POOL = 14, 35
+        feed_news = _filter_recurring_stories(_pull_segment_news("n.source NOT LIKE 'TG:%' AND COALESCE(n.is_case, 0) = 0", from_h, SEG_POOL))[:SEG_LIMIT]
+        cases_news = _filter_recurring_stories(_pull_segment_news("COALESCE(n.is_case, 0) = 1", from_h, SEG_POOL))[:SEG_LIMIT]
+        tg_news = _filter_recurring_stories(_pull_segment_news("n.source LIKE 'TG:%'", from_h, SEG_POOL))
         # Порог для раздела «Телеграм»: у постов свой скоринг, и служебные
         # (вакансии, анонсы конференций, «доброе утро») уходят в минус. Раньше
         # раздел брал топ-14 из почти неразличимых 12–25 баллов — сортировка была
         # случайной, и они попадали в канал.
         import config
         _tg_min = getattr(config, "TG_DIGEST_MIN_SCORE", 30)
-        tg_news = [t for t in tg_news if (t.get("total_score") or 0) >= _tg_min]
+        tg_news = [t for t in tg_news if (t.get("total_score") or 0) >= _tg_min][:SEG_LIMIT]
         used_items = feed_news + cases_news + tg_news
         from apis.digest import generate_general_digest
         result = generate_general_digest(feed_news, cases_news, tg_news, period_label)
@@ -778,7 +782,7 @@ def _compose_digest_impl(dtype="feed", period="day"):
         else:  # feed: main feed excludes TG channels and bookmarked cases
             dtype = "feed"
             seg, style_tag = "n.source NOT LIKE 'TG:%' AND COALESCE(n.is_case, 0) = 0", "feed_" + period
-        news_list = _filter_recurring_stories(_pull_segment_news(seg, from_h, 40))
+        news_list = _filter_recurring_stories(_pull_segment_news(seg, from_h, 90))[:40]
         used_items = news_list
         from apis.digest import generate_daily_digest
         result = generate_daily_digest(news_list, style="detailed", period_label=period_label, max_items=7)
