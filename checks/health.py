@@ -69,6 +69,15 @@ def get_sources_health() -> list[dict]:
     except Exception:
         pass
 
+    # Выключенные из дашборда. Цикл парсинга их пропускает, но в панели это никак
+    # не отражалось: 16 источников выключили 23 июня, и полтора месяца они висели
+    # как «dead» — при живых площадках и рабочих парсерах.
+    try:
+        from core.feature_flags import get_disabled_sources
+        manually_off = set(get_disabled_sources())
+    except Exception:
+        manually_off = set()
+
     # Include ALL configured sources
     conf_by_name = {s["name"]: s for s in config.SOURCES}
     all_source_names = [s["name"] for s in config.SOURCES]
@@ -95,7 +104,9 @@ def get_sources_health() -> list[dict]:
         probe_min = sh_pre.get("probe_minutes_ago")
         probed_recently = probe_min is not None and probe_min <= 24 * 60
 
-        if not last_parsed:
+        if name in manually_off:
+            status = "off"          # выключен вручную, цикл его не опрашивает
+        elif not last_parsed:
             status = "silent" if probed_recently else "dead"
         elif last_parsed <= cutoff_dead:
             status = "silent" if probed_recently else "dead"
@@ -132,10 +143,11 @@ def get_sources_health() -> list[dict]:
             # Когда мы в последний раз ДОЗВОНИЛИСЬ до источника (в минутах назад).
             # None — с перезапуска процесса опроса ещё не было.
             "probe_minutes_ago": sh.get("probe_minutes_ago"),
+            "manually_disabled": name in manually_off,
         })
 
     # Sort: dead first, then by count desc
-    _ORDER = {"dead": 0, "silent": 1, "down": 2, "warning": 3, "low": 4, "healthy": 5}
+    _ORDER = {"off": 0, "dead": 1, "silent": 2, "down": 3, "warning": 4, "low": 5, "healthy": 6}
     results.sort(key=lambda x: (_ORDER.get(x["status"], 9), -x["count_24h"]))
 
     return results

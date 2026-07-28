@@ -645,13 +645,26 @@ def _parse_one_source(source: dict) -> int:
 def reparse_all(body):
     try:
         import config
-        total = 0
+        # Массовый перепарс уважает выключенные источники — иначе кнопка «Перепарсить
+        # всё» молча возвращает то, что администратор выключил в дашборде. Именно так
+        # 8 июля в базу разом попали 16 отключённых источников.
+        try:
+            from core.feature_flags import get_disabled_sources
+            disabled = set(get_disabled_sources())
+        except Exception:
+            disabled = set()
+        total, skipped = 0, 0
         for source in config.SOURCES:
+            if source["name"] in disabled:
+                skipped += 1
+                continue
             try:
                 total += _parse_one_source(source)
             except Exception as e:
                 logger.error("Reparse %s error: %s", source["name"], e)
-        return {"status": "ok", "new_articles": total}
+        if skipped:
+            logger.info("Reparse all: пропущено %d выключенных источников", skipped)
+        return {"status": "ok", "new_articles": total, "skipped_disabled": skipped}
     except Exception as e:
         return {"status": "error", "message": str(e)}
 

@@ -2173,6 +2173,14 @@ async function exportOne(id) {
   else toast(r.message, true);
 }
 
+async function toggleSourceOn(name, enabled = true) {
+  const r = await api('/api/sources/toggle', {name, enabled});
+  if (r && r.status === 'error') { toast(r.message || 'Не удалось переключить источник', true); return; }
+  toast(enabled ? 'Источник включён: ' + name : 'Источник выключен: ' + name);
+  loadHealth();
+  if (typeof loadSources === 'function') loadSources();
+}
+
 // Sources
 let _sources = [];
 let _healthData = [];
@@ -2184,7 +2192,7 @@ async function loadSources() {
   health.forEach(h => { hMap[h.source] = h; });
   document.getElementById('sources-table').innerHTML = _sources.map(s => {
     const h = hMap[s.name] || {};
-    const icon = h.status==='healthy'?'&#9989;':h.status==='low'?'&#128993;':h.status==='warning'?'&#9888;&#65039;':h.status==='dead'?'&#10060;':'&#9898;';
+    const icon = h.manually_disabled ? '&#9209;&#65039;' : (h.status==='healthy'?'&#9989;':h.status==='low'?'&#128993;':h.status==='warning'?'&#9888;&#65039;':h.status==='dead'?'&#10060;':'&#9898;');
     const cnt = h.count_24h ?? '-';
     const lastP = h.last_parsed ? fmtDate(h.last_parsed) : '-';
     const minAgo = h.minutes_ago >= 0 ? h.minutes_ago + ' мин' : '';
@@ -2197,6 +2205,7 @@ async function loadSources() {
       <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis" title="${esc(s.url||s.channel||s.group_id||s.screen_name||s.handle||'')}">${esc(s.url||s.channel||s.group_id||s.screen_name||s.handle||'')}</td>
       <td>${s.interval} мин</td>
       <td style="white-space:nowrap">
+        <button class="btn btn-sm btn-secondary" onclick="toggleSourceOn(\`${s.name.replace(/`/g,'')}\`, ${h.manually_disabled ? 'true' : 'false'})" title="${h.manually_disabled ? 'Выключен: цикл его не опрашивает' : 'Выключить — цикл перестанет опрашивать источник'}">${h.manually_disabled ? 'Вкл' : 'Выкл'}</button>
         <button class="btn btn-sm btn-primary" onclick="reparseSource(\`${s.name.replace(/`/g,'')}\`)">Парсить</button>
         <button class="btn btn-sm btn-secondary" onclick="openEditModal(\`${s.name.replace(/`/g,'')}\`)">Ред.</button>
         <button class="btn btn-sm btn-danger" onclick="deleteSource(\`${s.name.replace(/`/g,'')}\`)">&#10005;</button>
@@ -2581,22 +2590,25 @@ async function loadHealth() {
   const data = await api('/api/health');
   _healthData = data;
   const maxCount = Math.max(...data.map(h => h.count_24h), 1);
-  let healthy=0, low=0, warn=0, down=0, dead=0, silent=0;
+  let healthy=0, low=0, warn=0, down=0, dead=0, silent=0, off=0;
   document.getElementById('health-table').innerHTML = data.map(h => {
     // silent — площадка отвечает, но давно не публикует; dead — до неё не достучались
-    const icons = {healthy:'&#9989;',low:'&#128993;',warning:'&#9888;&#65039;',down:'&#128308;',dead:'&#10060;',silent:'&#128164;'};
-    const labels = {healthy:'healthy',low:'low',warning:'warning',down:'down',dead:'не отвечает',silent:'молчит'};
+    const icons = {healthy:'&#9989;',low:'&#128993;',warning:'&#9888;&#65039;',down:'&#128308;',dead:'&#10060;',silent:'&#128164;',off:'&#9209;&#65039;'};
+    const labels = {healthy:'healthy',low:'low',warning:'warning',down:'down',dead:'не отвечает',silent:'молчит',off:'выключен'};
     const icon = icons[h.status] || '&#10067;';
     if (h.status==='healthy') healthy++;
     else if (h.status==='low') low++;
     else if (h.status==='warning') warn++;
     else if (h.status==='down') down++;
     else if (h.status==='silent') silent++;
+    else if (h.status==='off') off++;
     else dead++;
     const pct = Math.round((h.count_24h / maxCount) * 100);
     const barColor = h.status==='healthy'?'#17bf63':h.status==='low'?'#ffad1f':h.status==='warning'?'#f5a623':h.status==='silent'?'#8899a6':'#e0245e';
     const isSick = ['warning','down','dead','low'].includes(h.status);
-    const healBtn = isSick ? `<button class="btn btn-sm btn-warning" onclick="healSource('${h.source.replace(/'/g,"\\'")}')" style="padding:2px 8px;font-size:0.75em" title="Диагностика и лечение">&#128138;</button>` : '';
+    const healBtn = h.manually_disabled
+      ? `<button class="btn btn-sm btn-primary" onclick="toggleSourceOn('${h.source.replace(/'/g,"\'")}')" style="padding:2px 8px;font-size:0.75em" title="Источник выключен вручную — цикл его не опрашивает">Включить</button>`
+      : (isSick ? `<button class="btn btn-sm btn-warning" onclick="healSource('${h.source.replace(/'/g,"\'")}')" style="padding:2px 8px;font-size:0.75em" title="Диагностика и лечение">&#128138;</button>` : '');
     const srcLink = h.url ? ` <a href="${h.url}" target="_blank" rel="noopener" title="Открыть источник — проверить вручную" style="color:#1da1f2;text-decoration:none">&#8599;</a>` : '';
     const reason = ERR_LABELS[h.error_type] || (h.error_type ? h.error_type : '');
     const reasonCell = reason
@@ -2620,6 +2632,7 @@ async function loadHealth() {
   if (low) parts.push(`<span style="color:#ffad1f">${low} low</span>`);
   if (warn) parts.push(`<span style="color:#f5a623">${warn} warning</span>`);
   if (down) parts.push(`<span style="color:#e0245e">${down} down</span>`);
+  if (off) parts.push(`<span style="color:#ffad1f">${off} выключено</span>`);
   if (silent) parts.push(`<span style="color:#8899a6">${silent} молчат</span>`);
   if (dead) parts.push(`<span style="color:#e0245e">${dead} не отвечают</span>`);
   const el = document.getElementById('health-summary');
