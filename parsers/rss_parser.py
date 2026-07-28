@@ -155,13 +155,22 @@ def parse_rss_source(source: dict):
                 continue
 
             title = entry.get("title", "").strip()
-            published = entry.get("published", "")
+            published = entry.get("published", "") or entry.get("updated", "")
 
-            # Фильтр по дате: пропускаем старше 30 дней
-            if hasattr(entry, "published_parsed") and entry.published_parsed:
-                pub_dt = datetime(*entry.published_parsed[:6], tzinfo=timezone.utc)
-                if pub_dt < cutoff:
-                    continue
+            # Фильтр по дате. Раньше смотрели только published_parsed, а Atom-фиды
+            # отдают дату в updated: у Mojeek так проходили все 144 записи блога
+            # с 2013 года — архив попадал в ленту как свежие новости.
+            pub_dt = None
+            for attr in ("published_parsed", "updated_parsed", "created_parsed"):
+                val = entry.get(attr)
+                if val:
+                    try:
+                        pub_dt = datetime(*val[:6], tzinfo=timezone.utc)
+                        break
+                    except (TypeError, ValueError):
+                        continue
+            if pub_dt and pub_dt < cutoff:
+                continue
 
             # Получаем summary из RSS
             summary = ""
@@ -183,6 +192,14 @@ def parse_rss_source(source: dict):
 
             # Приоритет: дата из RSS, иначе из HTML страницы
             final_date = published or page_date
+
+            # Страховка для фидов без дат: возраст мог выясниться только со
+            # страницы статьи. Meta Research так приносил материалы 2023 года.
+            if not pub_dt and final_date:
+                from parsers.html_parser import _is_too_old
+                if _is_too_old(final_date):
+                    logger.debug("Skip old article %s (%s)", link, final_date)
+                    continue
 
             news_id = insert_news(
                 source=name,
