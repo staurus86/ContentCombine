@@ -172,23 +172,33 @@ def parse_rss_source(source: dict):
             if pub_dt and pub_dt < cutoff:
                 continue
 
-            # Получаем summary из RSS
+            # Текст из фида. Многие издания кладут в summary/content всю статью:
+            # у VentureBeat это 5 000 знаков. Раньше всё резалось до 500, и когда
+            # сайт отвечал 429 на загрузку страницы, в базу попадал огрызок —
+            # quality-чек считает его слабым материалом и занижает скор.
             summary = ""
-            if "summary" in entry:
-                soup = BeautifulSoup(entry.summary, "lxml")
-                summary = soup.get_text(strip=True)[:500]
+            raw_summary = ""
+            content_list = entry.get("content") or []
+            if content_list and isinstance(content_list, list):
+                raw_summary = content_list[0].get("value", "") or ""
+            if not raw_summary and "summary" in entry:
+                raw_summary = entry.summary or ""
+            if raw_summary:
+                summary = BeautifulSoup(raw_summary, "lxml").get_text(" ", strip=True)[:5000]
 
             # Загружаем полный текст страницы (с задержкой чтобы не перегружать)
             time.sleep(1)
             h1, description, plain_text, page_date, image_count = fetch_full_text(link)
 
             if not description:
-                description = summary
+                description = summary[:500]
 
-            # Fallback: если plain_text пустой, используем RSS summary
-            if not plain_text and summary:
+            # Fallback: страница не отдалась (429, блокировка) — берём текст из фида
+            # целиком, а не первые 500 знаков.
+            if len(plain_text or "") < len(summary):
+                if not plain_text:
+                    logger.debug("Text recovery for %s: using RSS content (%d chars)", link, len(summary))
                 plain_text = summary
-                logger.debug("Text recovery for %s: using RSS summary (%d chars)", link, len(summary))
 
             # Приоритет: дата из RSS, иначе из HTML страницы
             final_date = published or page_date
