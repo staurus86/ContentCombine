@@ -363,6 +363,13 @@ def _parse_single_sitemap_from_root(name: str, root, ns: dict, url_filter: str, 
     # Сортируем по дате (новые первыми) и берём до 20
     fresh_urls.sort(key=lambda x: x[1], reverse=True)
 
+    # Карта без единой даты (так у Sitebulb: 205 материалов, ни одного lastmod) —
+    # порядок в файле обычно от старых к новым, поэтому берём хвост. Иначе каждый
+    # цикл грузились одни и те же двадцать самых старых страниц и все отсеивались
+    # по возрасту.
+    if fresh_urls and not any(d for _, d in fresh_urls):
+        fresh_urls = fresh_urls[::-1]
+
     for link, published_at in fresh_urls[:20]:
         if news_exists(link) or _is_junk_url(link):
             continue
