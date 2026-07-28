@@ -181,6 +181,10 @@ def _parse_homepage(source: dict) -> int:
     domain = re.search(r'https?://([^/]+)', url).group(1) if re.search(r'https?://([^/]+)', url) else ""
     count = 0
     hard_err = None
+    # Фильтр раздела (как в sitemap-парсере). Проверяется при отборе, а не после:
+    # у BrightEdge первые 30 ссылок страницы — меню и продукты, посты блога идут
+    # ниже, и постфильтр оставлял от них одну-две.
+    url_filter = source.get("url_filter", "")
 
     try:
         resp = fetch_with_retry(url)
@@ -202,6 +206,8 @@ def _parse_homepage(source: dict) -> int:
                 href = urljoin(url, href)
             if domain and domain not in href:
                 continue
+            if url_filter and url_filter not in href:
+                continue
             title = a_tag.get_text(strip=True)
             if title and len(title) > 15 and href not in seen_urls:
                 seen_urls.add(href)
@@ -218,6 +224,8 @@ def _parse_homepage(source: dict) -> int:
                     continue
                 if any(p in href for p in skip_patterns):
                     continue
+                if url_filter and url_filter not in href:
+                    continue
                 title = a_tag.get_text(strip=True)
                 # Clean category prefixes
                 for prefix in ["Culture", "News", "Opinion", "Entertainment", "Tips & Guides", "Commentary", "Review"]:
@@ -228,17 +236,6 @@ def _parse_homepage(source: dict) -> int:
                     links_to_process.append((href, title))
                     if len(links_to_process) >= 30:
                         break
-
-        # Фильтр раздела (как в sitemap-парсере). Без него вторая стратегия тянет
-        # с сайта что попало: у BrightEdge в базе оказались /enterprise-seo и
-        # /win-in-ai-search — страницы услуг, а посты блога не забирались вовсе.
-        url_filter = source.get("url_filter", "")
-        if url_filter:
-            before = len(links_to_process)
-            links_to_process = [(l, t) for l, t in links_to_process if url_filter in l]
-            if before != len(links_to_process):
-                logger.info("%s: url_filter '%s' оставил %d из %d ссылок",
-                            name, url_filter, len(links_to_process), before)
 
         logger.info("%s: found %d article links on homepage", name, len(links_to_process))
 
