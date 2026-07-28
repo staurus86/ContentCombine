@@ -33,7 +33,9 @@ LOW_VALUE_TYPES = {"recap", "announcement"}
 _RECAP = re.compile(
     r"\b(recap|round-?up|digest|newsletter|weekly\s+(?:seo|search|ai|update)|week\s+in\s+review"
     r"|this\s+week\s+in|подкаст|дайджест|обзор\s+недели|итоги\s+(?:недели|месяца|дня)"
-    r"|главное\s+за\s+(?:неделю|день|месяц)|что\s+было\s+на\s+неделе)\b",
+    r"|главное\s+за\s+(?:неделю|день|месяц)|что\s+было\s+на\s+неделе"
+    # Форматы дайджестов Telegram-каналов: сами по себе это пересказ чужих новостей.
+    r"|всё,?\s+что\s+нужно\s+знать\s+о\s+seo|новостной\s*(?:🥃)?\s*шот|подборка\s+новостей)\b",
     re.IGNORECASE)
 
 _EVERGREEN = re.compile(
