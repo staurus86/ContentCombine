@@ -163,9 +163,29 @@ def _check_single(news: dict) -> dict:
     result["significance"] = sig
     total_score = min(100, total_score + sig["score_bonus"])
 
-    # Headline bonus
-    headline_bonus = max(0, (result["headline"]["score"] - 50)) // 10
-    total_score = min(100, total_score + headline_bonus)
+    # Headline bonus. Шаг 10 при среднем headline 45 давал 0 у 97.8% материалов —
+    # компонент занимал место в формуле и ничего не решал. Шкала: 30 → -2, 50 → 0,
+    # 70 → +4, 90 → +8, то есть слабый заголовок теперь тоже стоит баллов.
+    headline_bonus = round((result["headline"]["score"] - 50) / 5)
+    headline_bonus = max(-4, min(8, headline_bonus))
+    total_score = max(0, min(100, total_score + headline_bonus))
+
+    # Класс материала: рекап/анонс не должны опережать само событие.
+    from checks.content_type import classify_content
+    ctype = classify_content(news)
+    result["content_type"] = ctype
+    total_score = max(0, min(100, round(total_score * ctype["multiplier"])))
+
+    # TG-посты судим по своим сигналам: общие чеки на них почти не срабатывают.
+    tg_delta = 0
+    if (news.get("source") or "").startswith("TG:"):
+        from checks.tg_score import score_tg_post
+        tg = score_tg_post(news)
+        tg_delta = tg["delta"]
+        result["tg_signals"] = tg
+        if tg["junk"]:
+            result["content_type"] = ctype = {**ctype, "low_value": True}
+        total_score = max(0, min(100, total_score + tg_delta))
 
     # Feedback adjustment — apply learned weights from editor decisions
     feedback_adj = 0.0
@@ -208,6 +228,9 @@ def _check_single(news: dict) -> dict:
         "headline_bonus": headline_bonus,
         "significance": sig["level"],
         "significance_bonus": sig["score_bonus"],
+        "content_type": ctype["type"],
+        "type_multiplier": ctype["multiplier"],
+        "tg_delta": tg_delta,
         "source_weight": sw,
         "feedback_adj": round(feedback_adj, 2),
         "base_weighted": base_weighted,
@@ -215,6 +238,66 @@ def _check_single(news: dict) -> dict:
     }
 
     return result
+
+
+_THRESH_CACHE = {"value": None, "ts": 0.0}
+_THRESH_TTL = 1800  # полчаса: распределение за сутки так часто не меняется
+
+
+def adaptive_thresholds() -> tuple[int, int]:
+    """(порог авто-отсева, порог ТОП) по перцентилям скора за последние 24 часа.
+
+    Абсолютные константы устаревают при каждой правке весов: TOP_SCORE=70 пропускал
+    мимо ТОПа 47% того, что редактор берёт в дайджест, а AUTO_REJECT=15 отсекал 1.2%
+    потока. Перцентиль держит долю стабильной: нижние 10% отсеиваем, верхние 15%
+    помечаем как ТОП. Границы не дают перцентилю уехать на аномальном дне.
+    Fails open: нет данных или ошибка → значения из config."""
+    import time as _t
+    import config
+    fallback = (config.AUTO_REJECT_SCORE_THRESHOLD, config.TOP_SCORE_THRESHOLD)
+    now = _t.monotonic()
+    if _THRESH_CACHE["value"] and now - _THRESH_CACHE["ts"] < _THRESH_TTL:
+        return _THRESH_CACHE["value"]
+    try:
+        conn = get_connection()
+        cur = conn.cursor()
+        try:
+            if _is_postgres():
+                cur.execute("""
+                    SELECT percentile_cont(0.10) WITHIN GROUP (ORDER BY a.total_score),
+                           percentile_cont(0.85) WITHIN GROUP (ORDER BY a.total_score),
+                           COUNT(*)
+                    FROM news_analysis a JOIN news n ON n.id = a.news_id
+                    WHERE a.total_score > 0
+                      AND n.parsed_at::timestamptz > (NOW() - INTERVAL '24 hours')
+                """)
+            else:
+                cur.execute("""
+                    SELECT a.total_score FROM news_analysis a JOIN news n ON n.id = a.news_id
+                    WHERE a.total_score > 0 AND n.parsed_at > datetime('now', '-24 hours')
+                    ORDER BY a.total_score
+                """)
+            if _is_postgres():
+                row = cur.fetchone()
+                p10, p85, cnt = (row or (None, None, 0))
+            else:
+                vals = [r[0] for r in cur.fetchall()]
+                cnt = len(vals)
+                p10 = vals[int(cnt * 0.10)] if cnt else None
+                p85 = vals[int(cnt * 0.85)] if cnt else None
+        finally:
+            cur.close()
+        if not cnt or cnt < 50 or p10 is None or p85 is None:
+            return fallback
+        reject = max(10, min(35, int(p10)))
+        top = max(50, min(85, int(p85)))
+        _THRESH_CACHE["value"] = (reject, top)
+        _THRESH_CACHE["ts"] = now
+        logger.info("Adaptive thresholds: reject=%d top=%d (по %d записям за 24ч)", reject, top, cnt)
+        return reject, top
+    except Exception as e:
+        logger.debug("Adaptive thresholds failed open: %s", e)
+        return fallback
 
 
 def run_review_pipeline(news_list: list[dict], update_status: bool = True) -> dict:
@@ -279,12 +362,13 @@ def run_review_pipeline(news_list: list[dict], update_status: bool = True) -> di
     # Порог из config: раньше здесь был захардкожен 15, и настройка
     # AUTO_REJECT_SCORE_THRESHOLD меняла только оркестратор, но не это место.
     import config
-    AUTO_REJECT_SCORE = config.AUTO_REJECT_SCORE_THRESHOLD
-    TOP_SCORE = config.TOP_SCORE_THRESHOLD
+    AUTO_REJECT_SCORE, TOP_SCORE = adaptive_thresholds()
     text_by_id = {n.get("id"): ((n.get("title") or "") + " " + (n.get("plain_text") or n.get("description") or "")) for n in news_list}
     top_ids = []  # non-duplicate items scoring >= threshold → sticky is_top flag
     for r in results:
-        if not r.get("is_duplicate") and r.get("total_score", 0) >= TOP_SCORE:
+        # Рекапы и анонсы в ТОП не пускаем: их скор раздут форматом, а не событием.
+        low_value = (r.get("content_type") or {}).get("low_value", False)
+        if not r.get("is_duplicate") and not low_value and r.get("total_score", 0) >= TOP_SCORE:
             top_ids.append(r["id"])
         if update_status:
             if r.get("is_duplicate"):

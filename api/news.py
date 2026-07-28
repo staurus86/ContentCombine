@@ -586,7 +586,11 @@ def _get_tg_channels_digest_impl(period="day", send=False):
 
 
 def _pull_segment_news(seg, from_h, limit=40):
-    """Top news for a SQL segment within the last from_h hours, ranked by score+viral."""
+    """Top news for a SQL segment within the last from_h hours, ranked by total_score.
+
+    Виральность из сортировки убрана: она уже входит в total_score с весом 35%
+    (config.CHECK_WEIGHT_VIRAL), и слагаемое `+ viral_score` считало её дважды —
+    материал, набравший баллы словарём тяжёлых тем, дважды получал преимущество."""
     conn = get_connection()
     cur = conn.cursor()
     try:
@@ -600,7 +604,7 @@ def _pull_segment_news(seg, from_h, limit=40):
                    COALESCE(a.viral_level, ''), COALESCE(a.tags_data, '[]')
             FROM news n LEFT JOIN news_analysis a ON a.news_id = n.id
             WHERE {seg} AND COALESCE(n.is_deleted, 0) = 0 AND {time_cond}
-            ORDER BY (COALESCE(a.total_score, 0) + COALESCE(a.viral_score, 0)) DESC
+            ORDER BY COALESCE(a.total_score, 0) DESC
             LIMIT {int(limit)}
         """)
         cols = ["id", "title", "source", "url", "published_at", "total_score",
@@ -646,15 +650,29 @@ def get_top(query_params=None):
         cur.close()
 
 
-def _filter_recurring_stories(items):
-    """Drop candidates whose story was already covered in digests over the last 2 days.
+def _filter_recurring_stories(items, days: int = 7):
+    """Drop candidates whose story was already covered in digests over the last N days.
 
-    The same evolving story (e.g. a Google update) is covered by new articles daily —
-    different ids/urls — so id-based exclusion misses it. Match by meaning instead,
-    reusing the existing tfidf+entity similarity. Near-identical rehashes are dropped;
-    a genuinely new development on the story still passes. Fails open on any error."""
+    Два слоя. Жёсткий: тот же news_id, уже выходивший в дайджесте за окно (недельный
+    дайджест берёт 7 суток, поэтому окно смыслового дедупа в 2 дня его не покрывало —
+    123 заголовка выходили повторно). Мягкий: та же история другим материалом —
+    tfidf+entity по заголовкам за 2 дня, чтобы развитие сюжета всё ещё проходило.
+    Fails open on any error."""
     if not items:
         return items
+    try:
+        from storage.database import get_recent_digest_news_ids
+        seen_ids = get_recent_digest_news_ids(days=days)
+        if seen_ids:
+            before = len(items)
+            items = [it for it in items if it.get("id") not in seen_ids]
+            if len(items) < before:
+                logger.info("Digest id dedup: dropped %d/%d already-published items",
+                            before - len(items), before)
+        if not items:
+            return items
+    except Exception as e:
+        logger.warning("Digest id dedup skipped: %s", e)
     try:
         from storage.database import get_recent_digest_titles
         from checks.deduplication import recurring_indices
@@ -727,6 +745,13 @@ def _compose_digest_impl(dtype="feed", period="day"):
         feed_news = _filter_recurring_stories(_pull_segment_news("n.source NOT LIKE 'TG:%' AND COALESCE(n.is_case, 0) = 0", from_h, 14))
         cases_news = _filter_recurring_stories(_pull_segment_news("COALESCE(n.is_case, 0) = 1", from_h, 14))
         tg_news = _filter_recurring_stories(_pull_segment_news("n.source LIKE 'TG:%'", from_h, 14))
+        # Порог для раздела «Телеграм»: у постов свой скоринг, и служебные
+        # (вакансии, анонсы конференций, «доброе утро») уходят в минус. Раньше
+        # раздел брал топ-14 из почти неразличимых 12–25 баллов — сортировка была
+        # случайной, и они попадали в канал.
+        import config
+        _tg_min = getattr(config, "TG_DIGEST_MIN_SCORE", 30)
+        tg_news = [t for t in tg_news if (t.get("total_score") or 0) >= _tg_min]
         used_items = feed_news + cases_news + tg_news
         from apis.digest import generate_general_digest
         result = generate_general_digest(feed_news, cases_news, tg_news, period_label)

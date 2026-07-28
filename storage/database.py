@@ -929,6 +929,24 @@ def record_digest_news(items, digest_date: str = None):
         cur.close()
 
 
+def get_recent_digest_news_ids(days: int = 7) -> set:
+    """ID новостей, уже выходивших в дайджестах за последние `days` дней, включая
+    сегодняшние. Заголовочный дедуп ловит пересказы, но пропускал буквально тот же
+    материал: недельный дайджест берёт окно 7 суток, а титульная история смотрела
+    только 2 дня назад — «7 признаков, что подрядчик сливает SEO-бюджет» вышел
+    дважды, 14 и 19 июля, с одним и тем же news_id."""
+    from datetime import timedelta
+    conn = get_connection()
+    cur = conn.cursor()
+    ph = "%s" if _is_postgres() else "?"
+    since = (datetime.now(timezone.utc) - timedelta(days=days)).strftime("%Y-%m-%d")
+    try:
+        cur.execute(f"SELECT news_id FROM digest_history WHERE digest_date >= {ph}", (since,))
+        return {r[0] for r in cur.fetchall() if r[0]}
+    finally:
+        cur.close()
+
+
 def get_recent_digest_titles(days: int = 2) -> list:
     """Заголовки новостей из дайджестов за последние `days` КАЛЕНДАРНЫХ дней,
     ИСКЛЮЧАЯ сегодня — чтобы душить именно повторы «день в день», а не

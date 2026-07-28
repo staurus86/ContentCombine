@@ -117,6 +117,11 @@ SCORE_WEIGHT_KEYSO = float(os.getenv("SCORE_WEIGHT_KEYSO", "0.15"))
 SCORE_WEIGHT_TRENDS = float(os.getenv("SCORE_WEIGHT_TRENDS", "0.1"))
 SCORE_WEIGHT_HEADLINE = float(os.getenv("SCORE_WEIGHT_HEADLINE", "0.15"))
 
+# Раздел «Телеграм» в общем дайджесте: посты ниже порога в него не идут. Скоринг
+# TG считается отдельно (checks/tg_score.py), служебные посты уходят в минус.
+# Пустой раздел лучше вакансии и «доброго утра» в канале.
+TG_DIGEST_MIN_SCORE = _int_env("TG_DIGEST_MIN_SCORE", 30)
+
 # Pipeline thresholds
 FULL_AUTO_SCORE_THRESHOLD = _int_env("FULL_AUTO_SCORE_THRESHOLD", 70)
 FULL_AUTO_FINAL_THRESHOLD = _int_env("FULL_AUTO_FINAL_THRESHOLD", 60)
