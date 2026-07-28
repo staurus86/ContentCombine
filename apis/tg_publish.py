@@ -29,7 +29,16 @@ def _md_to_html(s: str) -> str:
     return s
 
 
-def _split_chunks(text: str, limit: int = CHUNK_LIMIT) -> list[str]:
+def _visible_len(s: str) -> int:
+    """Длина, которую считает Telegram: URL из [текст](url) уходят в entities и в
+    лимит 4096 не входят. Считать сырой markdown — значит рвать на два сообщения
+    дайджест, который в канал влезает одним (у дайджеста ссылок больше, чем текста)."""
+    s = re.sub(r"\[([^\]]+)\]\((https?://[^\s)]+)\)", r"\1", s)
+    s = re.sub(r"\*\*([^*]+)\*\*", r"\1", s)
+    return len(s.encode("utf-16-le")) // 2  # TG считает в UTF-16: эмодзи = 2
+
+
+def _split_chunks(text: str, limit: int = CHUNK_LIMIT, measure=len) -> list[str]:
     """Split text into Telegram-sized chunks at paragraph boundaries."""
     chunks, cur = [], ""
     for block in text.split("\n\n"):
@@ -37,7 +46,7 @@ def _split_chunks(text: str, limit: int = CHUNK_LIMIT) -> list[str]:
             if cur.strip():
                 chunks.append(cur.rstrip()); cur = ""
             chunks.append(block[:limit]); block = block[limit:]
-        if len(cur) + len(block) + 2 > limit and cur.strip():
+        if measure(cur) + measure(block) + 2 > limit and cur.strip():
             chunks.append(cur.rstrip()); cur = ""
         cur += block + "\n\n"
     if cur.strip():
@@ -141,7 +150,7 @@ def publish(body: dict) -> dict:
     if not token or not channel:
         return {"status": "no_token", "text": text}
 
-    chunks = _split_chunks(text)
+    chunks = _split_chunks(text, measure=_visible_len if is_md else len)
     parse_mode = None
     if is_md:
         chunks = [_md_to_html(c) for c in chunks]

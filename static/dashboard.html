@@ -5837,9 +5837,15 @@ function _subsTotals(authors) {
 // Чекер длины поста Telegram: лимит 4096, публикация режет длинное на части.
 // full = текст С заголовком (как реально уйдёт в канал).
 const TG_POST_LIMIT = 4096;
-function tgPostParts(fullText) { return Math.max(1, Math.ceil((fullText || '').length / 4000)); }
+// Считаем как Telegram: URL из [текст](url) уходят в entities и в лимит не входят.
+// По сырому markdown дайджест со ссылками выглядел вдвое длиннее, чем он есть.
+function tgVisibleLen(s) {
+  return (s || '').replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '$1')
+                  .replace(/\*\*([^*]+)\*\*/g, '$1').length;
+}
+function tgPostParts(fullText) { return Math.max(1, Math.ceil(tgVisibleLen(fullText) / 3800)); }
 function tgLenBadge(fullText) {
-  const n = (fullText || '').length;
+  const n = tgVisibleLen(fullText);
   if (n <= TG_POST_LIMIT)
     return `<span style="font-size:0.8em;color:#17bf63" title="Лимит Telegram ${TG_POST_LIMIT}">${n} зн. · в один пост</span>`;
   return `<span style="font-size:0.8em;color:#ffad1f;font-weight:600" title="Лимит Telegram ${TG_POST_LIMIT}">⚠️ ${n} зн. — уйдёт ${tgPostParts(fullText)} сообщениями</span>`;
