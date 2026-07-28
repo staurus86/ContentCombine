@@ -265,11 +265,30 @@ def _init_db_impl(conn, cur):
 
     # Records which news went into each published digest, for cross-day story dedup
     # (the same story is covered by new articles daily; id-based exclusion misses them).
+    # selected: 1 — материал реально вошёл в текст дайджеста, 0 — был только
+    # кандидатом. До этого писались все кандидаты подряд, и «попал в дайджест»
+    # означало «попал в топ-14 по скору» — обучение на такой разметке усиливало
+    # бы решения самого скоринга, а не решения редактора.
     digest_history_sql = """
         CREATE TABLE IF NOT EXISTS digest_history (
             news_id TEXT,
             title TEXT,
             digest_date TEXT,
+            created_at TEXT,
+            selected INTEGER DEFAULT 0
+        )
+    """
+
+    # Снимок сюжетов за день: даёт скорость роста. Без истории кластер с четырьмя
+    # источниками за час и кластер, копивший их трое суток, выглядели одинаково.
+    storyline_snapshots_sql = """
+        CREATE TABLE IF NOT EXISTS storyline_snapshots (
+            snapshot_date TEXT,
+            cluster_key TEXT,
+            title TEXT,
+            sources_count INTEGER DEFAULT 0,
+            items_count INTEGER DEFAULT 0,
+            member_ids TEXT DEFAULT '[]',
             created_at TEXT
         )
     """
@@ -341,6 +360,7 @@ def _init_db_impl(conn, cur):
         cur.execute(digest_history_sql)
         cur.execute(viral_triggers_sql)
         cur.execute(ai_citations_sql)
+        cur.execute(storyline_snapshots_sql)
     else:
         cur.execute(news_sql)
         cur.execute(analysis_sql)
@@ -352,6 +372,7 @@ def _init_db_impl(conn, cur):
         cur.execute(digest_history_sql)
         cur.execute(viral_triggers_sql)
         cur.execute(ai_citations_sql)
+        cur.execute(storyline_snapshots_sql)
         conn.commit()
 
     # Add check_data columns if missing (stores viral, sentiment, freshness, tags as JSON)
@@ -373,6 +394,9 @@ def _init_db_impl(conn, cur):
     _add_column_if_missing(cur, "news_analysis", "entity_names", "TEXT DEFAULT '[]'")
     _add_column_if_missing(cur, "news_analysis", "entity_best_tier", "TEXT DEFAULT ''")
     _add_column_if_missing(cur, "news_analysis", "reviewed_at", "TEXT DEFAULT ''")
+
+    # Дайджест: отличаем реально вошедшие в текст материалы от кандидатов.
+    _add_column_if_missing(cur, "digest_history", "selected", "INTEGER DEFAULT 0")
 
     # Articles: scheduled publication time
     _add_column_if_missing(cur, "articles", "scheduled_at", "TEXT")
@@ -775,7 +799,8 @@ def save_analysis(news_id: str, **kwargs):
 def save_check_results(news_id: str, checks: dict, sentiment: dict = None,
                        tags: list = None, momentum: dict = None,
                        headline: dict = None, total_score: int = 0,
-                       entities: list = None, score_breakdown: dict = None):
+                       entities: list = None, score_breakdown: dict = None,
+                       confidence: int = 0, cluster_id: str = ""):
     """Сохраняет результаты проверок (viral, sentiment, freshness и др.) в news_analysis."""
     import json
     conn = get_connection()
@@ -813,6 +838,10 @@ def save_check_results(news_id: str, checks: dict, sentiment: dict = None,
         "entity_best_tier": ent_best_tier,
         "reviewed_at": datetime.now(timezone.utc).isoformat(),
         "score_breakdown": json.dumps(score_breakdown or {}, ensure_ascii=False),
+        # Колонки заводились, но не заполнялись: confidence_score был 0, а
+        # cluster_id пустой у всех 8 382 записей.
+        "confidence_score": confidence,
+        "cluster_id": cluster_id or "",
     }
 
     # Ensure row exists in news_analysis
@@ -906,12 +935,17 @@ def save_digest(digest_id: str, digest_date: str, style: str,
     logger.info("Saved digest: %s (%s)", title[:60], style)
 
 
-def record_digest_news(items, digest_date: str = None):
-    """Запоминает новости, вошедшие в опубликованный дайджест, для сквозной
-    (междневной) дедупликации историй. items: iterable dict'ов с 'id' и 'title'."""
+def record_digest_news(items, digest_date: str = None, selected_ids=None):
+    """Запоминает материалы дайджеста для сквозной дедупликации и для обучения.
+
+    items — кандидаты, которые ушли в LLM. selected_ids — id тех, что реально
+    вошли в текст (модель ссылается на них в sources). Различать обязательно:
+    кандидаты отбираются самим скорингом, и обучение на них усиливало бы его
+    собственные решения вместо решений редактора."""
     items = [it for it in (items or []) if (it.get("title") or "").strip()]
     if not items:
         return
+    selected_ids = set(selected_ids or ())
     conn = get_connection()
     cur = conn.cursor()
     now = datetime.now(timezone.utc).isoformat()
@@ -920,8 +954,10 @@ def record_digest_news(items, digest_date: str = None):
     try:
         for it in items:
             cur.execute(
-                f"INSERT INTO digest_history (news_id, title, digest_date, created_at) VALUES ({ph},{ph},{ph},{ph})",
-                (it.get("id"), (it.get("title") or "").strip(), digest_date, now)
+                f"INSERT INTO digest_history (news_id, title, digest_date, created_at, selected)"
+                f" VALUES ({ph},{ph},{ph},{ph},{ph})",
+                (it.get("id"), (it.get("title") or "").strip(), digest_date, now,
+                 1 if it.get("id") in selected_ids else 0)
             )
         if not _is_postgres():
             conn.commit()
@@ -941,6 +977,15 @@ def get_recent_digest_news_ids(days: int = 7) -> set:
     ph = "%s" if _is_postgres() else "?"
     since = (datetime.now(timezone.utc) - timedelta(days=days)).strftime("%Y-%m-%d")
     try:
+        # Только реально опубликованные: кандидат, не попавший в текст, завтра
+        # имеет полное право туда попасть — душить его нечестно.
+        cur.execute(
+            f"SELECT news_id FROM digest_history WHERE digest_date >= {ph} AND COALESCE(selected, 0) = 1",
+            (since,))
+        ids = {r[0] for r in cur.fetchall() if r[0]}
+        if ids:
+            return ids
+        # Старые записи писались без разметки — для них поведение прежнее.
         cur.execute(f"SELECT news_id FROM digest_history WHERE digest_date >= {ph}", (since,))
         return {r[0] for r in cur.fetchall() if r[0]}
     finally:
@@ -959,10 +1004,75 @@ def get_recent_digest_titles(days: int = 2) -> list:
     since = (datetime.now(timezone.utc) - timedelta(days=days)).strftime("%Y-%m-%d")
     try:
         cur.execute(
+            f"SELECT title FROM digest_history WHERE digest_date >= {ph} AND digest_date < {ph}"
+            f" AND COALESCE(selected, 0) = 1",
+            (since, today)
+        )
+        titles = [r[0] for r in cur.fetchall() if r[0]]
+        if titles:
+            return titles
+        cur.execute(
             f"SELECT title FROM digest_history WHERE digest_date >= {ph} AND digest_date < {ph}",
             (since, today)
         )
         return [r[0] for r in cur.fetchall() if r[0]]
+    finally:
+        cur.close()
+
+
+def save_storyline_snapshot(clusters: list, snapshot_date: str = None):
+    """Сохраняет дневной снимок сюжетов: сколько источников и какие материалы.
+
+    По нему считается скорость роста — единственное, что отличает тренд от
+    разового залпа. Один снимок в день, повторный вызов перезаписывает."""
+    import json as _json
+    snapshot_date = snapshot_date or datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    conn = get_connection()
+    cur = conn.cursor()
+    p = "%s" if _is_postgres() else "?"
+    now = datetime.now(timezone.utc).isoformat()
+    try:
+        cur.execute(f"DELETE FROM storyline_snapshots WHERE snapshot_date = {p}", (snapshot_date,))
+        for c in clusters or []:
+            member_ids = [m.get("id") for m in (c.get("members") or []) if m.get("id")]
+            if not member_ids:
+                continue
+            cur.execute(
+                f"INSERT INTO storyline_snapshots (snapshot_date, cluster_key, title, sources_count,"
+                f" items_count, member_ids, created_at) VALUES ({p},{p},{p},{p},{p},{p},{p})",
+                (snapshot_date, hashlib.md5(",".join(sorted(member_ids)).encode()).hexdigest()[:12],
+                 (c.get("members") or [{}])[0].get("title", "")[:300],
+                 len(set(c.get("sources") or [])), c.get("count", len(member_ids)),
+                 _json.dumps(member_ids), now))
+        if not _is_postgres():
+            conn.commit()
+    finally:
+        cur.close()
+
+
+def get_storyline_snapshot(snapshot_date: str) -> list[dict]:
+    """Снимок сюжетов за конкретный день: [{sources_count, member_ids}]."""
+    import json as _json
+    conn = get_connection()
+    cur = conn.cursor()
+    p = "%s" if _is_postgres() else "?"
+    try:
+        cur.execute(
+            f"SELECT cluster_key, title, sources_count, items_count, member_ids"
+            f" FROM storyline_snapshots WHERE snapshot_date = {p}", (snapshot_date,))
+        out = []
+        for row in cur.fetchall():
+            key, title, sc, ic, mids = (row[0], row[1], row[2], row[3], row[4])
+            try:
+                ids = _json.loads(mids or "[]")
+            except Exception:
+                ids = []
+            out.append({"cluster_key": key, "title": title, "sources_count": sc or 0,
+                        "items_count": ic or 0, "member_ids": set(ids)})
+        return out
+    except Exception as e:
+        logger.debug("Storyline snapshot read failed: %s", e)
+        return []
     finally:
         cur.close()
 

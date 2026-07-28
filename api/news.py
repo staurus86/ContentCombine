@@ -797,7 +797,9 @@ def _compose_digest_impl(dtype="feed", period="day"):
                 news_count=result.get("news_count", 0),
             )
             # Remember covered stories so tomorrow's digest can skip the repeats.
-            record_digest_news(used_items)
+            # selected_ids — то, что модель реально поставила в текст: разметка
+            # для обучения весов и для метрики качества отбора.
+            record_digest_news(used_items, selected_ids=result.get("selected_ids"))
     except Exception as e:
         logger.warning("Compose digest save failed: %s", e)
 

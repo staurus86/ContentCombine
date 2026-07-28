@@ -324,6 +324,41 @@ def start_scheduler():
     # Auto-rescore news with score=0: daily at 04:00
     scheduler.add_job(_auto_rescore_zero, "cron", hour=4, minute=0, id="auto_rescore_zero")
 
+    # Веса источников учатся на решениях редактора (что он взял в дайджест) —
+    # ежедневно в 05:00 по окну 30 дней. Априорные веса ставились на глаз и
+    # разошлись с фактом. Первый прогон — через минуту после старта, если весов ещё нет.
+    def _refresh_source_weights():
+        try:
+            from checks.source_weight import save_learned_weights
+            save_learned_weights(days=30)
+        except Exception as e:
+            logger.warning("Source weight refresh failed: %s", e)
+
+    scheduler.add_job(_refresh_source_weights, "cron", hour=5, minute=0, id="learn_source_weights")
+
+    # Дневной снимок сюжетов: по нему «Тренды» считают прирост источников за сутки.
+    def _snapshot_storylines():
+        try:
+            from api.dashboard import get_storylines
+            from storage.database import save_storyline_snapshot
+            res = get_storylines(days=3)
+            clusters = res.get("storylines") or []
+            save_storyline_snapshot(clusters)
+            logger.info("Storyline snapshot saved: %d кластеров", len(clusters))
+        except Exception as e:
+            logger.warning("Storyline snapshot failed: %s", e)
+
+    scheduler.add_job(_snapshot_storylines, "cron", hour=23, minute=30, id="storyline_snapshot")
+    try:
+        from storage.database import get_app_setting
+        from checks.source_weight import LEARNED_KEY
+        if not get_app_setting(LEARNED_KEY):
+            from datetime import datetime as _dt_w, timedelta as _td_w
+            scheduler.add_job(_refresh_source_weights, "date", id="learn_source_weights_boot",
+                              run_date=_dt_w.now(scheduler.timezone) + _td_w(seconds=90))
+    except Exception as e:
+        logger.debug("Source weight bootstrap check skipped: %s", e)
+
     # Auto digest → Telegram channel: daily at AUTO_DIGEST_CRON_HOUR:00 Moscow time
     # (scheduler tz = Europe/Moscow). Builds the GENERAL digest (best of feed + cases
     # + telegram, 24h) and publishes it. Changing the setting takes effect on restart.

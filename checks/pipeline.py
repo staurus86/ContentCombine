@@ -240,6 +240,24 @@ def _check_single(news: dict) -> dict:
     return result
 
 
+def _confidence(result: dict) -> int:
+    """Насколько скору можно верить: доля сигналов, которые реально сработали.
+
+    Скор 60 из пустых сигналов и скор 60 из четырёх независимых подтверждений —
+    разные вещи, а выглядели одинаково. Считаем шесть сигналов: тема, текст,
+    дата, виральность, распространение и класс материала."""
+    checks = result.get("checks", {})
+    signals = [
+        checks.get("relevance", {}).get("score", 0) >= 24,     # минимум два узких термина
+        checks.get("quality", {}).get("score", 0) >= 40,
+        checks.get("freshness", {}).get("status", "") not in ("", "unknown", "today?"),
+        checks.get("viral", {}).get("score", 0) > 0,
+        (result.get("momentum") or {}).get("score", 0) > 0,
+        (result.get("significance") or {}).get("level", "routine") != "routine",
+    ]
+    return round(100 * sum(1 for s in signals if s) / len(signals))
+
+
 _THRESH_CACHE = {"value": None, "ts": 0.0}
 _THRESH_TTL = 1800  # полчаса: распределение за сутки так часто не меняется
 
@@ -332,6 +350,17 @@ def run_review_pipeline(news_list: list[dict], update_status: bool = True) -> di
     pairs = tfidf_similarity(titles, texts)
     groups = build_groups(results, pairs)
 
+    # Идентификатор кластера — на него смотрит аналитика сюжетов; колонка
+    # cluster_id до этого была пустой у всех записей.
+    import hashlib as _hashlib
+    for group in groups:
+        ids = sorted(m.get("id", "") for m in group["members"] if m.get("id"))
+        if len(ids) < 2:
+            continue
+        key = _hashlib.md5(",".join(ids).encode()).hexdigest()[:12]
+        for m in group["members"]:
+            m["cluster_id"] = key
+
     # Mark duplicates
     for group in groups:
         for idx in group.get("duplicate_indices", []):
@@ -396,6 +425,8 @@ def run_review_pipeline(news_list: list[dict], update_status: bool = True) -> di
                 total_score=r.get("total_score", 0),
                 entities=r.get("entities"),
                 score_breakdown=r.get("score_breakdown"),
+                confidence=_confidence(r),
+                cluster_id=r.get("cluster_id", ""),
             )
         except Exception as e:
             logger.warning("Failed to save check results for %s: %s", r["id"], e)

@@ -228,20 +228,23 @@ def get_storylines(days: int = 3):
     ph = "%s" if _is_postgres() else "?"
     try:
         cutoff = (dt_mod.now(timezone.utc) - timedelta(days=days)).isoformat()
+        # TG-каналы участвуют в кластеризации: тему в русскоязычной среде часто
+        # первыми поднимают именно они, а исключение `source NOT LIKE 'TG:%'`
+        # выкидывало половину потока из сюжетов.
         cur.execute(f"""
             SELECT n.id, n.source, n.title, n.url, n.published_at, n.status,
                    COALESCE(n.published_ts, n.parsed_at) as published_ts,
                    COALESCE(a.total_score, 0) as total_score,
                    COALESCE(a.viral_score, 0) as viral_score,
                    COALESCE(a.entity_names, '[]') as entity_names,
-                   COALESCE(a.viral_data, '{{}}') as viral_data
+                   COALESCE(a.viral_data, '{{}}') as viral_data,
+                   SUBSTR(COALESCE(n.description, n.plain_text, ''), 1, 300) as lead
             FROM news n
             LEFT JOIN news_analysis a ON n.id = a.news_id
             WHERE COALESCE(n.published_ts, n.parsed_at) > {ph}
-              AND n.source NOT LIKE {ph}
             ORDER BY COALESCE(n.published_ts, n.parsed_at) DESC
             LIMIT 2000
-        """, (cutoff, "TG:%"))
+        """, (cutoff,))
         if _is_postgres():
             columns = [desc[0] for desc in cur.description]
             news_list = [dict(zip(columns, r)) for r in cur.fetchall()]
@@ -299,8 +302,20 @@ def get_storylines(days: int = 3):
         # Мягче дедупа: тренд — «про один сюжет?», связь слабее, чем у дублей. С дефолтными
         # порогами короткое окно (3 дня) давало ~1 сюжет на 208 новостей; 0.15/0.28 — 3×
         # реальных сюжетов без явных ложных склеек (проверено на живом потоке).
-        pairs = tfidf_similarity(cluster_titles, floor=0.15, pair_threshold=0.28)
+        # Сущности берём из заголовка вместе с лидом: «Google подтвердил апдейт» и
+        # «Что известно про июльский апдейт» по одним заголовкам не склеивались.
+        cluster_texts = [f"{t} {(n.get('lead') or '')}" for t, n in zip(cluster_titles, news_list)]
+        pairs = tfidf_similarity(cluster_titles, cluster_texts, floor=0.15, pair_threshold=0.28)
         groups = build_groups(news_list, pairs)
+
+        # Вчерашний снимок — база для расчёта прироста источников.
+        try:
+            from storage.database import get_storyline_snapshot
+            yesterday = (dt_mod.now(timezone.utc) - timedelta(days=1)).strftime("%Y-%m-%d")
+            prev_snapshot = get_storyline_snapshot(yesterday)
+        except Exception as e:
+            logger.debug("Storyline snapshot unavailable: %s", e)
+            prev_snapshot = []
 
         # Deduplication: each news appears in only one storyline (the largest)
         used_ids = set()
@@ -323,8 +338,28 @@ def get_storylines(days: int = 3):
             max_viral = max((m.get("viral_score", 0) for m in members), default=0)
             count = len(members)
             n_sources = len(sources)
-            # Сила тренда = число независимых источников, а не количество статей
-            phase = "trending" if n_sources >= 4 else "developing" if n_sources >= 3 else "emerging"
+            # Прирост источников со вчерашнего снимка: тот же сюжет ищем по
+            # пересечению материалов. Без этого залп за час и сюжет, копивший
+            # четыре источника трое суток, выглядели одинаково.
+            member_ids = {m.get("id") for m in members if m.get("id")}
+            delta_sources = None
+            if prev_snapshot:
+                best, best_overlap = None, 0
+                for prev in prev_snapshot:
+                    overlap = len(member_ids & prev["member_ids"])
+                    if overlap > best_overlap:
+                        best, best_overlap = prev, overlap
+                if best is not None and best_overlap >= 2:
+                    delta_sources = n_sources - best["sources_count"]
+            # Сила тренда: сначала скорость, потом охват.
+            if delta_sources is not None and delta_sources >= 2:
+                phase = "accelerating"
+            elif n_sources >= 4:
+                phase = "trending"
+            elif n_sources >= 3:
+                phase = "developing"
+            else:
+                phase = "emerging"
 
             # Aggregate game entities across cluster
             all_entities = []
@@ -360,6 +395,7 @@ def get_storylines(days: int = 3):
             storylines.append({
                 "count": count,
                 "phase": phase,
+                "delta_sources": delta_sources,
                 "status": g["status"],
                 "sources": sources,
                 "avg_score": avg_score,
@@ -379,7 +415,8 @@ def get_storylines(days: int = 3):
                 "duplicate_indices": g.get("duplicate_indices", []),
             })
 
-        storylines.sort(key=lambda s: (-s["count"], -s["avg_score"]))
+        # Растущие сюжеты вперёд: скорость важнее накопленного объёма.
+        storylines.sort(key=lambda s: (-(s.get("delta_sources") or 0), -s["count"], -s["avg_score"]))
         return {"storylines": storylines[:50], "total_news": len(news_list)}
     except Exception as e:
         logger.error("Storylines error: %s", e)

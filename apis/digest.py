@@ -270,6 +270,23 @@ def _render_telegram(result, news_list) -> str:
     return text
 
 
+def selected_ids(result: dict, news_list: list[dict]) -> list:
+    """id материалов, на которые модель реально сослалась в пунктах дайджеста.
+
+    Это и есть решения редактора — в отличие от списка кандидатов, который
+    формирует сам скоринг. На них учатся веса источников и считается качество
+    отбора в аналитике."""
+    out, seen = [], set()
+    for it in (result or {}).get("items", []) or []:
+        for idx in (it.get("sources") or []):
+            if isinstance(idx, int) and 1 <= idx <= len(news_list):
+                nid = news_list[idx - 1].get("id")
+                if nid and nid not in seen:
+                    seen.add(nid)
+                    out.append(nid)
+    return out
+
+
 def _top_tags(news_list, n=3) -> list[str]:
     """Top-N most frequent tag labels across the digest news (самые обсуждаемые)."""
     import json as _json
@@ -346,6 +363,7 @@ def generate_daily_digest(news_list: list[dict], style: str = "brief",
         "title": result.get("title", "Дайджест"),
         "text": text or "Не удалось собрать пункты дайджеста.",
         "news_count": len(news_list),
+        "selected_ids": selected_ids(result, news_list),
     }
 
 
@@ -432,6 +450,7 @@ def generate_tg_channels_digest(news_list: list[dict], period_label: str = "за
         "title": result.get("title", "Дайджест SEO-каналов"),
         "text": text or "Не удалось собрать пункты дайджеста.",
         "news_count": len(news_list),
+        "selected_ids": selected_ids(result, news_list),
     }
 
 
@@ -539,4 +558,5 @@ def generate_general_digest(feed_news, cases_news, tg_news, period_label="за �
         "title": result.get("title", "Общий дайджест"),
         "text": text or "Не удалось собрать пункты дайджеста.",
         "news_count": len(all_news),
+        "selected_ids": selected_ids(result, all_news),
     }

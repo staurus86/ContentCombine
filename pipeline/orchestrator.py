@@ -548,10 +548,12 @@ def _calc_final_score(analysis: dict) -> int:
 
     # Keys.so bonus
     keyso_bonus = 0
+    has_keyso = False
     try:
         kd = analysis.get("keyso_data", "{}")
         if isinstance(kd, str):
             kd = _json.loads(kd) if kd else {}
+        has_keyso = bool(kd)
         freq = float(kd.get("freq") or kd.get("ws") or 0)
         if freq >= 10000:
             keyso_bonus = 100
@@ -568,10 +570,12 @@ def _calc_final_score(analysis: dict) -> int:
 
     # Trends bonus
     trends_bonus = 0
+    has_trends = False
     try:
         td = analysis.get("trends_data", "{}")
         if isinstance(td, str):
             td = _json.loads(td) if td else {}
+        has_trends = bool(td)
         vals = [float(v) for v in td.values() if str(v).replace(".", "").replace("-", "").isdigit()]
         max_t = max(vals) if vals else 0
         if max_t >= 80:
@@ -585,13 +589,22 @@ def _calc_final_score(analysis: dict) -> int:
     except Exception:
         logger.debug("trends_bonus scoring failed, defaulting to 0", exc_info=True)
 
-    return round(
-        internal * config.SCORE_WEIGHT_INTERNAL
-        + viral * config.SCORE_WEIGHT_VIRAL
-        + keyso_bonus * config.SCORE_WEIGHT_KEYSO
-        + trends_bonus * config.SCORE_WEIGHT_TRENDS
-        + headline * config.SCORE_WEIGHT_HEADLINE
-    )
+    # Keys.so и Google Trends сейчас не собираются: keyso_data и trends_data пусты
+    # во всех записях, и их 25% веса всегда давали 0 — потолок шкалы падал до 75
+    # при пороге full-auto 60. Веса недоступных компонентов перераспределяем на
+    # остальные, чтобы шкала оставалась 0–100 независимо от того, что подключено.
+    parts = [
+        (internal, config.SCORE_WEIGHT_INTERNAL, True),
+        (viral, config.SCORE_WEIGHT_VIRAL, True),
+        (keyso_bonus, config.SCORE_WEIGHT_KEYSO, has_keyso),
+        (trends_bonus, config.SCORE_WEIGHT_TRENDS, has_trends),
+        (headline, config.SCORE_WEIGHT_HEADLINE, True),
+    ]
+    active = [(v, w) for v, w, ok in parts if ok and w > 0]
+    total_w = sum(w for _, w in active)
+    if not total_w:
+        return 0
+    return round(sum(v * w for v, w in active) / total_w)
 
 
 # ─── Sheets retry ───

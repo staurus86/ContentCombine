@@ -105,6 +105,13 @@ def get_analytics():
         except Exception:
             feedback = {"sources": [], "tags": []}
 
+        # 8b. Качество отбора — сходится ли скоринг с выбором редактора
+        try:
+            selection_quality = get_selection_quality(days=14)
+        except Exception as e:
+            logger.debug("Selection quality skipped: %s", e)
+            selection_quality = {"status": "error", "daily": [], "summary": {}}
+
         # 10. Avg score per day (14 days)
         if _is_postgres():
             cur.execute("""SELECT DATE(n.parsed_at::timestamp) as d,
@@ -165,10 +172,103 @@ def get_analytics():
             "total_news": sum(statuses.values()),
             "score_trend": score_trend,
             "conversion_daily": conversion_daily,
+            "selection_quality": selection_quality,
         }
 
     finally:
         cur.close()
+
+
+def get_selection_quality(days: int = 14):
+    """Качество отбора: сходится ли скоринг с тем, что редактор берёт в дайджест.
+
+    Раньше аналитика показывала только объёмы и review_pass_rate (97%, потому что
+    считал прошедшим всё, что не отклонено). Проверить, стало ли лучше после правки
+    весов, было нечем. Здесь эталон — digest_history: решения LLM-редактора.
+
+    precision@10 — сколько из десяти лучших по скору за день ушло в дайджест;
+    recall — какая доля отобранного была в верхней части скора за тот же день.
+    """
+    conn = get_connection()
+    cur = conn.cursor()
+    try:
+        if _is_postgres():
+            cur.execute(f"""
+                WITH picked AS (
+                    SELECT DISTINCT news_id FROM digest_history WHERE COALESCE(selected, 0) = 1
+                )
+                SELECT SUBSTRING(COALESCE(n.published_ts, n.parsed_at), 1, 10) AS d,
+                       COALESCE(a.total_score, 0) AS score,
+                       (p.news_id IS NOT NULL) AS picked
+                FROM news n
+                JOIN news_analysis a ON a.news_id = n.id
+                LEFT JOIN picked p ON p.news_id = n.id
+                WHERE n.parsed_at::timestamptz > (NOW() - INTERVAL '{int(days)} days')
+                  AND COALESCE(a.total_score, 0) > 0
+            """)
+        else:
+            cur.execute(f"""
+                SELECT SUBSTR(COALESCE(n.published_ts, n.parsed_at), 1, 10) AS d,
+                       COALESCE(a.total_score, 0) AS score,
+                       (SELECT COUNT(*) FROM digest_history dh
+                         WHERE dh.news_id = n.id AND COALESCE(dh.selected, 0) = 1) > 0 AS picked
+                FROM news n JOIN news_analysis a ON a.news_id = n.id
+                WHERE n.parsed_at > datetime('now', '-{int(days)} days')
+                  AND COALESCE(a.total_score, 0) > 0
+            """)
+        rows = [(r[0], int(r[1] or 0), bool(r[2])) for r in cur.fetchall() if r[0]]
+    finally:
+        cur.close()
+
+    if not rows or not any(p for _, _, p in rows):
+        # Разметка появляется только у дайджестов, собранных после её внедрения.
+        return {"status": "ok", "daily": [], "summary": {},
+                "note": "Ждём размеченных дайджестов: метрика считается по материалам, "
+                        "которые редактор реально поставил в текст."}
+
+    by_day = {}
+    for day, score, picked in rows:
+        by_day.setdefault(day, []).append((score, picked))
+
+    daily = []
+    for day, items in sorted(by_day.items()):
+        picked_total = sum(1 for _, p in items if p)
+        if not picked_total:
+            continue
+        ranked = sorted(items, key=lambda x: -x[0])
+        top10 = ranked[:10]
+        precision = sum(1 for _, p in top10 if p) / max(len(top10), 1)
+        # recall: доля отобранного, попавшая в верхние N позиций скора, где N —
+        # размер дайджеста за этот день. Честное сравнение «скоринг против редактора».
+        top_n = ranked[:max(picked_total, 1)]
+        recall = sum(1 for _, p in top_n if p) / picked_total
+        picked_scores = [s for s, p in items if p]
+        rest_scores = [s for s, p in items if not p]
+        daily.append({
+            "date": day,
+            "candidates": len(items),
+            "picked": picked_total,
+            "precision_at_10": round(precision * 100, 1),
+            "recall": round(recall * 100, 1),
+            "avg_score_picked": round(sum(picked_scores) / len(picked_scores), 1),
+            "avg_score_rest": round(sum(rest_scores) / len(rest_scores), 1) if rest_scores else 0,
+        })
+
+    if not daily:
+        return {"status": "ok", "daily": [], "summary": {}}
+
+    n = len(daily)
+    summary = {
+        "days": n,
+        "precision_at_10": round(sum(d["precision_at_10"] for d in daily) / n, 1),
+        "recall": round(sum(d["recall"] for d in daily) / n, 1),
+        "avg_score_picked": round(sum(d["avg_score_picked"] for d in daily) / n, 1),
+        "avg_score_rest": round(sum(d["avg_score_rest"] for d in daily) / n, 1),
+        "picked_total": sum(d["picked"] for d in daily),
+        "candidates_total": sum(d["candidates"] for d in daily),
+    }
+    summary["score_gap"] = round(summary["avg_score_picked"] - summary["avg_score_rest"], 1)
+    return {"status": "ok", "daily": daily[-days:], "summary": summary}
 
 
 def get_funnel_analytics():

@@ -949,6 +949,15 @@ input:focus, textarea:focus, select:focus { outline:none; border-color:#1da1f2; 
     <!-- Summary cards -->
     <div class="grid-2" style="gap:12px;margin-bottom:16px" id="analytics-summary"></div>
 
+    <!-- Качество отбора: скоринг против решений редактора в дайджестах -->
+    <div class="card" style="margin-bottom:16px">
+      <h3 style="font-size:0.95em;margin-bottom:4px">Качество отбора (14 дней)</h3>
+      <div style="font-size:0.76em;color:var(--c-faint);margin-bottom:10px">
+        Эталон — материалы, которые редактор взял в дайджест. precision@10: сколько из десяти лучших по скору за день туда попало. recall: какая доля отобранного была в верхней части скора.
+      </div>
+      <div id="analytics-selection-quality"></div>
+    </div>
+
     <!-- Charts row -->
     <div class="grid-2" style="gap:12px;margin-bottom:16px">
       <div class="card">
@@ -3574,6 +3583,55 @@ async function deleteSelectedArticles() {
 }
 
 // ---- Analytics ----
+// Качество отбора: эталон — материалы, которые редактор взял в дайджест.
+// precision@10 — сколько из десяти лучших по скору за день туда попало;
+// recall — какая доля отобранного была в верхней части скора за тот же день.
+function renderSelectionQuality(sq) {
+  const el = document.getElementById('analytics-selection-quality');
+  if (!el) return;
+  const s = sq.summary || {};
+  const daily = sq.daily || [];
+  if (!daily.length) {
+    el.innerHTML = '<div style="color:var(--c-faint);font-size:0.85em">Нет данных: дайджесты за период не собирались.</div>';
+    return;
+  }
+  const col = v => v >= 70 ? '#17bf63' : v >= 45 ? '#ffad1f' : '#e0245e';
+  const cards = `
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px">
+      <div class="card" style="flex:1;min-width:130px;text-align:center">
+        <div style="font-size:1.7em;font-weight:700;color:${col(s.precision_at_10||0)}">${s.precision_at_10||0}%</div>
+        <div style="font-size:0.78em;color:var(--c-muted)">precision@10</div>
+      </div>
+      <div class="card" style="flex:1;min-width:130px;text-align:center">
+        <div style="font-size:1.7em;font-weight:700;color:${col(s.recall||0)}">${s.recall||0}%</div>
+        <div style="font-size:0.78em;color:var(--c-muted)">recall</div>
+      </div>
+      <div class="card" style="flex:1;min-width:130px;text-align:center">
+        <div style="font-size:1.7em;font-weight:700;color:#1da1f2">+${s.score_gap||0}</div>
+        <div style="font-size:0.78em;color:var(--c-muted)">разрыв скора</div>
+        <div style="font-size:0.72em;color:var(--c-faint);margin-top:2px">${s.avg_score_picked||0} против ${s.avg_score_rest||0}</div>
+      </div>
+      <div class="card" style="flex:1;min-width:130px;text-align:center">
+        <div style="font-size:1.7em;font-weight:700;color:#e1e8ed">${s.picked_total||0}</div>
+        <div style="font-size:0.78em;color:var(--c-muted)">в дайджестах</div>
+        <div style="font-size:0.72em;color:var(--c-faint);margin-top:2px">из ${s.candidates_total||0} за ${s.days||0} дн.</div>
+      </div>
+    </div>`;
+  const maxC = Math.max(...daily.map(d => d.candidates), 1);
+  const bars = daily.map(d => {
+    const day = (d.date || '').slice(5);
+    const h = Math.max(4, d.precision_at_10);
+    return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px"
+      title="${day}: precision@10 ${d.precision_at_10}%, recall ${d.recall}%, выбрано ${d.picked} из ${d.candidates}">
+      <span style="font-size:0.68em;color:${col(d.precision_at_10)}">${d.precision_at_10}</span>
+      <div style="width:100%;height:${h}px;background:${col(d.precision_at_10)};border-radius:3px 3px 0 0;opacity:.85"></div>
+      <span style="font-size:0.62em;color:var(--c-faint)">${day}</span>
+    </div>`;
+  }).join('');
+  el.innerHTML = cards +
+    `<div style="display:flex;align-items:flex-end;gap:3px;height:130px;padding-top:6px">${bars}</div>`;
+}
+
 async function loadAnalytics() {
   const r = await api('/api/analytics');
   if (r.status !== 'ok') return;
@@ -3588,9 +3646,12 @@ async function loadAnalytics() {
     <div class="card" style="text-align:center">
       <div style="font-size:2em;font-weight:700;color:#ffad1f">${r.top_count||0}</div>
       <div style="font-size:0.82em;color:var(--c-muted)">В ТОП</div>
-      <div style="font-size:0.82em;color:var(--c-muted);margin-top:4px">материалов &ge; 70 баллов</div>
+      <div style="font-size:0.82em;color:var(--c-muted);margin-top:4px">верхние 15% скора за сутки</div>
     </div>
   `;
+
+  // Качество отбора: сходится ли скоринг с выбором редактора в дайджестах
+  renderSelectionQuality(r.selection_quality || {});
 
   // Top sources
   const maxSrc = Math.max(...(r.top_sources||[]).map(s=>s.count), 1);
@@ -4557,13 +4618,17 @@ let _finPage = 0;
 const _finLimit = 50;
 
 function calcFinalScore(n) {
-  // Финальный скор: internal(40%) + viral(20%) + keyso_bonus(15%) + trends_bonus(10%) + headline(15%)
+  // Финальный скор: internal + viral + keyso_bonus + trends_bonus + headline.
+  // Веса недоступных компонентов перераспределяются на остальные (см. бэкенд
+  // _calc_final_score): Keys.so и Trends сейчас не собираются, и их 25% веса
+  // просто занижали шкалу на четверть.
   const internal = Number(n.total_score) || 0;
   const viral = Number(n.viral_score) || 0;
   const headline = Number(n.headline_score) || 0;
-  let keysoBonus = 0;
+  let keysoBonus = 0, hasKeyso = false;
   try {
     const kd = JSON.parse(n.keyso_data || '{}');
+    hasKeyso = Object.keys(kd).length > 0;
     const freq = Number(kd.freq || kd.ws) || 0;
     if (freq >= 10000) keysoBonus = 100;
     else if (freq >= 5000) keysoBonus = 80;
@@ -4571,9 +4636,10 @@ function calcFinalScore(n) {
     else if (freq >= 100) keysoBonus = 40;
     else if (freq > 0) keysoBonus = 20;
   } catch(e){}
-  let trendsBonus = 0;
+  let trendsBonus = 0, hasTrends = false;
   try {
     const td = JSON.parse(n.trends_data || '{}');
+    hasTrends = Object.keys(td).length > 0;
     const maxT = Math.max(...Object.values(td).map(Number).filter(v => !isNaN(v)), 0);
     if (maxT >= 80) trendsBonus = 100;
     else if (maxT >= 50) trendsBonus = 70;
@@ -4582,7 +4648,11 @@ function calcFinalScore(n) {
   } catch(e){}
   // Веса синхронизированы с config.SCORE_WEIGHT_* (бэкенд _calc_final_score):
   // viral снижен 0.2→0.05, internal поднят 0.4→0.55 — виральность уже входит в internal.
-  return Math.round(internal * 0.55 + viral * 0.05 + keysoBonus * 0.15 + trendsBonus * 0.1 + headline * 0.15);
+  const parts = [[internal, 0.55, true], [viral, 0.05, true], [keysoBonus, 0.15, hasKeyso],
+                 [trendsBonus, 0.1, hasTrends], [headline, 0.15, true]].filter(p => p[2]);
+  const totalW = parts.reduce((a, p) => a + p[1], 0);
+  if (!totalW) return 0;
+  return Math.round(parts.reduce((a, p) => a + p[0] * p[1], 0) / totalW);
 }
 
 async function loadFinal(page) {
