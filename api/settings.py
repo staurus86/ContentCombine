@@ -514,14 +514,12 @@ def preview_rewrite(body):
 def test_llm(body):
     try:
         import config
-        from openai import OpenAI
         import json as _json
         prompt = body.get("prompt", "Ответь JSON: {\"test\": \"ok\"}")
-        # Тот же браузерный UA, что и в apis/llm.py: без него Cloudflare гейтвея
+        # Тот же клиент (браузерный UA), что и в пайплайне: без UA Cloudflare гейтвея
         # отдаёт «Just a moment…» и кнопка «Тест LLM» врёт про поломку рабочего LLM.
-        from apis.llm import BROWSER_UA
-        client = OpenAI(api_key=config.OPENAI_API_KEY, base_url=config.OPENAI_BASE_URL,
-                        default_headers={"User-Agent": BROWSER_UA})
+        from apis.llm import get_client
+        client = get_client()
         response = client.chat.completions.create(
             model=config.LLM_MODEL,
             messages=[{"role": "user", "content": prompt}],

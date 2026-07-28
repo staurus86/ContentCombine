@@ -7,11 +7,12 @@ from core.circuit_breaker import _api_circuit_open
 
 logger = logging.getLogger(__name__)
 
-# Primary: OpenRouter key 1, Fallback: OpenRouter key 2
-_API_KEYS = [k for k in [
-    config.OPENAI_API_KEY,
-    os.getenv("OPENAI_API_KEY_2", ""),
-] if k]
+# Primary: ключ из config (env или Настройки), Fallback: запасной ключ из env.
+# Читается на каждый вызов, а не один раз при импорте: ключ, сохранённый через
+# ⚙ Настройки, обновляет config.OPENAI_API_KEY в памяти — без этого новый ключ
+# начинал работать только после рестарта сервиса.
+def _api_keys() -> list[str]:
+    return [k for k in [config.OPENAI_API_KEY, os.getenv("OPENAI_API_KEY_2", "")] if k]
 
 # Browser-like UA: the gateway sits behind Cloudflare, which serves a
 # «Just a moment…» challenge to the openai-SDK's default httpx User-Agent.
@@ -19,11 +20,14 @@ _API_KEYS = [k for k in [
 BROWSER_UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
               "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
 
-client = OpenAI(
-    api_key=_API_KEYS[0] if _API_KEYS else "",
-    base_url=config.OPENAI_BASE_URL,
-    default_headers={"User-Agent": BROWSER_UA},
-)
+def get_client(key: str = "") -> OpenAI:
+    """Клиент гейтвея с актуальным ключом и базовым URL из config."""
+    keys = _api_keys()
+    return OpenAI(
+        api_key=key or (keys[0] if keys else ""),
+        base_url=config.OPENAI_BASE_URL,
+        default_headers={"User-Agent": BROWSER_UA},
+    )
 
 PROMPT_TREND_FORECAST = """
 Ты — старший аналитик отраслевого медиа про SEO, AI-поиск и digital-маркетинг с 10+ годами опыта. Оцени трендовый потенциал новости.
@@ -102,10 +106,10 @@ PROMPT_KEYSO_QUERIES = """
 def _call_llm_raw(prompt: str, key_index: int = 0, news_id: str = "", model: str = "") -> dict | None:
     """Один вызов LLM с конкретным ключом и моделью (по умолчанию — основная)."""
     import time as _t
-    key = _API_KEYS[key_index] if key_index < len(_API_KEYS) else _API_KEYS[0]
+    keys = _api_keys()
+    key = keys[key_index] if key_index < len(keys) else (keys[0] if keys else "")
     model = model or config.LLM_MODEL
-    c = OpenAI(api_key=key, base_url=config.OPENAI_BASE_URL,
-               default_headers={"User-Agent": BROWSER_UA})
+    c = get_client(key)
     t0 = _t.time()
     response = c.chat.completions.create(
         model=model,
@@ -168,7 +172,7 @@ def _call_llm(prompt: str) -> dict | None:
             logger.warning("LLM model %s error — next model: %s", model, e)
 
     # Final fallback: a second API key with the primary model (key-specific issue).
-    if len(_API_KEYS) > 1:
+    if len(_api_keys()) > 1:
         try:
             result = _call_llm_raw(prompt, 1, model=config.LLM_MODEL)
             rate_increment("llm")

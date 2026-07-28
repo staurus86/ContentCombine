@@ -72,8 +72,8 @@ def _ask_openai_search(query: str, model: str) -> list[dict] | None:
     """Search-модель через существующий OpenAI-клиент (гейтвей artemox).
     Цитаты берём из url_citation-аннотаций; фолбэк — url в тексте ответа."""
     try:
-        from apis.llm import client
-        resp = client.chat.completions.create(
+        from apis.llm import get_client
+        resp = get_client().chat.completions.create(
             model=model,
             messages=[{"role": "user", "content": query}],
             timeout=60,
