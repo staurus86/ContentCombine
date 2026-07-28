@@ -517,7 +517,11 @@ def test_llm(body):
         from openai import OpenAI
         import json as _json
         prompt = body.get("prompt", "Ответь JSON: {\"test\": \"ok\"}")
-        client = OpenAI(api_key=config.OPENAI_API_KEY, base_url=config.OPENAI_BASE_URL)
+        # Тот же браузерный UA, что и в apis/llm.py: без него Cloudflare гейтвея
+        # отдаёт «Just a moment…» и кнопка «Тест LLM» врёт про поломку рабочего LLM.
+        from apis.llm import BROWSER_UA
+        client = OpenAI(api_key=config.OPENAI_API_KEY, base_url=config.OPENAI_BASE_URL,
+                        default_headers={"User-Agent": BROWSER_UA})
         response = client.chat.completions.create(
             model=config.LLM_MODEL,
             messages=[{"role": "user", "content": prompt}],
