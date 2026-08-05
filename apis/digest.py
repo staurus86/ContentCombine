@@ -6,6 +6,7 @@ Brief and telegram styles return free-form text.
 """
 
 import logging
+import re
 from datetime import datetime, timezone, timedelta
 
 logger = logging.getLogger(__name__)
@@ -401,10 +402,21 @@ def _render_links(news_list, sources, md=True):
     return links
 
 
+def _tg_handle(url: str) -> str:
+    """@хендл канала из ссылки на пост: t.me/shakinru/123 → «@shakinru».
+    Пусто для приватных каналов (t.me/c/<id>/<msg>) и любых нерегулярных ссылок."""
+    m = re.search(r"t\.me/(?:s/)?([A-Za-z][A-Za-z0-9_]{3,31})/\d+", url or "")
+    return f"@{m.group(1)}" if m else ""
+
+
 def _source_suffix(news_list, sources) -> str:
-    """Compact source links per item, labelled with the channel/source NAME:
-    «(DrMax SEO)», «(Search Engine Land)». Deduplicates by URL."""
-    links, seen = [], set()
+    """Compact source links per item: издания подписаны названием
+    «(Search Engine Land)», telegram-каналы — хендлом «(@drmaxseo)».
+    Дедуп по URL И по имени источника:
+    пункт, собранный из девяти материалов одного сайта, давал подпись
+    «(semai.ai)» девять раз подряд (2026-08-04). Одно издание — одна ссылка,
+    ведёт на первый материал."""
+    links, seen, seen_names = [], set(), set()
     for idx in sources or []:
         if not isinstance(idx, int) or idx < 1 or idx > len(news_list):
             continue
@@ -412,11 +424,14 @@ def _source_suffix(news_list, sources) -> str:
         url = (n.get("url") or "").strip()
         if not url or url in seen:
             continue
-        seen.add(url)
         name = (n.get("source") or "Источник").strip()
         if name.startswith("TG:"):
-            name = name[3:].strip()
+            name = _tg_handle(url) or name[3:].strip()
         name = name.replace("[", "").replace("]", "") or "Источник"
+        if name.lower() in seen_names:
+            continue
+        seen.add(url)
+        seen_names.add(name.lower())
         links.append(f"([{name}]({url}))")
     return " ".join(links)
 

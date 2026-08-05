@@ -688,6 +688,56 @@ def _filter_recurring_stories(items, days: int = 7):
         return items
 
 
+def _plural_ru(n: int, one: str, few: str, many: str) -> str:
+    """Русское числительное: 1 цитирование, 2 цитирования, 5 цитирований."""
+    n = abs(int(n))
+    if n % 10 == 1 and n % 100 != 11:
+        return one
+    if 2 <= n % 10 <= 4 and not 12 <= n % 100 <= 14:
+        return few
+    return many
+
+
+def _idn_domain(domain: str) -> str:
+    """Punycode → читаемый вид: xn----dtbffaenc8bdkm.xn--p1ai → про-движение.рф.
+    Возвращает исходную строку, если декодировать не вышло."""
+    if "xn--" not in (domain or ""):
+        return domain
+    try:
+        return ".".join(
+            p.encode("ascii").decode("idna") if p.startswith("xn--") else p
+            for p in domain.split(".")
+        )
+    except Exception:
+        return domain
+
+
+DIGEST_MAX_PER_SOURCE = 3  # сколько материалов одного источника максимум идёт в дайджест
+
+
+def _cap_per_source(items, max_per: int = DIGEST_MAX_PER_SOURCE):
+    """Ограничить долю одного источника в пуле кандидатов.
+
+    Залповая публикация одного сайта забирала дайджест целиком: 2026-08-04
+    semai.ai выкатил 12 материалов за сутки и занял 9 из 18 пунктов, а подписи
+    выродились в «(semai.ai)» девять раз подряд. Порядок сохраняем — пул уже
+    отсортирован по скору, поэтому лишнее с хвоста источника вытесняют
+    следующие по скору материалы других площадок."""
+    if not items:
+        return items
+    used, kept = {}, []
+    for it in items:
+        src = (it.get("source") or "").strip().lower()
+        if src and used.get(src, 0) >= max_per:
+            continue
+        used[src] = used.get(src, 0) + 1
+        kept.append(it)
+    if len(kept) < len(items):
+        logger.info("Digest source cap: dropped %d/%d items over %d per source",
+                    len(items) - len(kept), len(items), max_per)
+    return kept
+
+
 # In-flight дедуп compose: обрыв соединения на долгом LLM (деградация гейтвея)
 # заставляет edge/браузер НЕВИДИМО повторить POST → один клик = два LLM-прогона и
 # два сохранённых дайджеста (наблюдалось 2026-07-05: два gen_day с разницей 2м41с
@@ -746,9 +796,9 @@ def _compose_digest_impl(dtype="feed", period="day"):
         # иначе весь топ-14 мог состоять из материалов вчерашнего дайджеста, и до
         # модели доходили единицы кандидатов.
         SEG_LIMIT, SEG_POOL = 14, 35
-        feed_news = _filter_recurring_stories(_pull_segment_news("n.source NOT LIKE 'TG:%' AND COALESCE(n.is_case, 0) = 0", from_h, SEG_POOL))[:SEG_LIMIT]
-        cases_news = _filter_recurring_stories(_pull_segment_news("COALESCE(n.is_case, 0) = 1", from_h, SEG_POOL))[:SEG_LIMIT]
-        tg_news = _filter_recurring_stories(_pull_segment_news("n.source LIKE 'TG:%'", from_h, SEG_POOL))
+        feed_news = _cap_per_source(_filter_recurring_stories(_pull_segment_news("n.source NOT LIKE 'TG:%' AND COALESCE(n.is_case, 0) = 0", from_h, SEG_POOL)))[:SEG_LIMIT]
+        cases_news = _cap_per_source(_filter_recurring_stories(_pull_segment_news("COALESCE(n.is_case, 0) = 1", from_h, SEG_POOL)))[:SEG_LIMIT]
+        tg_news = _cap_per_source(_filter_recurring_stories(_pull_segment_news("n.source LIKE 'TG:%'", from_h, SEG_POOL)))
         # Порог для раздела «Телеграм»: у постов свой скоринг, и служебные
         # (вакансии, анонсы конференций, «доброе утро») уходят в минус. Раньше
         # раздел брал топ-14 из почти неразличимых 12–25 баллов — сортировка была
@@ -772,7 +822,10 @@ def _compose_digest_impl(dtype="feed", period="day"):
                     for m in top:
                         mark = " · новый" if m.get("new") else (
                             f" · +{m['delta']}" if m.get("delta", 0) > 0 and rep.get("prior_scan") else "")
-                        lines.append(f"• {m['domain']} — {m['citations']} цитирований в {m['queries']} запросах{mark}")
+                        cit = _plural_ru(m["citations"], "цитирование", "цитирования", "цитирований")
+                        qry = _plural_ru(m["queries"], "запросе", "запросах", "запросах")
+                        lines.append(f"• {_idn_domain(m['domain'])} — {m['citations']} {cit} "
+                                     f"в {m['queries']} {qry}{mark}")
                     result["text"] += "\n\n" + "\n".join(lines)
             except Exception as e:
                 logger.debug("Citability digest section skipped: %s", e)
@@ -782,7 +835,7 @@ def _compose_digest_impl(dtype="feed", period="day"):
         else:  # feed: main feed excludes TG channels and bookmarked cases
             dtype = "feed"
             seg, style_tag = "n.source NOT LIKE 'TG:%' AND COALESCE(n.is_case, 0) = 0", "feed_" + period
-        news_list = _filter_recurring_stories(_pull_segment_news(seg, from_h, 90))[:40]
+        news_list = _cap_per_source(_filter_recurring_stories(_pull_segment_news(seg, from_h, 90)))[:40]
         used_items = news_list
         from apis.digest import generate_daily_digest
         result = generate_daily_digest(news_list, style="detailed", period_label=period_label, max_items=7)
