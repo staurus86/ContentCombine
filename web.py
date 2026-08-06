@@ -293,6 +293,7 @@ class AdminHandler(BaseHTTPRequestHandler):
             "/api/test_llm": lambda: self._test_llm(body),
             "/api/test_keyso": lambda: self._test_keyso(body),
             "/api/reparse": lambda: self._reparse_source(body),
+            "/api/archive_run": lambda: self._json(self._archive_run(body)),
             "/api/citability/scan": lambda: self._json(self._run_citability_scan(body)),
             "/api/test_sheets": lambda: self._test_sheets(body),
             "/api/quick_tags": lambda: self._quick_tags(body),
@@ -1080,6 +1081,12 @@ async function login() {
     def _reparse_source(self, body):
         from api.settings import reparse_source
         self._json(reparse_source(body))
+
+    def _archive_run(self, body):
+        """Ручной прогон архива. limit — сколько записей взять за раз, days —
+        порог возраста; без них берутся ARCHIVE_RUN_LIMIT и PLAINTEXT_RETENTION_DAYS."""
+        from api.archive import archive_old_news
+        return archive_old_news(max_age_days=body.get("days"), limit=body.get("limit"))
 
     def _heal_source(self, body):
         from api.settings import heal_source
