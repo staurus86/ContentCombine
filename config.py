@@ -270,6 +270,7 @@ SOURCES = [
     {"name": "iPullRank", "type": "rss", "url": "https://ipullrank.com/feed", "interval": 60},
     {"name": "Marie Haynes", "type": "rss", "url": "https://www.mariehaynes.com/feed/", "interval": 60},
     {"name": "Originality AI", "type": "homepage", "url": "https://originality.ai/blog", "url_filter": "/blog/", "interval": 60},
+    {"name": "Otterly AI", "type": "sitemap", "url": "https://otterly.ai/blog/post-sitemap.xml", "url_filter": "/blog/", "interval": 60},
     {"name": "Peec AI", "type": "homepage", "url": "https://peec.ai/blog", "interval": 60},
     {"name": "Profound", "type": "homepage", "url": "https://tryprofound.com/blog", "url_filter": "/blog/", "interval": 60},
     {"name": "Schema.org Blog", "type": "homepage", "url": "https://blog.schema.org/", "interval": 60},
@@ -451,7 +452,29 @@ SOURCES = [
     {"name": "Brandlight", "type": "homepage", "url": "https://www.brandlight.ai/blog/", "interval": 120},
     {"name": "Trakkr", "type": "homepage", "url": "https://trakkr.ai/", "interval": 120},
     {"name": "BrightEdge", "type": "homepage", "url": "https://www.brightedge.com/blog", "url_filter": "/blog/", "interval": 120},
-    {"name": "Bluefish AI", "type": "homepage", "url": "https://www.bluefishai.com/", "interval": 120}
+    {"name": "Bluefish AI", "type": "homepage", "url": "https://www.bluefishai.com/", "interval": 120},
+    # --- Добор 2026-08-06. Повод: Otterly вернулся живым после вердикта «недоступен».
+    # Перепроверены все выброшенные аудитом 28.07 и добавлены пропущенные. Moz и
+    # Search Engine Watch выбывали не потому, что молчат: у Moz фид /blog/feed отдаёт
+    # записи 2021 года (живой — /posts/rss/blog), SEW публикует каждый день. Сайты на
+    # Webflow/Framer без RSS взяты через sitemap, как Otterly.
+    {"name": "Moz Blog", "type": "rss", "url": "https://moz.com/posts/rss/blog", "interval": 60},
+    {"name": "Search Engine Watch", "type": "rss", "url": "https://www.searchenginewatch.com/feed/", "interval": 60},
+    {"name": "DEJAN AI", "type": "rss", "url": "https://dejan.ai/blog/feed/", "interval": 60},
+    {"name": "Previsible", "type": "rss", "url": "https://previsible.io/feed/", "interval": 60},
+    {"name": "Similarweb Blog", "type": "rss", "url": "https://www.similarweb.com/blog/feed/", "interval": 90},
+    {"name": "Terakeet Blog", "type": "rss", "url": "https://terakeet.com/blog/feed/", "interval": 120},
+    {"name": "Amsive Insights", "type": "sitemap", "url": "https://www.amsive.com/post-sitemap.xml", "url_filter": "/insights/", "interval": 120},
+    {"name": "Latent Space", "type": "rss", "url": "https://www.latent.space/feed", "interval": 90},
+    {"name": "Interconnects", "type": "rss", "url": "https://www.interconnects.ai/feed", "interval": 90},
+    {"name": "AI Snake Oil", "type": "rss", "url": "https://www.aisnakeoil.com/feed", "interval": 120},
+    {"name": "One Useful Thing", "type": "rss", "url": "https://www.oneusefulthing.org/feed", "interval": 120},
+    {"name": "The Verge AI", "type": "rss", "url": "https://www.theverge.com/rss/ai-artificial-intelligence/index.xml", "interval": 60},
+    {"name": "Ars Technica AI", "type": "rss", "url": "https://arstechnica.com/ai/feed/", "interval": 60},
+    {"name": "Platformer", "type": "rss", "url": "https://www.platformer.news/rss/", "interval": 90},
+    {"name": "Reddit r/SEO", "type": "rss", "url": "https://www.reddit.com/r/SEO/.rss", "interval": 60},
+    {"name": "Seznam Blog", "type": "rss", "url": "https://blog.seznam.cz/feed/", "interval": 120},
+    {"name": "Databricks Blog", "type": "rss", "url": "https://www.databricks.com/feed", "interval": 90}
 ]
 
 
