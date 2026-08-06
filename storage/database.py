@@ -416,6 +416,13 @@ def _init_db_impl(conn, cur):
         cur.execute("CREATE INDEX IF NOT EXISTS idx_news_top ON news(is_top)")
     except Exception:
         pass
+    # Archive: время выгрузки в Google Sheets. Заполнено — текст статьи уже во
+    # внешнем архиве и обнулён в базе, повторно такую запись не выгружаем.
+    _add_column_if_missing(cur, "news", "archived_at", "TEXT")
+    try:
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_news_archived ON news(archived_at)")
+    except Exception:
+        pass
     # Normalized article date (ISO UTC) — ЕДИНЫЙ источник истины для ВСЕХ фильтров по дате
     # (published_at бывает ISO/RFC822 → нельзя сравнивать в SQL; published_ts всегда ISO).
     _add_column_if_missing(cur, "news", "published_ts", "TEXT")

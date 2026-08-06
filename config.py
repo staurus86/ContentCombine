@@ -147,8 +147,18 @@ NEWS_MAX_AGE_DAYS = _int_env("NEWS_MAX_AGE_DAYS", 45)
 
 # Retention periods
 DELETED_NEWS_RETENTION_DAYS = _int_env("DELETED_NEWS_RETENTION_DAYS", 30)
-PLAINTEXT_RETENTION_DAYS = _int_env("PLAINTEXT_RETENTION_DAYS", 7)
+# Срок хранения текста статьи в базе. Настройка была объявлена и выведена в UI,
+# но ничего не чистила — теперь по ней работает архиватор (api/archive.py):
+# текст старше срока уезжает в Google Sheets и обнуляется в базе.
+PLAINTEXT_RETENTION_DAYS = _int_env("PLAINTEXT_RETENTION_DAYS", 3)
 HEALTH_LOG_RETENTION_DAYS = _int_env("HEALTH_LOG_RETENTION_DAYS", 7)
+
+# Архив текстов в Google Sheets
+ARCHIVE_ENABLED = os.getenv("ARCHIVE_ENABLED", "true").lower() == "true"
+# Потолок записей за прогон: чанк из SHEETS_BATCH_SIZE строк с паузой держит
+# нас под квотой Sheets (60 запросов/мин), накопленный хвост уходит за
+# несколько прогонов по расписанию.
+ARCHIVE_RUN_LIMIT = _int_env("ARCHIVE_RUN_LIMIT", 1000)
 
 # Cron schedule (hours, 0-23)
 AUTO_RESCORE_CRON_HOUR = _int_env("AUTO_RESCORE_CRON_HOUR", 4)

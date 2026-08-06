@@ -318,6 +318,11 @@ HEADERS_NOT_READY = [
     "Headline скор", "Momentum", "URL", "Описание",
 ]
 
+HEADERS_ARCHIVE = [
+    "ID", "Дата публикации", "Дата парсинга", "Источник", "Заголовок", "URL",
+    "Описание", "Текст статьи", "Статус", "Скор", "Теги", "Дата архивации",
+]
+
 HEADERS_STORYLINES = [
     "Сюжет", "Фаза", "Кол-во новостей", "Источники", "Ср. скор", "Макс. вирал",
     "Игры", "Виральные триггеры", "Новость", "Источник новости", "Скор новости", "Дата", "URL",
@@ -629,6 +634,57 @@ def write_not_ready_batch(items: list[tuple[dict, dict]]) -> dict:
     logger.info("NotReady batch complete: %d written, %d skipped, %d errors",
                 written, skipped, errors)
     return {"written": written, "skipped": skipped, "errors": errors}
+
+
+def write_archive_chunk(items: list[dict], tab_name: str) -> dict:
+    """Пишет чанк новостей в архивную вкладку месяца.
+
+    Возвращает {"written": [id], "skipped": [id]} — id тех записей, чей текст
+    уже лежит в Sheets. Вызывающий чистит plain_text только по этим спискам:
+    что не попало ни в один, осталось с текстом и уедет следующим прогоном.
+    skipped — URL уже во вкладке (прошлый прогон записал, а чистка сорвалась).
+    """
+    ws = _get_worksheet(tab_name, HEADERS_ARCHIVE)
+    if not ws:
+        logger.error("Archive: вкладка %s недоступна", tab_name)
+        return {"written": [], "skipped": []}
+
+    existing_urls = _get_cached_urls(ws, 6, tab_name)
+
+    rows, urls, ids, skipped = [], [], [], []
+    for n in items:
+        url = n.get("url") or ""
+        if url and url in existing_urls:
+            skipped.append(n.get("id"))
+            continue
+        rows.append([
+            n.get("id") or "",
+            n.get("published_ts") or "",
+            n.get("parsed_at") or "",
+            n.get("source") or "",
+            n.get("title") or "",
+            url,
+            n.get("description") or "",
+            n.get("plain_text") or "",
+            n.get("status") or "",
+            n.get("total_score") if n.get("total_score") is not None else "",
+            n.get("tags") or "",
+            n.get("archived_at") or "",
+        ])
+        urls.append(url)
+        ids.append(n.get("id"))
+        existing_urls.add(url)
+
+    if not rows:
+        return {"written": [], "skipped": skipped}
+
+    try:
+        _append_rows_batch(ws, rows, tab_name, urls)
+    except Exception as e:
+        logger.error("Archive: чанк %s не записан (%d строк): %s", tab_name, len(rows), e)
+        return {"written": [], "skipped": skipped}
+
+    return {"written": ids, "skipped": skipped}
 
 
 def write_storylines(storylines: list[dict]) -> dict:

@@ -14,7 +14,7 @@ from apscheduler.schedulers.blocking import BlockingScheduler
 import config
 from parsers.rss_parser import parse_rss_source
 from parsers.html_parser import parse_html_source
-from storage.database import cleanup_old_plaintext, cleanup_old_tasks, log_health_snapshot
+from storage.database import cleanup_old_tasks, log_health_snapshot
 
 # Re-export for backward compatibility (web.py, bot, tests import from scheduler)
 from core.circuit_breaker import (  # noqa: F401
@@ -276,8 +276,10 @@ def start_scheduler():
     scheduler.add_job(adaptive_parse_tick, "interval", minutes=config.PARSE_ACTIVE_MIN,
                       id="adaptive_parse", max_instances=1, coalesce=True)
 
-    # Cleanup old plain_text daily (7 days)
-    scheduler.add_job(lambda: cleanup_old_plaintext(days=7), "interval", hours=24, id="cleanup_plaintext")
+    # Тексты чистит архиватор (ниже, archive_old_news) — он сперва кладёт статью
+    # в Sheets и только потом обнуляет. cleanup_old_plaintext стирал без копии и
+    # мимо базы: фильтр статусов пропускал in_review, а это 9602 записи из 10267
+    # и все 18 МБ текстов. Джоб снят, функция оставлена для ручного вызова.
 
     # Cleanup old tasks from task_queue daily
     scheduler.add_job(cleanup_old_tasks, "interval", hours=24, id="cleanup_tasks")
@@ -303,6 +305,12 @@ def start_scheduler():
         soft_delete_stale_news()  # run once on startup
     except Exception as e:
         logger.warning("Initial stale-news sweep skipped: %s", e)
+
+    # Архив: текст статьи старше PLAINTEXT_RETENTION_DAYS уезжает в Google Sheets
+    # и обнуляется в базе. На старте не гоняем — прогон ходит в Sheets и тормозил
+    # бы подъём контейнера.
+    from api.archive import archive_old_news
+    scheduler.add_job(archive_old_news, "interval", hours=6, id="archive_old_news")
 
     # Cache cleanup every 3 hours
     from apis.cache import cache_cleanup

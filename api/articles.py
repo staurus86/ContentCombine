@@ -24,6 +24,25 @@ def _row_to_dict(cur, row):
     return dict(row)
 
 
+def _text_for_rewrite(news: dict) -> str:
+    """Текст новости для рерайта. Пустой plain_text — значит статья уехала в
+    архив (api/archive.py) и текста в базе больше нет: дозагружаем страницу по
+    URL. Не открылась — остаётся описание, оно короткое, но рерайт не падает."""
+    text = news.get("plain_text") or ""
+    if text:
+        return text
+    url = news.get("url") or ""
+    if url:
+        try:
+            from parsers.html_parser import _fetch_article
+            _, _, plain_text, _, _ = _fetch_article(url)
+            if plain_text:
+                return plain_text
+        except Exception as e:
+            logger.warning("Рерайт: страница %s не открылась, берём описание: %s", url, e)
+    return news.get("description") or ""
+
+
 # ---------------------------------------------------------------------------
 # CRUD
 # ---------------------------------------------------------------------------
@@ -265,13 +284,13 @@ def rewrite_news_handler(body):
         cur = conn.cursor()
         try:
             ph = _ph()
-            cur.execute(f"SELECT title, plain_text, description FROM news WHERE id = {ph}", (news_id,))
+            cur.execute(f"SELECT title, plain_text, description, url FROM news WHERE id = {ph}", (news_id,))
             row = cur.fetchone()
             if not row:
                 return {"status": "error", "message": "News not found"}
             news = _row_to_dict(cur, row)
             title = news.get("title", "")
-            text = news.get("plain_text", "") or news.get("description", "")
+            text = _text_for_rewrite(news)
             from apis.llm import rewrite_news
             result = rewrite_news(title, text, style, language)
             if result:
@@ -307,7 +326,7 @@ def batch_rewrite(body):
                     continue
                 news = _row_to_dict(cur, row)
                 title = news.get("title", "")
-                text = news.get("plain_text", "") or news.get("description", "")
+                text = _text_for_rewrite(news)
                 result = rewrite_news(title, text, style, language)
                 if not result:
                     results.append({"news_id": nid, "ok": False, "error": "LLM failed"})
