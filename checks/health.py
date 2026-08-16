@@ -30,8 +30,8 @@ def get_sources_health() -> list[dict]:
 
     now = datetime.now(timezone.utc)
     cutoff_24h = (now - timedelta(hours=24)).isoformat()
-    cutoff_3h = (now - timedelta(hours=3)).isoformat()
     cutoff_dead = (now - timedelta(days=config.SOURCE_DEAD_DAYS)).isoformat()
+    stale_after_min = config.SOURCE_PROBE_STALE_HOURS * 60
 
     ph = "%s" if _is_postgres() else "?"
 
@@ -96,26 +96,33 @@ def get_sources_health() -> list[dict]:
             last_parsed = ""
             count = 0
 
-        # Опрашиваем мы источник или нет — отдельный вопрос от того, публикует ли он.
-        # Раньше статус считался только по появлению новых записей, и площадка с
-        # публикацией раз в месяц была неотличима от сломанного парсера: панель
-        # показывала 104 «dead» при 38 реально молчащих (аудит 2026-07-28).
+        # Статус меряет ОДНО: дозвонились ли мы до площадки. Как часто она сама
+        # публикует — не наша поломка и живёт в отдельных колонках (count_24h,
+        # last_parsed). Раньше healthy требовал публикацию за 3 часа, при том что
+        # в тихом режиме цикл обходит источники раз в сутки, — панель показывала
+        # ноль здоровых и 132 «down» на полностью исправной системе.
         sh_pre = sh_status.get(name, {})
-        probe_min = sh_pre.get("probe_minutes_ago")
-        probed_recently = probe_min is not None and probe_min <= 24 * 60
+        ok_min = sh_pre.get("ok_minutes_ago")
+        failures = sh_pre.get("consecutive_failures", 0) or 0
+        auto_off = sh_pre.get("disabled_at") is not None
+        probed_ok_recently = ok_min is not None and ok_min <= stale_after_min
 
         if name in manually_off:
             status = "off"          # выключен вручную, цикл его не опрашивает
-        elif not last_parsed:
-            status = "silent" if probed_recently else "dead"
-        elif last_parsed <= cutoff_dead:
-            status = "silent" if probed_recently else "dead"
-        elif last_parsed > cutoff_3h:
-            status = "healthy" if count >= 10 else "low"
-        elif last_parsed > cutoff_24h:
-            status = "warning"
+        elif auto_off:
+            status = "dead"         # серия сбоев подряд, источник снят с опроса
+        elif failures > 0:
+            status = "down"         # последний опрос не удался, но ещё пробуем
+        elif ok_min is None:
+            # Процесс перезапустился и до источника ещё не дошла очередь. Это не
+            # поломка — просто нечего сказать.
+            status = "unknown"
+        elif not probed_ok_recently:
+            status = "stale"        # опрос был удачным, но давно: цикл не доходит
+        elif last_parsed and last_parsed > cutoff_dead:
+            status = "healthy"      # отвечает и публикует
         else:
-            status = "down"          # жив, но публикует редко (1д…порог) — не dead
+            status = "silent"       # отвечает, но давно ничего не выпускал
 
         # Calculate minutes since last parse
         minutes_ago = -1
@@ -140,14 +147,15 @@ def get_sources_health() -> list[dict]:
             "last_error": (sh.get("last_error", "") or "")[:160],
             "consecutive_failures": sh.get("consecutive_failures", 0) or 0,
             "auto_disabled": sh.get("disabled_at") is not None,
-            # Когда мы в последний раз ДОЗВОНИЛИСЬ до источника (в минутах назад).
-            # None — с перезапуска процесса опроса ещё не было.
+            # probe — когда источник опрашивали, ok — когда опрос удался.
+            # None — с перезапуска процесса до него ещё не дошла очередь.
             "probe_minutes_ago": sh.get("probe_minutes_ago"),
+            "ok_minutes_ago": sh.get("ok_minutes_ago"),
             "manually_disabled": name in manually_off,
         })
 
-    # Sort: dead first, then by count desc
-    _ORDER = {"off": 0, "dead": 1, "silent": 2, "down": 3, "warning": 4, "low": 5, "healthy": 6}
+    # Сначала то, что требует вмешательства; healthy — в самый низ.
+    _ORDER = {"dead": 0, "down": 1, "stale": 2, "off": 3, "unknown": 4, "silent": 5, "healthy": 6}
     results.sort(key=lambda x: (_ORDER.get(x["status"], 9), -x["count_24h"]))
 
     return results

@@ -123,14 +123,29 @@ def parse_rss_source(source: dict):
     url = source["url"]
     count = 0
 
+    # Фид снят с сайта, а запрос увело редиректом на обычную страницу. feedparser
+    # честно спотыкается о HTML и рапортует «not well-formed (invalid token)», после
+    # чего источник копит parse_error и молча уходит в авто-отключение. Читается это
+    # как сломанный парсер, хотя чинить надо адрес. Отличаем случай по факту.
+    served_html_at = ""
+    # Ошибка основной загрузки. Фолбэк ниже отдаёт feedparser сам URL, и если сайт
+    # вернёт страницу блокировки, наружу уйдёт «not well-formed» — то есть 403 или
+    # 429 будет выглядеть как битый фид. Держим исходную причину и рапортуем её.
+    fetch_error = None
+
     try:
         # Fetch RSS via fetch_with_retry to use proxy rotation,
         # then parse the raw content with feedparser
         try:
             resp = fetch_with_retry(url)
+            ctype = (resp.headers.get("Content-Type") or "").lower()
+            head = resp.content[:512].lstrip().lower()
+            if "html" in ctype or head.startswith((b"<!doctype html", b"<html")):
+                served_html_at = str(resp.url)
             feed = feedparser.parse(resp.content)
-        except Exception:
+        except Exception as e:
             # Fallback: let feedparser fetch directly (no proxy)
+            fetch_error = e
             logger.debug("Proxy fetch failed for RSS %s, falling back to direct feedparser", name)
             feed = feedparser.parse(url, request_headers={"User-Agent": _get_random_ua()})
         if not feed.entries:
@@ -142,6 +157,17 @@ def parse_rss_source(source: dict):
                 feed = feedparser.parse(url, request_headers={"User-Agent": "Feedfetcher-Google"})
             except Exception:
                 pass
+        if not feed.entries and served_html_at:
+            where = f" (запрос ушёл на {served_html_at})" if served_html_at != url else ""
+            logger.warning("Feed gone for %s: сайт отдал HTML вместо фида%s", name, where)
+            _record_failure(name, f"feed gone: сайт отдал HTML вместо фида{where}")
+            return None
+
+        if not feed.entries and fetch_error is not None:
+            logger.warning("Feed fetch failed for %s: %s", name, fetch_error)
+            _record_failure(name, fetch_error)
+            return None
+
         if feed.bozo and not feed.entries:
             logger.warning("Feed error for %s: %s", name, feed.bozo_exception)
             _record_failure(name, feed.bozo_exception)

@@ -50,7 +50,7 @@ def _date_from_url(url: str) -> str:
 
 
 _JUNK_URL_RE = re.compile(
-    r"/(legal|terms|privacy|cookie|cookies|authors?|category|categories|tag|tags|seo-tools|tools)(/|$)"
+    r"/(legal|terms|privacy|cookie|cookies|authors?|category|categories|tag|tags|topic|topics|seo-tools|tools)(/|$)"
     r"|[^/]*-hub/?$",
     re.IGNORECASE,
 )

@@ -13,6 +13,10 @@ logger = logging.getLogger(__name__)
 def classify_error(error: str) -> str:
     """Classify raw error string into a category."""
     err = str(error).lower()
+    # Первым: адрес фида умер, сайт отдаёт страницу. Иначе это утонет в parse_error
+    # («битый XML»), и по панели не понять, что чинить надо конфиг, а не парсер.
+    if "feed gone" in err:
+        return "feed_gone"
     if any(k in err for k in ["timeout", "timed out", "read timed out"]):
         return "timeout"
     if any(k in err for k in ["name resolution", "dns", "getaddrinfo", "nodename nor servname",
@@ -56,7 +60,10 @@ class SourceHealth:
             self._sources[source] = {
                 "failures": 0, "total_failures": 0, "total_success": 0,
                 "disabled_at": None, "last_error": "", "error_type": "",
-                "last_probe": None,
+                # last_probe — когда опрашивали (неважно, чем кончилось);
+                # last_ok — когда опрос удался. Панель здоровья меряет доступность
+                # площадки, а для этого нужен именно успех, а не факт попытки.
+                "last_probe": None, "last_ok": None,
             }
 
     def record_success(self, source: str, latency_ms: float = 0):
@@ -72,6 +79,7 @@ class SourceHealth:
             # считала «мёртвым» любой источник без свежих новостей, поэтому редкий
             # блог с публикацией раз в месяц был неотличим от сломанного парсера.
             s["last_probe"] = time.time()
+            s["last_ok"] = s["last_probe"]
             if latency_ms > 0:
                 if source not in self._latencies:
                     self._latencies[source] = deque(maxlen=5)
@@ -136,6 +144,8 @@ class SourceHealth:
                     "last_probe": s.get("last_probe"),
                     "probe_minutes_ago": (round((time.time() - s["last_probe"]) / 60)
                                           if s.get("last_probe") else None),
+                    "ok_minutes_ago": (round((time.time() - s["last_ok"]) / 60)
+                                       if s.get("last_ok") else None),
                 }
                 for name, s in self._sources.items()
             }

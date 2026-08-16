@@ -1106,7 +1106,7 @@ input:focus, textarea:focus, select:focus { outline:none; border-color:#1da1f2; 
     </div>
     <div id="health-recs" style="display:none;margin-bottom:15px"></div>
     <table>
-      <thead id="health-thead"><tr><th>Статус</th><th>Источник</th><th>Статей (24ч)</th><th style="min-width:120px">Активность</th><th>Последняя новость</th><th>Прошло</th><th title="Когда последний раз дозвонились до площадки">Опрошен</th><th>Причина</th><th>Лечение</th></tr></thead>
+      <thead id="health-thead"><tr><th>Статус</th><th>Источник</th><th>Статей (24ч)</th><th style="min-width:120px">Активность</th><th>Последняя новость</th><th>Прошло</th><th title="Когда последний раз успешно дозвонились до площадки">Дозвон</th><th>Причина</th><th>Лечение</th></tr></thead>
       <tbody id="health-table"></tbody>
     </table>
   </div>
@@ -2112,7 +2112,8 @@ const STATUS_LABELS = {new:'Новая',in_review:'Проверка',approved:'�
 const CRITICAL_SOURCES = ['Google Search Status'];
 // Human-readable причина сбоя источника (из source_health.error_type).
 const ERR_LABELS = {dns:'DNS не резолвится', http_4xx:'404/410', http_5xx:'5xx сервер', timeout:'таймаут',
-  connection:'отказ соединения', ssl:'SSL', parse_error:'битый фид', auth:'401/403', rate_limit:'429 лимит', unknown:'ошибка'};
+  connection:'отказ соединения', ssl:'SSL', parse_error:'битый фид', feed_gone:'фида нет — нужен адрес',
+  auth:'401/403', rate_limit:'429 лимит', unknown:'ошибка'};
 
 function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
 function fmtDate(d) { if (!d) return '-'; return d.replace('T',' ').slice(0,16); }
@@ -2192,7 +2193,7 @@ async function loadSources() {
   health.forEach(h => { hMap[h.source] = h; });
   document.getElementById('sources-table').innerHTML = _sources.map(s => {
     const h = hMap[s.name] || {};
-    const icon = h.manually_disabled ? '&#9209;&#65039;' : (h.status==='healthy'?'&#9989;':h.status==='low'?'&#128993;':h.status==='warning'?'&#9888;&#65039;':h.status==='dead'?'&#10060;':'&#9898;');
+    const icon = h.manually_disabled ? '&#9209;&#65039;' : (h.status==='healthy'?'&#9989;':h.status==='stale'?'&#9888;&#65039;':h.status==='down'?'&#128308;':h.status==='dead'?'&#10060;':'&#9898;');
     const cnt = h.count_24h ?? '-';
     const lastP = h.last_parsed ? fmtDate(h.last_parsed) : '-';
     const minAgo = h.minutes_ago >= 0 ? h.minutes_ago + ' мин' : '';
@@ -2590,22 +2591,23 @@ async function loadHealth() {
   const data = await api('/api/health');
   _healthData = data;
   const maxCount = Math.max(...data.map(h => h.count_24h), 1);
-  let healthy=0, low=0, warn=0, down=0, dead=0, silent=0, off=0;
+  let healthy=0, stale=0, down=0, dead=0, silent=0, off=0, unknown=0;
   document.getElementById('health-table').innerHTML = data.map(h => {
-    // silent — площадка отвечает, но давно не публикует; dead — до неё не достучались
-    const icons = {healthy:'&#9989;',low:'&#128993;',warning:'&#9888;&#65039;',down:'&#128308;',dead:'&#10060;',silent:'&#128164;',off:'&#9209;&#65039;'};
-    const labels = {healthy:'healthy',low:'low',warning:'warning',down:'down',dead:'не отвечает',silent:'молчит',off:'выключен'};
+    // Статус = дозвонились ли до площадки. Как часто она публикует — колонки
+    // «За 24ч» и «Последняя запись», это не поломка источника.
+    const icons = {healthy:'&#9989;',silent:'&#128164;',stale:'&#9888;&#65039;',down:'&#128308;',dead:'&#10060;',off:'&#9209;&#65039;',unknown:'&#9898;'};
+    const labels = {healthy:'отвечает',silent:'не публикует',stale:'давно не опрашивали',down:'сбой опроса',dead:'снят после сбоев',off:'выключен',unknown:'ещё не опрашивали'};
     const icon = icons[h.status] || '&#10067;';
     if (h.status==='healthy') healthy++;
-    else if (h.status==='low') low++;
-    else if (h.status==='warning') warn++;
+    else if (h.status==='stale') stale++;
     else if (h.status==='down') down++;
     else if (h.status==='silent') silent++;
     else if (h.status==='off') off++;
+    else if (h.status==='unknown') unknown++;
     else dead++;
     const pct = Math.round((h.count_24h / maxCount) * 100);
-    const barColor = h.status==='healthy'?'#17bf63':h.status==='low'?'#ffad1f':h.status==='warning'?'#f5a623':h.status==='silent'?'#8899a6':'#e0245e';
-    const isSick = ['warning','down','dead','low'].includes(h.status);
+    const barColor = h.status==='healthy'?'#17bf63':h.status==='stale'?'#f5a623':(h.status==='silent'||h.status==='unknown')?'#8899a6':'#e0245e';
+    const isSick = ['down','dead','stale'].includes(h.status);
     const healBtn = h.manually_disabled
       ? `<button class="btn btn-sm btn-primary" onclick="toggleSourceOn('${h.source.replace(/'/g,"\'")}')" style="padding:2px 8px;font-size:0.75em" title="Источник выключен вручную — цикл его не опрашивает">Включить</button>`
       : (isSick ? `<button class="btn btn-sm btn-warning" onclick="healSource('${h.source.replace(/'/g,"\'")}')" style="padding:2px 8px;font-size:0.75em" title="Диагностика и лечение">&#128138;</button>` : '');
@@ -2621,25 +2623,25 @@ async function loadHealth() {
       <td><div style="background:#22303c;border-radius:4px;overflow:hidden;height:18px"><div style="background:${barColor};width:${pct}%;height:100%;border-radius:4px;transition:width .5s"></div></div></td>
       <td>${fmtDate(h.last_parsed)}</td>
       <td>${h.minutes_ago >= 0 ? h.minutes_ago + ' мин' : '?'}</td>
-      <td title="Когда последний раз дозвонились до площадки">${h.probe_minutes_ago == null ? '—' : (h.probe_minutes_ago < 90 ? h.probe_minutes_ago + ' мин' : Math.round(h.probe_minutes_ago/60) + ' ч')}</td>
+      <td title="Когда последний раз успешно дозвонились до площадки">${h.ok_minutes_ago == null ? '—' : (h.ok_minutes_ago < 90 ? h.ok_minutes_ago + ' мин' : Math.round(h.ok_minutes_ago/60) + ' ч')}</td>
       <td>${reasonCell}</td>
       <td>${healBtn}</td>
     </tr>`;
   }).join('');
   // Summary with detailed counts
   const parts = [];
-  if (healthy) parts.push(`<span style="color:#17bf63">${healthy} ок</span>`);
-  if (low) parts.push(`<span style="color:#ffad1f">${low} low</span>`);
-  if (warn) parts.push(`<span style="color:#f5a623">${warn} warning</span>`);
-  if (down) parts.push(`<span style="color:#e0245e">${down} down</span>`);
+  if (healthy) parts.push(`<span style="color:#17bf63">${healthy} отвечают</span>`);
+  if (silent) parts.push(`<span style="color:#8899a6">${silent} не публикуют</span>`);
+  if (stale) parts.push(`<span style="color:#f5a623">${stale} давно не опрашивали</span>`);
+  if (down) parts.push(`<span style="color:#e0245e">${down} сбой опроса</span>`);
+  if (dead) parts.push(`<span style="color:#e0245e">${dead} снято после сбоев</span>`);
   if (off) parts.push(`<span style="color:#ffad1f">${off} выключено</span>`);
-  if (silent) parts.push(`<span style="color:#8899a6">${silent} молчат</span>`);
-  if (dead) parts.push(`<span style="color:#e0245e">${dead} не отвечают</span>`);
+  if (unknown) parts.push(`<span style="color:#8899a6">${unknown} ещё не опрашивали</span>`);
   const el = document.getElementById('health-summary');
   if (el) el.innerHTML = parts.join(' / ');
   // Show heal-all button if any sick
   const btnHeal = document.getElementById('btn-heal-all');
-  if (btnHeal) btnHeal.style.display = (warn + down + dead + low) > 0 ? '' : 'none';
+  if (btnHeal) btnHeal.style.display = (stale + down + dead) > 0 ? '' : 'none';
 }
 
 async function healSource(name) {
@@ -2680,7 +2682,7 @@ async function healSource(name) {
 }
 
 async function healAllSick() {
-  const sick = _healthData.filter(h => ['warning','down','dead','low'].includes(h.status));
+  const sick = _healthData.filter(h => ['down','dead','stale'].includes(h.status));
   if (!sick.length) { toast('Все источники здоровы!'); return; }
   toast('Лечение ' + sick.length + ' источников...');
   const btn = document.getElementById('btn-heal-all');
@@ -7067,7 +7069,7 @@ async function loadHealthPlus() {
     }
 
     el.innerHTML = sources.map(s => {
-      const icon = s.status==='healthy'?'&#9989;':s.status==='low'?'&#128993;':s.status==='warning'?'&#9888;&#65039;':'&#10060;';
+      const icon = s.status==='healthy'?'&#9989;':s.status==='stale'?'&#9888;&#65039;':s.status==='silent'?'&#128164;':(s.status==='off'||s.status==='unknown')?'&#9898;':'&#10060;';
       const maxT = Math.max(...(s.trend_7d||[1]), 1);
       const sparkHtml = '<span class="sparkline">' +
         (s.trend_7d||[]).map(v => '<span class="sparkline-bar" style="height:' + Math.max(2, Math.round(v/maxT*24)) + 'px"></span>').join('') +
@@ -7090,10 +7092,10 @@ async function loadHealthPlus() {
 
     const sumEl = document.getElementById('health-summary');
     if (sumEl) {
-      const ok = sources.filter(s => s.status === 'healthy').length;
-      const warn = sources.filter(s => ['low','warning'].includes(s.status)).length;
+      const ok = sources.filter(s => ['healthy','silent'].includes(s.status)).length;
+      const warn = sources.filter(s => s.status === 'stale').length;
       const dead = sources.filter(s => ['dead','down'].includes(s.status)).length;
-      sumEl.textContent = ok + ' ок / ' + warn + ' внимание / ' + dead + ' мертв / ' + allRecs.length + ' рекомендаций';
+      sumEl.textContent = ok + ' отвечают / ' + warn + ' давно не опрашивали / ' + dead + ' не отвечают / ' + allRecs.length + ' рекомендаций';
     }
   } catch(e) {
     el.innerHTML = '<tr><td colspan="8" style="color:#e0245e">Ошибка: ' + (e.message||e) + '</td></tr>';

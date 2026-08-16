@@ -1307,18 +1307,32 @@ def check_critical_alerts():
         finally:
             cur.close()
 
-        # Mass source failure (>= 5 auto-disabled at once), 6h cooldown to avoid spam.
+        # Массовый сбой = НОВЫЕ отключения разом (упала сеть, DNS, прокси), а не
+        # размер накопленного списка. Порог по длине слал «массовый сбой: 5 отключено»
+        # каждые 6 часов месяцами подряд, пока в списке лежали пять давно мёртвых
+        # фидов, — тревога переставала что-либо значить. Сравниваем состав.
+        import json
+        import time
         from core.source_health import source_health
-        disabled = [n for n, s in source_health.get_status().items() if s.get("disabled_at")]
-        if len(disabled) >= 5:
-            import time
+        disabled = sorted(n for n, s in source_health.get_status().items() if s.get("disabled_at"))
+        try:
+            known = set(json.loads(get_app_setting("alert_mass_failure_names") or "[]"))
+        except (ValueError, TypeError):
+            known = set()
+        fresh = [n for n in disabled if n not in known]
+
+        if len(fresh) >= 5:
             last = get_app_setting("alert_mass_failure_ts")
             now = time.time()
             if not last or (now - float(last)) > 6 * 3600:
                 send_admin_alert(
-                    f"⚠️ <b>Массовый сбой источников</b>: {len(disabled)} отключено.\n"
-                    "Примеры: " + _esc_html(", ".join(disabled[:8])))
+                    f"⚠️ <b>Массовый сбой источников</b>: {len(fresh)} отключено разом "
+                    f"(всего в отключке {len(disabled)}).\n"
+                    "Новые: " + _esc_html(", ".join(fresh[:8])))
                 set_app_setting("alert_mass_failure_ts", str(now))
+        # Состав пишем всегда: иначе те же имена будут «новыми» на каждом тике.
+        if set(disabled) != known:
+            set_app_setting("alert_mass_failure_names", json.dumps(disabled, ensure_ascii=False))
     except Exception as e:
         logger.error("check_critical_alerts error: %s", e)
 

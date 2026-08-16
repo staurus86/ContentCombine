@@ -187,6 +187,10 @@ SOURCE_FAILURE_THRESHOLD = _int_env("SOURCE_FAILURE_THRESHOLD", 5)
 # Источник считается "мёртвым" по времени молчания, а не по "0 за 24ч":
 # редко публикующие официальные источники не должны висеть как dead.
 SOURCE_DEAD_DAYS = _int_env("SOURCE_DEAD_DAYS", 14)
+# Через сколько часов без удачного опроса площадка в панели считается протухшей.
+# 26 — с запасом к тихому режиму, где полный обход идёт раз в сутки в окне перед
+# дайджестом. Порог меньше суток красил бы всю панель в аварию каждое утро.
+SOURCE_PROBE_STALE_HOURS = _int_env("SOURCE_PROBE_STALE_HOURS", 26)
 
 # Адаптивная частота автономного парсинга: есть активный логин — чаще, нет — реже.
 PARSE_ACTIVE_MIN = _int_env("PARSE_ACTIVE_MIN", 15)          # цикл при активном логине
@@ -342,7 +346,10 @@ SOURCES = [
     {"name": "Search Off the Record", "type": "rss", "url": "https://rss.libsyn.com/shows/266492/destinations/2027951.xml", "interval": 120},
     {"name": "Semrush Blog", "type": "rss", "url": "https://www.semrush.com/blog/feed/", "interval": 60},
     {"name": "SISTRIX EN", "type": "rss", "url": "https://www.sistrix.com/feed/", "interval": 60},
-    {"name": "Stan Ventures Blog", "type": "rss", "url": "https://www.stanventures.com/blog/feed/", "interval": 60},    {"name": "Victorious Blog", "type": "rss", "url": "https://victorious.com/blog/feed/", "interval": 120},
+    # RSS у них снят: /blog/feed/ отдаёт 301 на HTML-страницу блога, а /feed/ —
+    # валидный, но пустой фид. Живой канал — post-sitemap с настоящими lastmod.
+    {"name": "Stan Ventures Blog", "type": "sitemap", "url": "https://www.stanventures.com/blog/post-sitemap.xml", "url_filter": "/blog/", "interval": 60},
+    {"name": "Victorious Blog", "type": "rss", "url": "https://victorious.com/blog/feed/", "interval": 120},
     {"name": "Yoast SEO Blog", "type": "rss", "url": "https://yoast.com/feed/", "interval": 60},
     {"name": "DE: 121WATT", "type": "rss", "url": "https://www.121watt.de/feed/", "interval": 60},
     {"name": "DE: Aufgesang (Olaf Kopp)", "type": "rss", "url": "https://www.aufgesang.de/feed/", "interval": 60},
@@ -350,7 +357,10 @@ SOURCES = [
     {"name": "DE: SISTRIX Blog", "type": "homepage", "url": "https://www.sistrix.de/news/", "rss_url": "https://www.sistrix.de/news/feed/", "interval": 60},
     {"name": "DE: t3n SEO/Digital", "type": "rss", "url": "https://t3n.de/rss.xml", "interval": 30},
     {"name": "ES: Ahrefs Blog (ES)", "type": "rss", "url": "https://ahrefs.com/blog/es/feed/", "interval": 60},
-    {"name": "ES: Cyberclick", "type": "homepage", "url": "https://www.cyberclick.es/blog", "rss_url": "https://www.cyberclick.es/numerical-blog/rss.xml", "interval": 120},
+    # /blog отдавал 404 и записывал источнику http_4xx каждый цикл — блог живёт
+    # на /numerical-blog. url_filter держит homepage-ветку в разделе блога:
+    # без него стратегия «длинный текст ссылки» тянула лендинги услуг.
+    {"name": "ES: Cyberclick", "type": "homepage", "url": "https://www.cyberclick.es/numerical-blog", "url_filter": "/numerical-blog/", "rss_url": "https://www.cyberclick.es/numerical-blog/rss.xml", "interval": 120},
     {"name": "ES: MJ Cachon", "type": "rss", "url": "https://mjcachon.com/feed/", "interval": 60},
     {"name": "FR: Abondance", "type": "rss", "url": "https://www.abondance.com/feed", "interval": 30},
     {"name": "FR: Blog du Moderateur (BDM)", "type": "rss", "url": "https://www.blogdumoderateur.com/feed/", "interval": 30},
@@ -358,7 +368,11 @@ SOURCES = [
     {"name": "JA: Web Tan Forum", "type": "rss", "url": "https://webtan.impress.co.jp/rss.xml", "interval": 30},
     {"name": "NL: Frankwatching", "type": "rss", "url": "https://www.frankwatching.com/feed/", "interval": 30},
     {"name": "PL: Sprawny Marketing", "type": "rss", "url": "https://sprawnymarketing.pl/feed/", "interval": 60},
-    {"name": "PT: Conversion.com.br (BR)", "type": "rss", "url": "https://www.conversion.com.br/blog/feed/", "interval": 60},
+    # Переехали на Payload CMS и фид не отдают ни по одному адресу: /blog/feed/
+    # уходит 301 на HTML. Sitemap тоже не годится — lastmod там равен дате
+    # пересборки, поэтому статьи 2023 года выглядят как сегодняшние. Берём
+    # страницу блога: возраст определяется по дате самой статьи.
+    {"name": "PT: Conversion.com.br (BR)", "type": "homepage", "url": "https://www.conversion.com.br/blog", "url_filter": "/blog/", "interval": 60},
     {"name": "RU: Cossa", "type": "rss", "url": "https://www.cossa.ru/rss/", "interval": 30},    {"name": "RU: Habr — SEO", "type": "rss", "url": "https://habr.com/ru/rss/hub/seo/all/", "interval": 30},
     {"name": "RU: Labrika Блог", "type": "sitemap", "url": "https://labrika.ru/sitemap.xml", "url_filter": "/blog/", "interval": 120},
     {"name": "RU: ppc.world", "type": "rss", "url": "https://ppc.world/feed/", "interval": 60},

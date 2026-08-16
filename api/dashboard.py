@@ -487,10 +487,12 @@ def get_source_health_plus():
             conversion = round(good / total * 100) if total > 0 else 0
 
             recs = []
-            if h["status"] in ("dead", "down"):
-                recs.append({"type": "error", "text": "Проверьте RSS/URL — источник не отвечает"})
-            elif h["status"] == "warning":
-                recs.append({"type": "warning", "text": "Источник нестабилен, возможны проблемы с доступом"})
+            if h["status"] == "dead":
+                recs.append({"type": "error", "text": "Снят с опроса после серии сбоев — проверьте адрес фида"})
+            elif h["status"] == "down":
+                recs.append({"type": "error", "text": "Последний опрос не удался — проверьте RSS/URL"})
+            elif h["status"] == "stale":
+                recs.append({"type": "warning", "text": "Цикл давно не доходил до источника"})
             if total > 10 and conversion < 10:
                 recs.append({"type": "warning", "text": f"Низкая конверсия ({conversion}%) — рассмотрите снижение веса"})
             avg_score = round(float(stats.get("avg_score", 0)))
