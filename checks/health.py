@@ -107,7 +107,12 @@ def get_sources_health() -> list[dict]:
         auto_off = sh_pre.get("disabled_at") is not None
         probed_ok_recently = ok_min is not None and ok_min <= stale_after_min
 
-        if name in manually_off:
+        if name not in conf_by_name:
+            # Записи в базе есть, а источника в config.SOURCES уже нет: его убрали,
+            # а история осталась. Опрашивать нечего — это не поломка и не «ещё не
+            # дошла очередь», иначе такие имена вечно висят в панели как непонятные.
+            status = "removed"
+        elif name in manually_off:
             status = "off"          # выключен вручную, цикл его не опрашивает
         elif auto_off:
             status = "dead"         # серия сбоев подряд, источник снят с опроса
@@ -155,7 +160,8 @@ def get_sources_health() -> list[dict]:
         })
 
     # Сначала то, что требует вмешательства; healthy — в самый низ.
-    _ORDER = {"dead": 0, "down": 1, "stale": 2, "off": 3, "unknown": 4, "silent": 5, "healthy": 6}
+    _ORDER = {"dead": 0, "down": 1, "stale": 2, "off": 3, "unknown": 4,
+              "silent": 5, "healthy": 6, "removed": 7}
     results.sort(key=lambda x: (_ORDER.get(x["status"], 9), -x["count_24h"]))
 
     return results

@@ -2591,12 +2591,12 @@ async function loadHealth() {
   const data = await api('/api/health');
   _healthData = data;
   const maxCount = Math.max(...data.map(h => h.count_24h), 1);
-  let healthy=0, stale=0, down=0, dead=0, silent=0, off=0, unknown=0;
+  let healthy=0, stale=0, down=0, dead=0, silent=0, off=0, unknown=0, removed=0;
   document.getElementById('health-table').innerHTML = data.map(h => {
     // Статус = дозвонились ли до площадки. Как часто она публикует — колонки
     // «За 24ч» и «Последняя запись», это не поломка источника.
-    const icons = {healthy:'&#9989;',silent:'&#128164;',stale:'&#9888;&#65039;',down:'&#128308;',dead:'&#10060;',off:'&#9209;&#65039;',unknown:'&#9898;'};
-    const labels = {healthy:'отвечает',silent:'не публикует',stale:'давно не опрашивали',down:'сбой опроса',dead:'снят после сбоев',off:'выключен',unknown:'ещё не опрашивали'};
+    const icons = {healthy:'&#9989;',silent:'&#128164;',stale:'&#9888;&#65039;',down:'&#128308;',dead:'&#10060;',off:'&#9209;&#65039;',unknown:'&#9898;',removed:'&#128465;&#65039;'};
+    const labels = {healthy:'отвечает',silent:'не публикует',stale:'давно не опрашивали',down:'сбой опроса',dead:'снят после сбоев',off:'выключен',unknown:'ещё не опрашивали',removed:'убран из конфига'};
     const icon = icons[h.status] || '&#10067;';
     if (h.status==='healthy') healthy++;
     else if (h.status==='stale') stale++;
@@ -2604,9 +2604,10 @@ async function loadHealth() {
     else if (h.status==='silent') silent++;
     else if (h.status==='off') off++;
     else if (h.status==='unknown') unknown++;
+    else if (h.status==='removed') removed++;
     else dead++;
     const pct = Math.round((h.count_24h / maxCount) * 100);
-    const barColor = h.status==='healthy'?'#17bf63':h.status==='stale'?'#f5a623':(h.status==='silent'||h.status==='unknown')?'#8899a6':'#e0245e';
+    const barColor = h.status==='healthy'?'#17bf63':h.status==='stale'?'#f5a623':(h.status==='silent'||h.status==='unknown'||h.status==='removed')?'#8899a6':'#e0245e';
     const isSick = ['down','dead','stale'].includes(h.status);
     const healBtn = h.manually_disabled
       ? `<button class="btn btn-sm btn-primary" onclick="toggleSourceOn('${h.source.replace(/'/g,"\'")}')" style="padding:2px 8px;font-size:0.75em" title="Источник выключен вручную — цикл его не опрашивает">Включить</button>`
@@ -2637,6 +2638,7 @@ async function loadHealth() {
   if (dead) parts.push(`<span style="color:#e0245e">${dead} снято после сбоев</span>`);
   if (off) parts.push(`<span style="color:#ffad1f">${off} выключено</span>`);
   if (unknown) parts.push(`<span style="color:#8899a6">${unknown} ещё не опрашивали</span>`);
+  if (removed) parts.push(`<span style="color:var(--c-faint)">${removed} убрано из конфига</span>`);
   const el = document.getElementById('health-summary');
   if (el) el.innerHTML = parts.join(' / ');
   // Show heal-all button if any sick
@@ -7069,7 +7071,7 @@ async function loadHealthPlus() {
     }
 
     el.innerHTML = sources.map(s => {
-      const icon = s.status==='healthy'?'&#9989;':s.status==='stale'?'&#9888;&#65039;':s.status==='silent'?'&#128164;':(s.status==='off'||s.status==='unknown')?'&#9898;':'&#10060;';
+      const icon = s.status==='healthy'?'&#9989;':s.status==='stale'?'&#9888;&#65039;':s.status==='silent'?'&#128164;':(s.status==='off'||s.status==='unknown'||s.status==='removed')?'&#9898;':'&#10060;';
       const maxT = Math.max(...(s.trend_7d||[1]), 1);
       const sparkHtml = '<span class="sparkline">' +
         (s.trend_7d||[]).map(v => '<span class="sparkline-bar" style="height:' + Math.max(2, Math.round(v/maxT*24)) + 'px"></span>').join('') +
