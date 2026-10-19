@@ -409,6 +409,19 @@ def _tg_handle(url: str) -> str:
     return f"@{m.group(1)}" if m else ""
 
 
+def _strip_utm(url: str) -> str:
+    """Убрать utm_*-метки из ссылки: в посте они только удлиняют адрес."""
+    from urllib.parse import urlsplit, urlunsplit, parse_qsl, urlencode
+    try:
+        p = urlsplit(url)
+        if "utm_" not in p.query:
+            return url
+        q = [(k, v) for k, v in parse_qsl(p.query, keep_blank_values=True) if not k.lower().startswith("utm_")]
+        return urlunsplit((p.scheme, p.netloc, p.path, urlencode(q), p.fragment))
+    except Exception:
+        return url
+
+
 def _source_suffix(news_list, sources, wrap: bool = True) -> str:
     """Compact source links per item: издания подписаны названием
     «(Search Engine Land)», telegram-каналы — хендлом «(@drmaxseo)».
@@ -421,12 +434,14 @@ def _source_suffix(news_list, sources, wrap: bool = True) -> str:
         if not isinstance(idx, int) or idx < 1 or idx > len(news_list):
             continue
         n = news_list[idx - 1]
-        url = (n.get("url") or "").strip()
+        url = _strip_utm((n.get("url") or "").strip())
         if not url or url in seen:
             continue
         name = (n.get("source") or "Источник").strip()
         if name.startswith("TG:"):
             name = _tg_handle(url) or name[3:].strip()
+        else:
+            name = re.sub(r"^[A-Z]{2}:\s*", "", name)  # языковой префикс «DE: t3n» → «t3n»
         name = name.replace("[", "").replace("]", "") or "Источник"
         if name.lower() in seen_names:
             continue
@@ -817,6 +832,8 @@ PROMPT_GENERAL = """Ты ведёшь Telegram-канал для SEO-специ�
    * слухи, прогнозы и мнения называй прямо: «по данным…», «это прогноз», «Google пока не подтвердил».
      Не выдавай предположение за факт;
    * одно описание — одна мысль. Без списков, без скобок, без вводных вроде «Источник сообщает»;
+   * названия компаний, брендов и продуктов пиши так, как они написаны в материале
+     (Semai.ai, а не «Семанай»), не транслитерируй;
    * не начинай с названия источника, канала или автора.
 
 8. Поле lede — одно предложение до 150 знаков для начала поста. Назови две-три главные темы
