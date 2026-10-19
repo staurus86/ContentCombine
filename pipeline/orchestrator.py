@@ -1115,6 +1115,14 @@ def _today_msk():
     return (datetime.now(timezone.utc) + timedelta(hours=3)).strftime("%Y-%m-%d")
 
 
+def _channel_footer() -> str:
+    """Подпись под постом: ссылка на канал. Только для публичного @хендла."""
+    ch = (getattr(config, "TELEGRAM_PUBLISH_CHANNEL", "") or "").strip()
+    if ch.startswith("@") and len(ch) > 1:
+        return f"\n\n[{ch}](https://t.me/{ch[1:]})"
+    return ""
+
+
 def auto_publish_telegram_digest():
     """Daily evening job: build the GENERAL digest (best of feed + cases + telegram
     over the last 24h, grouped into sections) and publish it to the Telegram channel.
@@ -1144,7 +1152,7 @@ def auto_publish_telegram_digest():
 
         title = (digest.get("title") or "").strip()
         text = digest.get("text") or ""
-        body_text = (f"**\U0001F4E8 {title}**\n" if title else "") + text
+        body_text = (f"**\U0001F4E8 {title}**\n" if title else "") + text + _channel_footer()
         pub = publish({"text": body_text, "markdown": True})
         # Mark the day done only on a successful send, so failures retry on the next tick.
         if pub.get("status") == "ok":
@@ -1194,7 +1202,7 @@ def auto_publish_weekly_digest():
 
         title = (digest.get("title") or "").strip()
         text = digest.get("text") or ""
-        body_text = (f"**\U0001F4C6 {title}**\n" if title else "") + text
+        body_text = (f"**\U0001F4C6 {title}**\n" if title else "") + text + _channel_footer()
         pub = publish({"text": body_text, "markdown": True})
         if pub.get("status") == "ok":
             set_app_setting(AUTO_TG_WEEKLY_MARKER, week)

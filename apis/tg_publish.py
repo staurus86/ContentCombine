@@ -26,7 +26,19 @@ def _md_to_html(s: str) -> str:
     s = re.sub(r"\[([^\]]+)\]\((https?://[^\s)]+)\)",
                lambda m: f'<a href="{m.group(2)}">{m.group(1)}</a>', s)
     s = re.sub(r"\*\*([^*]+)\*\*", r"<b>\1</b>", s)
-    return s
+    # Строки «> текст» → сворачиваемая цитата (подряд идущие строки — одна цитата).
+    out, quote = [], []
+    for line in s.split("\n"):
+        if line.startswith("&gt; "):
+            quote.append(line[5:])
+            continue
+        if quote:
+            out.append("<blockquote expandable>" + "\n".join(quote) + "</blockquote>")
+            quote = []
+        out.append(line)
+    if quote:
+        out.append("<blockquote expandable>" + "\n".join(quote) + "</blockquote>")
+    return "\n".join(out)
 
 
 def _visible_len(s: str) -> int:
@@ -35,6 +47,7 @@ def _visible_len(s: str) -> int:
     дайджест, который в канал влезает одним (у дайджеста ссылок больше, чем текста)."""
     s = re.sub(r"\[([^\]]+)\]\((https?://[^\s)]+)\)", r"\1", s)
     s = re.sub(r"\*\*([^*]+)\*\*", r"\1", s)
+    s = re.sub(r"(?m)^> ", "", s)
     return len(s.encode("utf-16-le")) // 2  # TG считает в UTF-16: эмодзи = 2
 
 

@@ -601,14 +601,15 @@ def _pull_segment_news(seg, from_h, limit=40):
         cur.execute(f"""
             SELECT n.id, n.title, n.source, n.url, n.published_at,
                    COALESCE(a.total_score, 0), COALESCE(a.viral_score, 0),
-                   COALESCE(a.viral_level, ''), COALESCE(a.tags_data, '[]')
+                   COALESCE(a.viral_level, ''), COALESCE(a.tags_data, '[]'),
+                   COALESCE(NULLIF(n.description, ''), substr(n.plain_text, 1, 900), '')
             FROM news n LEFT JOIN news_analysis a ON a.news_id = n.id
             WHERE {seg} AND COALESCE(n.is_deleted, 0) = 0 AND {time_cond}
             ORDER BY COALESCE(a.total_score, 0) DESC
             LIMIT {int(limit)}
         """)
         cols = ["id", "title", "source", "url", "published_at", "total_score",
-                "viral_score", "viral_level", "tags_data"]
+                "viral_score", "viral_level", "tags_data", "snippet"]
         return [dict(zip(cols, row)) for row in cur.fetchall()]
     finally:
         cur.close()
@@ -826,7 +827,13 @@ def _compose_digest_impl(dtype="feed", period="day"):
                         qry = _plural_ru(m["queries"], "запросе", "запросах", "запросах")
                         lines.append(f"• {_idn_domain(m['domain'])} — {m['citations']} {cit} "
                                      f"в {m['queries']} {qry}{mark}")
-                    result["text"] += "\n\n" + "\n".join(lines)
+                    section = "\n".join(lines)
+                    # Хештеги остаются в конце поста, секция встаёт перед ними.
+                    body, sep, tags = result["text"].rpartition("\n\n#")
+                    if sep and "\n" not in tags:
+                        result["text"] = body + "\n\n" + section + "\n\n#" + tags
+                    else:
+                        result["text"] += "\n\n" + section
             except Exception as e:
                 logger.debug("Citability digest section skipped: %s", e)
     else:
